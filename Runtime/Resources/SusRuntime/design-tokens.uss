@@ -1,0 +1,77 @@
+/* ═══════════════════════════════════════════════════════════
+   L3: Semantic Design Tokens
+   Bridges --thm-* (theme) → --sus-* (semantic, consumed by kit)
+
+   Loaded by SusBootstrap at CONTAINER level (NOT panel TSS).
+   
+   ⚠ CRITICAL: :root { --sus-*: var(--thm-*); } must resolve
+   --thm-* on the element that carries .theme-light / .theme-dark
+   class. If loaded at panel level, panel :root never has these
+   classes → all var(--thm-*) resolve to dark defaults regardless
+   of theme.
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+    /* ── Surface ── */
+    --sus-bg-page:            var(--thm-bg-page);
+    --sus-bg-surface:         var(--thm-bg-surface);
+    --sus-bg-surface-raised:  var(--thm-bg-surface-raised);
+    --sus-bg-overlay:         var(--thm-bg-surface-overlay);
+
+    /* ── Text ── */
+    --sus-text-primary:       var(--thm-text-primary);
+    --sus-text-secondary:     var(--thm-text-secondary);
+    --sus-text-disabled:      var(--thm-text-disabled);
+    --sus-text-on-primary:    var(--thm-text-on-primary);
+
+    /* ── Border ── */
+    --sus-border:             var(--thm-border);
+    --sus-border-hover:       var(--thm-border-hover);
+    --sus-border-focus:       var(--thm-border-focus);
+    --sus-divider:            var(--thm-border);
+
+    /* ── Scrim ── */
+    --sus-scrim:              var(--thm-scrim);
+
+    /* ── Surfaces ── */
+    --sus-bg-surface-variant: var(--thm-bg-surface-variant);
+    --sus-bg-disabled:        var(--thm-bg-disabled);
+
+    /* ── Primary ── */
+    --sus-primary:            var(--thm-primary);
+    --sus-primary-hover:      var(--thm-primary-hover);
+    --sus-primary-pressed:    var(--thm-primary-pressed);
+
+    /* ── Secondary ── */
+    --sus-secondary:          var(--thm-secondary);
+    --sus-secondary-hover:    var(--thm-secondary-hover);
+
+    /* ── Semantic colors ── */
+    --sus-success:            var(--thm-success);
+    --sus-success-hover:      var(--thm-success-hover);
+    --sus-warning:            var(--thm-warning);
+    --sus-warning-hover:      var(--thm-warning-hover);
+    --sus-error:              var(--thm-error);
+    --sus-error-hover:        var(--thm-error-hover);
+    --sus-info:               var(--thm-info);
+    --sus-info-hover:         var(--thm-info-hover);
+
+    /* ── Overlay accents (hover/selected/disabled states) ── */
+    --sus-hover-overlay:      var(--thm-hover-overlay);
+    --sus-selected-overlay:   var(--thm-selected-overlay);
+    --sus-disabled-overlay:   var(--thm-disabled-overlay);
+
+    /* ── Opacity states ── */
+    --sus-opacity-hover:      0.04;
+    --sus-opacity-focus:      0.12;
+    --sus-opacity-selected:   0.08;
+    --sus-opacity-disabled:   0.38;
+
+    /* ── Font types — body / label / heading / italic.
+       All resolve to --base-font-primary by default (except italic).
+       Override individually: --base-font-body: var(--font-family-bold). */
+    --sus-font-body:         var(--base-font-body);
+    --sus-font-label:        var(--base-font-label);
+    --sus-font-heading:      var(--base-font-heading);
+    --sus-font-italic:       var(--base-font-italic);
+}

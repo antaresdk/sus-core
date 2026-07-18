@@ -1,0 +1,159 @@
+/* ═══════════════════════════════════════════════════════════
+   L1: Raw Palette — design constants, never change with theme.
+
+   Loaded on panel level (SusDefault.tss) — available to both
+   panel :root and container :root through CSS variable cascade.
+
+   Contains: colors, spacing, radius, font sizes.
+   Does NOT contain: --thm-* (L2, theme-dependent), --sus-* (L3),
+   --sk-* (L4), component styles (L5).
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+    /* ════════════════════════════════════════
+       Greys
+       ════════════════════════════════════════ */
+    /* GreyNN — NN is the lightness percent (value ≈ round(NN/100 × 255)).
+       Full ramp so BOTH theme variants alias to a named step
+       (dark uses the low steps, light the high steps = 255 − dark). */
+    --base-color-Grey98:    rgb(250, 250, 250);
+    --base-color-Grey96:    rgb(245, 245, 245);   /* light: 255-10  (mirror Grey04) */
+    --base-color-Grey94:    rgb(240, 240, 240);
+    --base-color-Grey92:    rgb(235, 235, 235);   /* light: 255-20  (mirror Grey08) */
+    --base-color-Grey90:    rgb(229, 229, 229);
+    --base-color-Grey88:    rgb(224, 224, 224);   /* light: 255-31  (mirror Grey12) */
+    --base-color-Grey84:    rgb(214, 214, 214);   /* light: 255-41  (mirror Grey16) */
+    --base-color-Grey81:    rgb(207, 207, 203);   /* light: 255-48,255-52 (mirror Grey18) */
+    --base-color-Grey80:    rgb(204, 204, 204);
+    --base-color-Grey76:    rgb(194, 194, 194);   /* light: 255-61  (mirror Grey24) */
+    --base-color-Grey70:    rgb(178, 178, 178);   /* light: 255-77  (mirror Grey30) */
+    --base-color-Grey60:    rgb(153, 153, 153);
+    --base-color-Grey40:    rgb(102, 102, 102);
+    --base-color-Grey30:    rgb( 77,  77,  77);
+    --base-color-Grey24:    rgb( 61,  61,  61);
+    --base-color-Grey20:    rgb( 51,  51,  51);   /* light text-secondary: 255-204 */
+    --base-color-Grey18:    rgb( 48,  48,  52);
+    --base-color-Grey16:    rgb( 41,  41,  41);
+    --base-color-Grey12:    rgb( 31,  31,  31);
+    --base-color-Grey08:    rgb( 20,  20,  20);
+    --base-color-Grey06:    rgb( 15,  15,  15);   /* light text-primary: 255-240 */
+    --base-color-Grey04:    rgb( 10,  10,  10);
+    --base-color-Grey02:    rgb(  5,   5,   5);
+
+    /* ════════════════════════════════════════
+       Primary (Blue)
+       ════════════════════════════════════════ */
+    --base-color-Primary90: rgb(205, 225, 255);
+    --base-color-Primary70: rgb(102, 163, 255);
+    --base-color-Primary50: rgb(  0, 102, 255);
+    --base-color-Primary30: rgb(  0,  61, 153);
+    --base-color-Primary10: rgb(  0,  20,  51);
+
+    /* ════════════════════════════════════════
+       Secondary (neutral accent)
+       ════════════════════════════════════════ */
+    --base-color-Secondary90: rgb(225, 230, 235);
+    --base-color-Secondary70: rgb(140, 155, 170);
+    --base-color-Secondary50: rgb( 80, 100, 120);
+    --base-color-Secondary30: rgb( 50,  60,  75);
+    --base-color-Secondary10: rgb( 20,  25,  30);
+
+    /* ════════════════════════════════════════
+       Info
+       ════════════════════════════════════════ */
+    --base-color-Info90: rgb(200, 230, 255);
+    --base-color-Info70: rgb(100, 180, 255);
+    --base-color-Info50: rgb( 33, 150, 243);
+    --base-color-Info30: rgb( 13,  71, 161);
+    --base-color-Info10: rgb(  5,  25,  55);
+
+    /* ════════════════════════════════════════
+       Semantic status colors
+       ════════════════════════════════════════ */
+    --base-color-Success:     rgb( 76, 175,  80);
+    --base-color-SuccessHover: rgb(100, 200, 100);
+    --base-color-Warning:     rgb(255, 193,   7);
+    --base-color-WarningHover: rgb(255, 210,  50);
+    --base-color-Error:       rgb(244,  67,  54);
+    --base-color-ErrorHover:   rgb(255, 105,  92);
+
+    /* ════════════════════════════════════════
+       Transparent white/black (overlays, scrims, hover)
+       ════════════════════════════════════════ */
+    --base-color-WhiteT5:   rgba(255, 255, 255, 0.05);
+    --base-color-WhiteT10:  rgba(255, 255, 255, 0.10);
+    --base-color-WhiteT30:  rgba(255, 255, 255, 0.30);
+    --base-color-WhiteT70:  rgba(255, 255, 255, 0.70);
+    --base-color-WhiteT90:  rgba(255, 255, 255, 0.90);
+    --base-color-WhiteT100: rgb(255, 255, 255);
+
+    --base-color-BlackT5:   rgba(  0,   0,   0, 0.05);
+    --base-color-BlackT10:  rgba(  0,   0,   0, 0.10);
+    --base-color-BlackT18:  rgba(  0,   0,   0, 0.18);
+    --base-color-BlackT30:  rgba(  0,   0,   0, 0.30);
+    --base-color-BlackT70:  rgba(  0,   0,   0, 0.70);
+    --base-color-BlackT90:  rgba(  0,   0,   0, 0.90);
+    --base-color-BlackT100: rgb(  0,   0,   0);
+
+    /* ════════════════════════════════════════
+       Game rarity / utility
+       ════════════════════════════════════════ */
+    --base-color-Rare:      rgb(255, 215,   0); /* Gold */
+    --base-color-Epic:      rgb(170,  80, 240); /* Purple */
+    --base-color-Legendary: rgb(255, 140,   0); /* Orange */
+    --base-color-Heal:      rgb( 80, 220, 100); /* Green (heal) */
+    --base-color-Shield:    rgb( 80, 200, 255); /* Cyan (shield) */
+
+    /* ════════════════════════════════════════
+       Spacing scale
+       ════════════════════════════════════════ */
+    --base-space-unit: 4px;
+    --base-space-4:  4px;
+    --base-space-8:  8px;
+    --base-space-12: 12px;
+    --base-space-16: 16px;
+    --base-space-20: 20px;
+    --base-space-24: 24px;
+    --base-space-32: 32px;
+    --base-space-40: 40px;
+    --base-space-48: 48px;
+    --base-space-64: 64px;
+
+    /* ════════════════════════════════════════
+       Radius scale
+       ════════════════════════════════════════ */
+    --base-radius-none: 0px;
+    --base-radius-sm:   4px;
+    --base-radius-md:   8px;
+    --base-radius-lg:  12px;
+    --base-radius-xl:  16px;
+    --base-radius-full: 20px;
+
+    /* ════════════════════════════════════════
+       Font sizes (px)
+       ════════════════════════════════════════ */
+    --base-font-10: 10px;
+    --base-font-12: 12px;
+    --base-font-14: 14px;
+    --base-font-16: 16px;
+    --base-font-18: 18px;
+    --base-font-20: 20px;
+    --base-font-24: 24px;
+    --base-font-28: 28px;
+    --base-font-32: 32px;
+
+    /* ── Font family — change ONE variable to switch all text.
+       Available: --font-family-regular, --font-family-medium,
+       --font-family-bold, --font-family-light, --font-family-italic */
+    --base-font-primary:    var(--font-family-medium);
+
+    /* Type aliases — all resolve through --base-font-primary.
+       Override individually if a type needs a different weight:
+       --base-font-body: var(--font-family-regular);
+       Components use --sk-font-family-body/label/heading/italic, NOT raw fonts. */
+    --base-font-body:       var(--base-font-primary);
+    --base-font-label:      var(--base-font-primary);
+    --base-font-heading:    var(--base-font-primary);
+    --base-font-italic:     var(--font-family-italic);
+    --base-font-mono:       url("Fonts/Montserrat/Montserrat-Light.ttf");
+}

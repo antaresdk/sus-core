@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Sharq.Bootstrap</RootNamespace>
+    <AssemblyName>SharqBootstrap</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <NoWarn>CS0649;CS0169;CS8618;IDE1006</NoWarn>
+  </PropertyGroup>
+
+  <!-- Link generator source files from sus-core/Editor/SourceGenerator
+       (exclude SusConfig.cs — it depends on UnityEngine; we provide a shim) -->
+  <ItemGroup>
+    <Compile Include="..\..\Editor\SourceGenerator\Constants.cs" Link="SourceGenerator\Constants.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Parser\SharqFileParser.cs" Link="SourceGenerator\Parser\SharqFileParser.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Parser\ScriptParser.cs" Link="SourceGenerator\Parser\ScriptParser.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Parser\TemplateParser.cs" Link="SourceGenerator\Parser\TemplateParser.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Parser\StyleParser.cs" Link="SourceGenerator\Parser\StyleParser.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Generator\BuildMethodGenerator.cs" Link="SourceGenerator\Generator\BuildMethodGenerator.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Generator\ScopedCssGenerator.cs" Link="SourceGenerator\Generator\ScopedCssGenerator.cs" />
+    <Compile Include="..\..\Editor\SourceGenerator\Parser\CssScanner.cs" Link="SourceGenerator\Parser\CssScanner.cs" />
+  </ItemGroup>
+
+</Project>

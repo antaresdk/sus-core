@@ -1,0 +1,27 @@
+<template>
+    <ui:VisualElement $MainElement class="#SCRIPTNAME_LOWER#">
+        <ui:Label name="Title" text="#SCRIPTNAME#" />
+        <slot />
+    </ui:VisualElement>
+</template>
+
+<script>
+using Sharq.Core;
+
+protected override void Created()
+{
+}
+
+protected override void Mounted()
+{
+    $MainElement.style.flexGrow = 1;
+}
+</script>
+
+<style>
+/*
+  NOTE: Sharq adds .#SCRIPTNAME_LOWER# prefix to ALL rules.
+  .#SCRIPTNAME_LOWER# { } becomes .#SCRIPTNAME_LOWER# .#SCRIPTNAME_LOWER# { } — doesn't match root.
+  Root styles → inline in Mounted() or companion .uss.
+*/
+</style>

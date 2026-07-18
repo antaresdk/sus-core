@@ -1,0 +1,85 @@
+/* ── SUS Global Reset & Utilities ──────────────────────────
+   Auto-loaded by SusBootstrap.LoadTokenCascade() (after core tokens;
+   downstream L4/L5 sheets register via RegisterCascadeStyleSheet).
+
+   Purpose: normalize built-in Unity USS defaults + utilities.
+
+   Override: place Assets/Resources/SusRuntime/_global.uss
+             in your project to replace this default.
+   ──────────────────────────────────────────────────────────── */
+
+/* ── No aggressive reset — USS inherits font from parent naturally ─── */
+
+/* ── ScrollView reset ─────────────────────────────────────── */
+.unity-scroll-view__content-container {
+    padding: 0;
+}
+
+/* ── Utility: hide element (display: none; Flex matching) ──── */
+.sus-hidden {
+    display: none;
+}
+
+/* ── Utility: flex spacer ─────────────────────────────────── */
+.sus-spacer {
+    flex-grow: 1;
+}
+
+/* ── Utility: text truncation ──────────────────────────────── */
+.sus-text-truncate {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+/* ── Utility: visually hidden (accessible, not visible) ───── */
+.sus-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    opacity: 0;
+}
+
+/* ── Utility: flexible scroll container ───────────────────── */
+.sus-scroll-y {
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+/* ── Screen outlet / route screens ──────────────────────────
+   Absolute children (splash/menu content) do NOT contribute to
+   parent layout height. Without a sized outlet the screen collapses
+   to W×0 (BoundsAudit). Root outlet fills the mount container;
+   nested outlets stay in flex flow (lobby child regions).
+   ─────────────────────────────────────────────────────────── */
+.sus-screen-outlet,
+.sus-route-view {
+    flex-grow: 1;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+}
+
+.sus-route-view--root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.sus-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    flex-grow: 1;
+}

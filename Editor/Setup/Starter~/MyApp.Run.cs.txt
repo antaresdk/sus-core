@@ -1,0 +1,19 @@
+using Sharq.Core;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+/// <summary>
+/// SUS application entry point (copied by Tools → SUS → Setup Project).
+/// Attach to a GameObject that has a UIDocument.
+/// </summary>
+[RequireComponent(typeof(UIDocument))]
+public class {{CLASS_NAME}} : MonoBehaviour
+{
+    private void OnEnable()
+    {
+        // TODO: create a *.sharq screen, then mount it: .Mount<YourScreen>();
+        Sharq.Core.SusApp.Create(GetComponent<UIDocument>())
+            .UseTheme(SusTheme.Dark)
+            .Run();
+    }
+}

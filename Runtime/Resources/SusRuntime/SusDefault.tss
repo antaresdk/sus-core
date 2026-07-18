@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════════════════════
+   SUS Default Theme (replaces unity-theme://default)
+
+   PANEL-LEVEL (PanelSettings.themeStyleSheet):
+     - unity default (layout, controls, font-size)
+     - L0 reset (_reset.uss — color overrides)
+     - L1 palette (_palette.uss — --base-* constants)
+
+   CONTAINER-LEVEL (LoadDesignTokenCascade):
+     - L2 aliases (_theme.uss — --thm-* via .theme-light/dark)
+     - L3 semantic (design-tokens.uss — --sus-* = var(--thm-*))
+     - icon utilities (_icon.uss — needs --sus-*)
+     - L4/L5 extras (RegisterCascadeStyleSheet — optional downstream)
+
+   Loaded by SusBootstrap.ApplyDefaultTSS(UIDocument).
+   ═══════════════════════════════════════════════════════════ */
+
+@import url("unity-theme://default");
+
+/* ── L1: Raw palette (--base-color-*, --base-space-*, --base-font-*) ──
+   BEFORE _reset.uss so the reset can reference --base-color-* directly. */
+@import url("_palette.uss");
+
+/* ── L0: Unity default overrides (uses --base-color-* from _palette.uss) ── */
+@import url("_reset.uss");
+
+/* ── L0b: .sus-label layout after unity-* class strip ── */
+@import url("_text.uss");
+
+/* ── Font definitions ── */
+@import url("_font.uss");
+
+/* ── Reset / global utilities ── */
+@import url("_global.uss");
+
+/* ── Transition presets (F1: v-if enter/leave) ── */
+@import url("_transitions.uss");

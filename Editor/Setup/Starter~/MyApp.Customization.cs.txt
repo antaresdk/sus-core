@@ -1,0 +1,30 @@
+using Sharq.Core;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+/// <summary>
+/// SUS application entry point (copied by Tools → SUS → Setup Project).
+/// Attach to a GameObject that has a UIDocument.
+/// Each Use* line is wired to Customization/ — see Customization/README.md.
+/// </summary>
+[RequireComponent(typeof(UIDocument))]
+public class {{CLASS_NAME}} : MonoBehaviour
+{
+    // Font set for the whole app — Customization/Fonts/AppFonts.asset
+    // (auto-assigned by the Setup Wizard; leave empty to keep the built-in font).
+    [SerializeField] private SusFontAsset _fonts;
+
+    private void OnEnable()
+    {
+        Sharq.Core.SusApp.Create(GetComponent<UIDocument>())
+            .UseTheme(SusTheme.Dark)
+            // Colors & sizes → Customization/Theme/Resources/branding.uss
+            .UseCustomStyles("branding")
+            // Typefaces → Customization/Fonts/AppFonts.asset
+            .UseFonts(_fonts)
+            // Project icons → Customization/Icons/Resources/SusRuntime/Icons/app/
+            // Project-local overload (no package id): scans any Assets/**/Resources folder.
+            .UseIcons(new ResourcesFolderIconProvider("app"))
+            .Mount<HomeScreen>();
+    }
+}
