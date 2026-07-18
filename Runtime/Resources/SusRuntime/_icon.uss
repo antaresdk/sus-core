@@ -1,0 +1,71 @@
+/* ── SUS Icon Utilities ────────────────────────────────────
+   Auto-loaded by SusBootstrap.LoadTokenCascade() (5th in cascade,
+   after _font).
+
+   Defines .sus-icon-bg and .icon-* utility classes consumed by
+   SusIcon and other icon-using components.
+
+   Override: place Assets/Resources/SusRuntime/_icon.uss
+             in your project to replace icon utilities.
+   ──────────────────────────────────────────────────────────── */
+
+/* ── Icon background container ───────────────────────────────
+   Used by SusIcon to center SVG icons within a fixed-size box.
+   ──────────────────────────────────────────────────────────── */
+.sus-icon-bg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ── Icon size utilities ───────────────────────────────────── */
+.icon-xs {
+    width: 12px;
+    height: 12px;
+}
+
+.icon-sm {
+    width: 16px;
+    height: 16px;
+}
+
+.icon-md {
+    width: 24px;
+    height: 24px;
+}
+
+.icon-lg {
+    width: 32px;
+    height: 32px;
+}
+
+.icon-xl {
+    width: 40px;
+    height: 40px;
+}
+
+/* ── Icon color utilities ──────────────────────────────────── */
+.icon-primary {
+    -unity-background-image-tint-color: var(--sus-primary);
+}
+
+.icon-secondary {
+    -unity-background-image-tint-color: var(--sus-text-secondary);
+}
+
+.icon-disabled {
+    -unity-background-image-tint-color: var(--sus-text-disabled);
+}
+
+.icon-error {
+    -unity-background-image-tint-color: var(--sus-color-error, var(--thm-error));
+}
+
+.icon-success {
+    -unity-background-image-tint-color: var(--sus-color-success, var(--thm-success));
+}
+
+.icon-warning {
+    -unity-background-image-tint-color: var(--sus-color-warning, var(--thm-warning));
+}

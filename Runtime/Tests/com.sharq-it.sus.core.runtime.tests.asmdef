@@ -1,0 +1,21 @@
+{
+    "name": "com.sharq-it.sus.core.runtime.tests",
+    "rootNamespace": "Sharq.Core.Runtime.Tests",
+    "references": [
+        "com.sharq-it.sus.core",
+        "UnityEngine.TestRunner"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,0 +1,59 @@
+<template>
+    <ui:VisualElement name="Root" class="#SCRIPTNAME_LOWER#-screen">
+        <ui:VisualElement name="Header" class="#SCRIPTNAME_LOWER#-screen__header">
+            <ui:Button name="BackBtn" text="←" @click="GoBack"
+                       class="#SCRIPTNAME_LOWER#-screen__back-btn" />
+            <ui:Label name="Title" text="#SCRIPTNAME#"
+                      class="#SCRIPTNAME_LOWER#-screen__title" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="Content" class="#SCRIPTNAME_LOWER#-screen__content">
+            <slot />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</template>
+
+<script>
+using Sharq.Core;
+using Sharq.Router;
+
+protected override void Mounted()
+{
+    $MainElement.style.flexGrow = 1;
+}
+
+void GoBack()
+{
+    Router.Value?.Navigate("/");
+}
+</script>
+
+<style>
+/*
+  NOTE: Sharq adds .#SCRIPTNAME_LOWER#-screen prefix to ALL rules.
+  Root styles → inline in Mounted(). Child rules (below) work correctly.
+*/
+.#SCRIPTNAME_LOWER#-screen {
+    display: flex;
+    flex-direction: column;
+}
+.#SCRIPTNAME_LOWER#-screen__header {
+    flex-direction: row;
+    align-items: center;
+    padding: 16px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sk-color-border, rgba(255, 255, 255, 0.12));
+}
+.#SCRIPTNAME_LOWER#-screen__back-btn {
+    margin-right: 16px;
+}
+.#SCRIPTNAME_LOWER#-screen__title {
+    font-size: 22px;
+    color: var(--sk-color-text-primary, white);
+}
+.#SCRIPTNAME_LOWER#-screen__content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+</style>

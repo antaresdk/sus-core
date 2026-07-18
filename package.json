@@ -1,0 +1,48 @@
+{
+  "name": "com.sharq-it.sus.core",
+  "version": "1.0.0",
+  "displayName": "SusCore",
+  "description": "Vue.js-like reactive UI framework for Unity UI Toolkit: .sharq compiler (AssetPostprocessor), reactivity (Prop<T>, Computed<T>, ReactiveEffect), directives (v-if, v-show, v-for with typed item access, slot, @event), component composition (SetChildProp/BindChildProp вЂ” case-insensitive, Prop<T>-safe mutation), SusBootstrap, SusBreakpointService, SusThemeService, SusResolutionService, SusIconRegistry, OverlayHost.",
+  "unity": "6000.0",
+  "license": "MIT",
+  "author": {
+    "name": "Sharq IT",
+    "email": "info@sharq-it.com",
+    "url": "https://github.com/antaresdk"
+  },
+  "keywords": [
+    "ui",
+    "uitoolkit",
+    "vue",
+    "reactive",
+    "sharq",
+    "sus"
+  ],
+  "homepage": "https://github.com/antaresdk/sus-core",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antaresdk/sus-core.git"
+  },
+  "documentationUrl": "https://github.com/antaresdk/sus-core/blob/main/Docs/README.md",
+  "changelogUrl": "https://github.com/antaresdk/sus-core/blob/main/CHANGELOG.md",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  },
+  "samples": [
+    {
+      "displayName": "Comp Example",
+      "description": "Component composition: SetChildProp and BindChildProp вЂ” literal and reactive props between components, mutating .Value without replacing Prop<T>.",
+      "path": "Samples~/Comp"
+    },
+    {
+      "displayName": "SusBootstrap Example",
+      "description": "Showcase of the full design-token system: themes (Dark/Light via T key), colors, fonts, sizes, reactive breakpoints, and SusIcon icons вЂ” all via var(--sus-*). Includes a ready ThemeShowcase.unity scene.",
+      "path": "Samples~/SusBootstrap"
+    },
+    {
+      "displayName": "SusKeepAlive Example",
+      "description": "SusKeepAlive example: element wrapper with hide/show toggle via display:none (DOM is preserved).",
+      "path": "Samples~/SusKeepAlive"
+    }
+  ]
+}

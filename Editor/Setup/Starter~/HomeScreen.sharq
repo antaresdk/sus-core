@@ -1,0 +1,45 @@
+<template>
+<ui:VisualElement $MainElement class="home-screen"
+                  style="flex-grow: 1; align-items: center; justify-content: center;
+                         background-color: var(--sus-bg-page);">
+
+    <ui:VisualElement class="home-screen__card"
+                      style="align-items: center; padding: 32px 40px; border-radius: 16px;
+                             background-color: var(--sus-bg-surface);
+                             border-width: 1px; border-color: var(--sus-border);">
+
+        <ui:Label class="home-screen__title" :text="Title.Value"
+                  style="font-size: 28px; color: var(--sus-text-primary);
+                         -unity-text-align: middle-center;" />
+
+        <ui:Label class="home-screen__subtitle"
+                  text="Edit HomeScreen.sharq to build your first screen."
+                  style="margin-top: 8px; font-size: 15px; color: var(--sus-text-secondary);
+                         -unity-text-align: middle-center;" />
+
+        <ui:VisualElement class="home-screen__badge"
+                          style="margin-top: 20px; padding: 6px 16px; border-radius: 20px;
+                                 background-color: var(--sus-primary);">
+            <ui:Label text="SUS"
+                      style="font-size: 13px; color: var(--sus-text-on-primary);
+                             -unity-text-align: middle-center;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:VisualElement>
+</template>
+
+<script>
+$using Sharq.Core;
+
+// Props are reactive: assign Title.Value at runtime and the label updates automatically.
+public Prop<string> Title = new("Welcome to SUS");
+</script>
+
+<style>
+/* Root/self-target styles live in inline style="" above (Sharq scoping would rewrite
+   .home-screen to ".home-screen .home-screen" and never match the root element).
+   Child-only selectors are safe here, e.g.: */
+.home-screen__card:hover {
+    border-color: var(--sus-primary);
+}
+</style>

@@ -1,0 +1,16 @@
+{
+    "name": "com.sharq-it.sus.core.examples.keepalive",
+    "rootNamespace": "Sharq.Core.Examples",
+    "references": [
+        "com.sharq-it.sus.core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

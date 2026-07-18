@@ -1,0 +1,50 @@
+/* ═══════════════════════════════════════════════════════════
+   SUS Transition presets (F1) — enter/leave classes for v-if.
+   Used by SusComponent.BindTransitionVisibility.
+   Duration: 200ms (must match SusTransition.DefaultDurationMs).
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Shared active phase ── */
+.sus-transition-enter-active,
+.sus-transition-leave-active {
+    transition-property: opacity, translate, scale;
+    transition-duration: 0.2s;
+    transition-timing-function: ease;
+}
+
+/* ── Fade ── */
+.sus-transition--fade.sus-transition-enter-from,
+.sus-transition--fade.sus-transition-leave-to {
+    opacity: 0;
+}
+
+.sus-transition--fade.sus-transition-enter-to,
+.sus-transition--fade.sus-transition-leave-from {
+    opacity: 1;
+}
+
+/* ── Slide (up) ── */
+.sus-transition--slide.sus-transition-enter-from,
+.sus-transition--slide.sus-transition-leave-to {
+    opacity: 0;
+    translate: 0 12px;
+}
+
+.sus-transition--slide.sus-transition-enter-to,
+.sus-transition--slide.sus-transition-leave-from {
+    opacity: 1;
+    translate: 0 0;
+}
+
+/* ── Scale ── */
+.sus-transition--scale.sus-transition-enter-from,
+.sus-transition--scale.sus-transition-leave-to {
+    opacity: 0;
+    scale: 0.92;
+}
+
+.sus-transition--scale.sus-transition-enter-to,
+.sus-transition--scale.sus-transition-leave-from {
+    opacity: 1;
+    scale: 1;
+}

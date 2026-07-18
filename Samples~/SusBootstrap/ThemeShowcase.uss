@@ -1,0 +1,161 @@
+/* ═══════════════════════════════════════════════════════════════
+   ThemeShowcase.uss — sus-core design-token showcase.
+   ALL values come only via var(--sus-*) (Layer 3).
+   No hardcoded rgb() — colors/sizes come from the theme.
+   Tokens are loaded onto root automatically via SusBootstrap.Mount.
+   ═══════════════════════════════════════════════════════════════ */
+
+.showcase-root {
+    flex-grow: 1;
+    background-color: var(--sus-bg-page);
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+.showcase-header {
+    flex-direction: row;
+    align-items: center;
+    padding-top: var(--sus-space-16);
+    padding-bottom: var(--sus-space-16);
+    padding-left: var(--sus-space-24);
+    padding-right: var(--sus-space-24);
+    background-color: var(--sus-bg-surface);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+}
+
+.showcase-title {
+    font-size: var(--sus-font-heading);
+    color: var(--sus-text-primary);
+}
+
+.showcase-spacer {
+    flex-grow: 1;
+}
+
+.showcase-badge {
+    padding-top: var(--sus-space-4);
+    padding-bottom: var(--sus-space-4);
+    padding-left: var(--sus-space-12);
+    padding-right: var(--sus-space-12);
+    margin-right: var(--sus-space-12);
+    background-color: var(--sus-secondary);
+    color: var(--sus-text-primary);
+    border-radius: var(--sus-radius-full);
+    font-size: var(--sus-font-small);
+    -unity-text-align: middle-center;
+}
+
+.showcase-btn {
+    padding-top: var(--sus-space-8);
+    padding-bottom: var(--sus-space-8);
+    padding-left: var(--sus-space-16);
+    padding-right: var(--sus-space-16);
+    background-color: var(--sus-primary);
+    color: var(--sus-text-on-primary);
+    border-radius: var(--sus-button-radius);
+    font-size: var(--sus-font-body);
+    -unity-text-align: middle-center;
+}
+
+.showcase-btn:hover {
+    background-color: var(--sus-primary-hover);
+}
+
+.showcase-btn:active {
+    background-color: var(--sus-primary-pressed);
+}
+
+/* ── Sections ───────────────────────────────────────────── */
+.showcase-section {
+    padding-top: var(--sus-space-16);
+    padding-left: var(--sus-space-24);
+    padding-right: var(--sus-space-24);
+}
+
+.showcase-section__title {
+    font-size: var(--sus-font-subtitle);
+    color: var(--sus-text-secondary);
+    margin-bottom: var(--sus-space-8);
+}
+
+/* ── Color swatches (Colors) ────────────────────────────── */
+.swatch-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.swatch {
+    width: 88px;
+    height: 56px;
+    margin-right: var(--sus-space-8);
+    margin-bottom: var(--sus-space-8);
+    border-radius: var(--sus-radius-md);
+    align-items: center;
+    justify-content: center;
+}
+
+.swatch__label {
+    font-size: var(--sus-font-caption);
+    color: var(--sus-text-on-primary);
+}
+
+.swatch--primary { background-color: var(--sus-primary); }
+.swatch--secondary { background-color: var(--sus-secondary); }
+.swatch--success { background-color: var(--sus-success); }
+.swatch--warning { background-color: var(--sus-warning); }
+.swatch--error { background-color: var(--sus-error); }
+
+/* ── Typography scale (Fonts / sizes) ───────────────────── */
+.type-sample {
+    color: var(--sus-text-primary);
+    margin-bottom: var(--sus-space-4);
+}
+
+.type-caption { font-size: var(--sus-font-caption); }
+.type-small { font-size: var(--sus-font-small); }
+.type-body { font-size: var(--sus-font-body); }
+.type-subtitle { font-size: var(--sus-font-subtitle); }
+.type-heading { font-size: var(--sus-font-heading); }
+.type-hero { font-size: var(--sus-font-hero); }
+
+/* ── Icons (Icons) ──────────────────────────────────────── */
+.icon-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.demo-icon {
+    width: 28px;
+    height: 28px;
+    margin-right: var(--sus-space-12);
+    margin-bottom: var(--sus-space-8);
+    /* tint: use --sus-text-primary directly —
+       the --sk-color-text-primary → var(--sus-text-primary) chain
+       does not resolve in Unity USS due to cross-sheet var(). */
+}
+
+.demo-icon .sus-icon__image {
+    -unity-background-image-tint-color: var(--sus-text-primary);
+}
+
+.demo-icon--accent {
+    -unity-background-image-tint-color: var(--sus-primary);
+}
+
+.demo-icon--success {
+    -unity-background-image-tint-color: var(--sus-success);
+}
+
+/* ── Responsive (Breakpoints) ───────────────────────────────
+   SusBreakpointService adds .breakpoint-* class on root.
+   On narrow screens shrink the title and hide the badge. Demonstrates
+   that USS rules keyed by breakpoint class override the base rules. */
+.breakpoint-sm .showcase-title {
+    font-size: var(--sus-font-title);
+}
+
+.breakpoint-sm .showcase-header {
+    padding-left: var(--sus-space-16);
+    padding-right: var(--sus-space-16);
+}

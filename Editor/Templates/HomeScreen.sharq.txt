@@ -1,0 +1,81 @@
+<template>
+    <ui:VisualElement name="Root" class="home-screen">
+<!-- Greeting -->
+        <ui:Label name="Title" class="home-screen__title" text="Welcome to SUS" />
+        <ui:Label name="Subtitle" class="home-screen__subtitle" text="Vue-like UI framework for Unity" />
+
+<!-- Go to settings screen -->
+        <ui:Button name="SettingsBtn" class="home-screen__button"
+text="Settings" @click="GoSettings" />
+
+<!-- Counter (demonstration of reactivity) -->
+        <ui:VisualElement name="Counter" class="home-screen__counter">
+            <ui:Label name="CounterLabel" :text="CountLabel" />
+            <ui:Button name="IncBtn" text="+" @click="Increment" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</template>
+
+<script>
+using Sharq.Core;
+using Sharq.Router;
+
+// Props
+public Prop<int> Count = new(0);
+
+// Computed
+public string CountLabel => $"Counter: {Count.Value}";
+
+void GoSettings()
+{
+// Go through the router
+    Router.Value?.Navigate("/settings");
+}
+
+void Increment()
+{
+    Count.Value++;
+}
+</script>
+
+<style>
+/*
+NOTE: Sharq scoping adds the .home-screen prefix to all rules.
+  Rules like .home-screen { ... } become .home-screen .home-screen — they do not match the root.
+  Root styles - via inline style on $MainElement or companion .uss.
+
+The rules for children (as below) work correctly.
+*/
+
+.home-screen {
+/* Root styles - via inline in Mounted() */
+}
+.home-screen__title {
+    font-size: 28px;
+    -unity-text-align: middle-center;
+    color: var(--sk-color-text-primary, white);
+    margin-bottom: 8px;
+}
+.home-screen__subtitle {
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    color: var(--sk-color-text-secondary, rgba(255, 255, 255, 0.6));
+    margin-bottom: 24px;
+}
+.home-screen__button {
+    margin-top: 16px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.home-screen__counter {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-top: 32px;
+}
+.home-screen__counter Label {
+    font-size: 18px;
+    color: var(--sk-color-text-primary, white);
+    margin-right: 12px;
+}
+</style>

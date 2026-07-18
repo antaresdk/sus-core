@@ -1,0 +1,83 @@
+/* ── SUS Font Family Definitions ──────────────────────────
+   Auto-loaded by SusBootstrap.LoadTokenCascade() (after _palette).
+
+   Each var(--font-family-*) resolves from --sus-font-family-* first,
+   falling back to the packaged Montserrat.
+
+   IMPORTANT: --sus-font-family-* can ONLY be set from USS — Unity has no
+   public API to set USS custom properties (--var) from C#. So:
+     • SusApp.UseFonts(SusFontAsset) / SusFontService.ApplyFonts apply ONLY
+       the Regular (body) typeface, via the inherited -unity-font-definition
+       on the root + OverlayHost. Medium/Bold/Heading/Mono are NOT changed.
+     • To override per-weight families (--sus-font-family-heading, -mono, …),
+       define them in USS: an override _font.uss or your branding.uss.
+
+   Override options:
+     • Per-weight (all families): place Assets/Resources/SusRuntime/_font.uss
+       in your project and set --sus-font-family-* there.
+     • Body-only (quick): call SusApp.UseFonts(fontAsset).
+   ──────────────────────────────────────────────────────────── */
+
+/* ── Typographic Scale (base sizes) ────────────────────────── */
+:root {
+    --base-font-size-xs:   10px;
+    --base-font-size-sm:   12px;
+    --base-font-size-md:   14px;
+    --base-font-size-lg:   16px;
+    --base-font-size-xl:   20px;
+    --base-font-size-2xl:  24px;
+    --base-font-size-3xl:  32px;
+    --base-font-size-4xl:  48px;
+
+    /* Letter-spacing (px only in USS) */
+    --base-font-tracking-tight:  -0.15px;
+    --base-font-tracking-normal:  0px;
+    --base-font-tracking-wide:    0.15px;
+}
+
+/* ── Font Families (Montserrat default, overridable via --sus-font-family-*) ── */
+:root {
+    --font-family-regular: var(--sus-font-family-regular, url("Fonts/Montserrat/Montserrat-Regular.ttf"));
+    --font-family-medium:  var(--sus-font-family-medium,  url("Fonts/Montserrat/Montserrat-Medium.ttf"));
+    --font-family-bold:    var(--sus-font-family-bold,    url("Fonts/Montserrat/Montserrat-Bold.ttf"));
+    --font-family-black:   url("Fonts/Montserrat/Montserrat-Black.ttf");
+    --font-family-italic:  url("Fonts/Montserrat/Montserrat-Italic.ttf");
+    --font-family-light:   var(--sus-font-family-light,   url("Fonts/Montserrat/Montserrat-Light.ttf"));
+    --font-family-heading: var(--sus-font-family-heading, var(--font-family-bold));
+    --font-family-mono:    var(--sus-font-family-mono,    var(--font-family-regular));
+
+    --main-font-family: var(--font-family-regular);
+    -unity-font-definition: var(--font-family-regular);
+}
+
+/* ── Semantic Size Aliases (L3) ──────────────────────────────
+   Components should reference these, NOT --base-font-size-* directly.
+   Override --sus-font-size-* in a custom USS sheet to re-scale. ── */
+:root {
+    --sus-font-size-caption:  var(--base-font-size-xs);
+    --sus-font-size-small:    var(--base-font-size-sm);
+    --sus-font-size-body:     var(--base-font-size-md);
+    --sus-font-size-subtitle: var(--base-font-size-lg);
+    --sus-font-size-heading3: var(--base-font-size-xl);
+    --sus-font-size-heading2: var(--base-font-size-2xl);
+    --sus-font-size-heading1: var(--base-font-size-3xl);
+    --sus-font-size-hero:     var(--base-font-size-4xl);
+}
+
+/* ── Kit-level Font Tokens (L4) ──────────────────────────────
+   Components consume --sk-font-*; these bridge --sus-font-*.
+   Add theme-specific overrides in suskit-theme-overrides.uss. ── */
+:root {
+    --sk-font-xsmall:  var(--sus-font-size-caption);
+    --sk-font-small:   var(--sus-font-size-small);
+    --sk-font-body:    var(--sus-font-size-body);
+    --sk-font-subtitle: var(--sus-font-size-subtitle);
+    --sk-font-heading:  var(--sus-font-size-heading1);
+
+    /* Kit font family bridges */
+    --sk-font-family-label:   var(--font-family-medium);
+    --sk-font-family-heading: var(--font-family-heading);
+    --sk-font-family-italic:  var(--font-family-italic);
+    --sk-font-family-mono:    var(--font-family-mono);
+    --sk-font-medium:         var(--font-family-medium);
+}
