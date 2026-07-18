@@ -1,0 +1,25 @@
+{
+    "name": "com.sharq-it.sus.core.editor.tests",
+    "rootNamespace": "Sharq.Core.Editor.Tests",
+    "references": [
+        "com.sharq-it.sus.core",
+        "com.sharq-it.sus.core.editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

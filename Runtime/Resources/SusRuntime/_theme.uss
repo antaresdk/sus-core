@@ -1,0 +1,174 @@
+/* ═══════════════════════════════════════════════════════════
+   L2: Theme-aliased tokens (--thm-*)
+
+   Loaded on CONTAINER level by LoadDesignTokenCascade (after L1
+   _palette.uss). .theme-dark / .theme-light CSS classes on the
+   container :root pick which block wins — CSS cascade resolves it.
+
+   ── ARCHITECTURE (two independent axes) ─────────────────────
+   THEME  = redefinition of ALIASES here: --thm-* points at a
+            different --base-* step per variant (dark ⇄ light).
+   BRAND  = redefinition of VALUES in L1 (--base-*): swap the raw
+            palette via a sheet loaded after _palette (AddStyleSheet)
+            and every --thm-* / --sus-* re-resolves automatically.
+   So colors live in exactly ONE place (L1), themes only re-alias,
+   and rebranding never touches this file or any component.
+
+   ── WHY var() chains are safe here ──────────────────────────
+   All layers are co-located on the same container/overlay element
+   (SusBootstrap loads _palette → _theme → design-tokens on the
+   container AND on OverlayHost). L3 design-tokens.uss already relies
+   on the same mechanism (--sus-*: var(--thm-*)) in production, so
+   --thm-*: var(--base-*) resolves identically.
+   (Historical note: the old "direct rgb, self-contained" comment was
+   from when --base-* lived only in panel TSS — no longer the case.)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Dark Theme (default) ─────────────────────────────────── */
+:root,
+.theme-dark {
+    /* Surface */
+    --thm-bg-page:            var(--base-color-Grey04);
+    --thm-bg-surface:         var(--base-color-Grey08);
+    --thm-bg-surface-raised:  var(--base-color-Grey12);
+    --thm-bg-surface-overlay: var(--base-color-Grey16);
+    --thm-bg-surface-variant: var(--base-color-Grey18);
+    --thm-bg-disabled:        var(--base-color-Grey40);
+
+    /* Text */
+    --thm-text-primary:       var(--base-color-Grey94);
+    --thm-text-secondary:     var(--base-color-Grey80);
+    --thm-text-disabled:      var(--base-color-Grey60);
+    --thm-text-on-primary:    var(--base-color-Grey98);
+
+    /* Border */
+    --thm-border:             var(--base-color-Grey24);
+    --thm-border-hover:       var(--base-color-Grey40);
+    --thm-border-focus:       var(--base-color-Primary50);
+
+    /* Primary */
+    --thm-primary:            var(--base-color-Primary50);
+    --thm-primary-hover:      var(--base-color-Primary70);
+    --thm-primary-pressed:    var(--base-color-Primary30);
+
+    /* Secondary (neutral) */
+    --thm-secondary:          var(--base-color-Grey24);
+    --thm-secondary-hover:    var(--base-color-Grey30);
+
+    /* Semantic — same in both themes */
+    --thm-success:            var(--base-color-Success);
+    --thm-success-hover:      var(--base-color-SuccessHover);
+    --thm-warning:            var(--base-color-Warning);
+    --thm-warning-hover:      var(--base-color-WarningHover);
+    --thm-error:              var(--base-color-Error);
+    --thm-error-hover:        var(--base-color-ErrorHover);
+    --thm-info:               var(--base-color-Info50);
+    --thm-info-hover:         var(--base-color-Info70);
+
+    /* Scrim / Overlay */
+    --thm-scrim:              var(--base-color-BlackT30);
+
+    /* Transparent surface accents (hover/selected/disabled) */
+    --thm-hover-overlay:      var(--base-color-WhiteT5);
+    --thm-selected-overlay:   var(--base-color-WhiteT10);
+    --thm-disabled-overlay:   var(--base-color-WhiteT5);
+
+    /* Game rarity / utility */
+    --thm-rare:               var(--base-color-Rare);
+    --thm-epic:               var(--base-color-Epic);
+    --thm-legendary:          var(--base-color-Legendary);
+    --thm-heal:               var(--base-color-Heal);
+    --thm-shield:             var(--base-color-Shield);
+}
+
+/* ── Light Theme (.theme-light class) ───────────────────────
+   ═══════════════════════════════════════════════════════════
+   INVERTIBLE (neutral): alias to the mirror grey step
+   (Grey96 = 255-Grey04, etc.). NON-INVERTIBLE (semantic): same
+   --base-* as dark. Text-on-primary = light grey for colored fills.
+   ═══════════════════════════════════════════════════════════ */
+.theme-light {
+    /* ════════════════════════════════════════════════
+       INVERTIBLE — neutral, aliased to the mirror step
+       ════════════════════════════════════════════════ */
+
+    /* Surface */
+    --thm-bg-page:            var(--base-color-Grey96);
+    --thm-bg-surface:         var(--base-color-Grey92);
+    --thm-bg-surface-raised:  var(--base-color-Grey88);
+    --thm-bg-surface-overlay: var(--base-color-Grey84);
+    --thm-bg-surface-variant: var(--base-color-Grey81);
+    --thm-bg-disabled:        var(--base-color-Grey60);
+
+    /* Text */
+    --thm-text-primary:       var(--base-color-Grey06);
+    --thm-text-secondary:     var(--base-color-Grey20);
+    --thm-text-disabled:      var(--base-color-Grey40);
+
+    /* Border */
+    --thm-border:             var(--base-color-Grey76);
+    --thm-border-hover:       var(--base-color-Grey60);
+
+    /* Secondary (neutral) */
+    --thm-secondary:          var(--base-color-Grey76);
+    --thm-secondary-hover:    var(--base-color-Grey70);
+
+    /* Overlay (direction flip: white→black, alpha ×1.6-2)
+       See Weber-Fechner law, W3C CSSWG #7358 */
+    --thm-hover-overlay:      var(--base-color-BlackT10);
+    --thm-selected-overlay:   var(--base-color-BlackT18);
+    --thm-disabled-overlay:   var(--base-color-BlackT10);
+
+    /* Scrim */
+    --thm-scrim:              var(--base-color-BlackT30);
+
+    /* ════════════════════════════════════════════════
+       NON-INVERTIBLE — semantic, same --base-* as dark
+       ════════════════════════════════════════════════ */
+
+    /* Primary (blue) */
+    --thm-primary:            var(--base-color-Primary50);
+    --thm-primary-hover:      var(--base-color-Primary70);
+    --thm-primary-pressed:    var(--base-color-Primary30);
+
+    /* Text on primary fill */
+    --thm-text-on-primary:    var(--base-color-Grey98);
+
+    /* Semantic — identical to dark */
+    --thm-success:            var(--base-color-Success);
+    --thm-success-hover:      var(--base-color-SuccessHover);
+    --thm-warning:            var(--base-color-Warning);
+    --thm-warning-hover:      var(--base-color-WarningHover);
+    --thm-error:              var(--base-color-Error);
+    --thm-error-hover:        var(--base-color-ErrorHover);
+    --thm-info:               var(--base-color-Info50);
+    --thm-info-hover:         var(--base-color-Info70);
+
+    /* Focus ring */
+    --thm-border-focus:       var(--base-color-Primary50);
+
+    /* Game rarity / utility */
+    --thm-rare:               var(--base-color-Rare);
+    --thm-epic:               var(--base-color-Epic);
+    --thm-legendary:          var(--base-color-Legendary);
+    --thm-heal:               var(--base-color-Heal);
+    --thm-shield:             var(--base-color-Shield);
+}
+
+/* ── Custom Theme Extension Point ────────────────────────────
+   Add new .theme-{name} blocks below. :root defaults to dark.
+   Custom blocks with the same specificity override earlier styles
+   through CSS cascade (order wins).
+
+   Example:
+   .theme-midnight {
+       --thm-bg-page:          var(--base-color-Blue02);
+       --thm-text-primary:     var(--base-color-Grey90);
+   }
+
+   Then in C#:
+   SusThemeService.Instance.SetTheme(root, new SusTheme("midnight"));
+
+   Downstream UI packages may ship their own token / theme-override USS
+   that reads the same --thm-* variables.
+   ═══════════════════════════════════════════════════════════ */

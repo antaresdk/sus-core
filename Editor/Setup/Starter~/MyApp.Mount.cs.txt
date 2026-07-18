@@ -1,0 +1,29 @@
+using Sharq.Core;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+/// <summary>
+/// SUS application entry point (copied by Tools → SUS → Setup Project).
+/// Attach to a GameObject that has a UIDocument.
+/// Uses <c>Sharq.Core.SusApp</c> explicitly to avoid clashing with legacy global SusApp types.
+/// </summary>
+[RequireComponent(typeof(UIDocument))]
+public class {{CLASS_NAME}} : MonoBehaviour
+{
+    private void OnEnable()
+    {
+        // Fluent bootstrap: TSS → cascade → OverlayHost → world panel → mount → theme.
+        Sharq.Core.SusApp.Create(GetComponent<UIDocument>())
+            .UseTheme(SusTheme.Dark)
+            .Mount<HomeScreen>();
+
+        // ── Multi-screen navigation (install sus-router, then use): ──
+        // Sharq.Core.SusApp.Create(GetComponent<UIDocument>())
+        //     .UseTheme(SusTheme.Dark)
+        //     .UseRouter(new Sharq.Router.SusRouter(), routes =>
+        //     {
+        //         routes.Register("/", typeof(HomeScreen));
+        //     }, initialPath: "/")
+        //     .Run();
+    }
+}

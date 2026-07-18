@@ -1,0 +1,23 @@
+/* ═══════════════════════════════════════════════════════════
+   L0b: SUS text element defaults (replaces layout from unity-label)
+
+   After SusLabelClassService strips unity-* classes, Labels lose
+   Unity Default Theme flex-shrink:0 / intrinsic sizing hints and
+   collapse to 0 height inside flex parents.
+
+   We do NOT restore unity-label. Instead every stripped Label gets
+   class "sus-label" with height driven by glyph metrics (no fixed
+   min-height) and flex-shrink:0 so text is not crushed to 0.
+   ═══════════════════════════════════════════════════════════ */
+
+.sus-label {
+    /* Keep intrinsic text height — do not set height / min-height */
+    flex-grow: 0;
+    flex-shrink: 0;
+    overflow: visible;
+    white-space: normal;
+    /* After stripping unity-label, color/font no longer come from TSS —
+       without these, labels collapse to 0×0 when panel theme has no font. */
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+    -unity-font-definition: var(--font-family-regular, var(--main-font-family));
+}

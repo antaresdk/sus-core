@@ -1,0 +1,106 @@
+/* ═══════════════════════════════════════════════════════════
+   L0: Unity Default TSS — full reset of all text classes
+
+   Panel-level (SusDefault.tss imports _palette.uss BEFORE this file,
+   so --base-color-* are available).
+
+   Grey94 = rgb(240,240,240) — dark-theme default for text.
+   A downstream base stylesheet may override with theme-sensitive
+   --sk-* tokens (text color + font family).
+
+   USS priority: element.styleSheets > panel.themeStyleSheet,
+   so a container-level base sheet wins over _reset.uss (panel TSS).
+
+   NOTE: No -unity-font-style anywhere. Font switching is done
+   via -unity-font-definition using actual font file variables
+   (--font-family-regular/medium/bold), not CSS font-style.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Generic text elements ── */
+.unity-label,
+.unity-text-element {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── Button (all states) ── */
+.unity-button,
+.unity-button__label {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── Toggle (label, checkmark text) ── */
+.unity-toggle,
+.unity-toggle__label,
+.unity-toggle__checkmark,
+.unity-toggle__input {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── TextField + BaseTextField — label, input, placeholder ── */
+.unity-text-field,
+.unity-text-field__label,
+.unity-text-field__input,
+.unity-text-field__placeholder,
+.unity-base-text-field,
+.unity-base-text-field__label,
+.unity-base-text-field__input,
+.unity-base-text-field__placeholder {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── Slider (label, value) ── */
+.unity-base-slider,
+.unity-base-slider__label,
+.unity-slider,
+.unity-slider__label,
+.unity-slider__value {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── ScrollView (drag/drop labels) ── */
+.unity-scroll-view,
+.unity-scroll-view__content-container {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── Foldout (accordion headers) ── */
+.unity-foldout,
+.unity-foldout__label,
+.unity-foldout__checkmark {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── Dropdown / Popup ── */
+.unity-popup-window,
+.unity-base-popup-field,
+.unity-base-popup-field__label,
+.unity-base-popup-field__input,
+.unity-base-popup-field__text {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── ListView / TreeView — list items ── */
+.unity-collection-view,
+.unity-list-view__item,
+.unity-tree-view__item,
+.unity-list-view__item__label,
+.unity-tree-view__item__label {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── EnumField / IntegerField / FloatField (all numeric inputs) ── */
+.unity-base-field,
+.unity-base-field__label,
+.unity-base-field__input,
+.unity-enum-field,
+.unity-integer-field,
+.unity-float-field {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}
+
+/* ── ProgressBar (inner text) ── */
+.unity-progress-bar,
+.unity-progress-bar__title,
+.unity-progress-bar__progress {
+    color: var(--base-color-Grey94, rgb(240, 240, 240));
+}

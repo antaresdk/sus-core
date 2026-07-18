@@ -1,0 +1,44 @@
+# Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]in/
+/[Oo]bj/
+
+# .NET build output (Tools~/SharqBootstrap and any nested projects)
+# Tools~ is a ~-suffixed folder so Unity never imports it (source or build output).
+[Bb]in/
+[Oo]bj/
+Tools~/**/bin/
+Tools~/**/obj/
+
+# IDE
+.idea/
+.vs/
+*.sln.DotSettings.user
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local build leftovers (never ship in package)
+Editor/bin/
+Editor/obj/
+Editor/bin.meta
+Editor/obj.meta
+
+.commitmsg
+.commitmsg.meta
+
+# Unity ignores folders ending with "~". A folder .meta for those paths makes the
+# Editor spam: "A meta data file (.meta) exists but its folder '…~' can't be found".
+# Do not commit folder metas for Documentation~, Tools~, Samples~, Starter~, etc.
+*~.meta
+
+# Internal planning (not part of the public package surface)
+/roadmap/
+
