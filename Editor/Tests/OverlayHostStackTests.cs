@@ -45,10 +45,10 @@ namespace Sharq.Core.Editor.Tests
 
             var stack = _host.Stack;
             Assert.AreEqual(3, stack.Count);
-            // Ascending order: Transition(10) → Tooltip(20) → Modal(40)
+            // Ascending: Transition(10) → Modal(20) → Tooltip(30) — tooltips above modals
             Assert.AreEqual(OverlayCategory.Transition, stack[0].Category);
-            Assert.AreEqual(OverlayCategory.Tooltip, stack[1].Category);
-            Assert.AreEqual(OverlayCategory.Modal, stack[2].Category);
+            Assert.AreEqual(OverlayCategory.Modal, stack[1].Category);
+            Assert.AreEqual(OverlayCategory.Tooltip, stack[2].Category);
         }
 
         [Test]
