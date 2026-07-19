@@ -18,8 +18,8 @@ function Test-UnityHiddenTildePath {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
-# Only run when there are staged changes
-$staged = git diff --cached --name-only 2>$null
+# Only run when there are staged changes (skip deleted paths — they must not get new .meta)
+$staged = git diff --cached --name-only --diff-filter=ACM 2>$null
 if (-not $staged) { exit 0 }
 
 # Collect all known entries (both in index and working tree)

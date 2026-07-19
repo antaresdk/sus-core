@@ -1,6 +1,7 @@
 # commit-msg — last-chance strip of Cursor attribution trailers
 param(
-    [Parameter(Mandatory = $true)][string]$CommitMsgFile
+    [Parameter(Mandatory = $true, Position = 0)][string]$CommitMsgFile,
+    [Parameter(ValueFromRemainingArguments = $true)][object[]]$Unused
 )
 
 if (-not (Test-Path $CommitMsgFile)) { exit 0 }
