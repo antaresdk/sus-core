@@ -110,7 +110,8 @@ namespace Sharq.Core
             TryLoadAndAdd(container, ResourcePath + "_icon");        // icon utilities (needs --sus-*)
             LoadExtraCascadeSheets(container);                        // L4/L5 downstream tokens+styles
 
-            // Resolution axis: root .breakpoint-* (+ optional downstream breakpoint USS).
+            // Resolution axis removed: .breakpoint-* only (driven like old
+            // SusResolutionService — cascadeRoot.resolvedStyle.width on geometry).
             SusBreakpointService.Attach(container);
 
             SusDensityService.Attach(container);

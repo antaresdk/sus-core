@@ -685,12 +685,20 @@ namespace Sharq.Core
 #endif
 
             BreakpointService?.UpdateFromElement(this);
-            // resolution-* classes must sit on the cascade root (same as theme/breakpoints),
-            // not panel.visualTree — USS sheets are attached to UIDocument.rootVisualElement.
+
+            // Same path as deleted SusResolutionService: push cascade-root width
+            // explicitly so .breakpoint-* stays on the token root even if the
+            // per-component service lookup is still warming up.
             var cascadeRoot = SusBootstrap.TokenCascadeRoot
                 ?? SusThemeService.ResolveCascadeRoot(this);
             if (cascadeRoot != null && cascadeRoot.panel != null)
-                SusResolutionService.Instance.Update(cascadeRoot, cascadeRoot.resolvedStyle.width);
+            {
+                var w = cascadeRoot.resolvedStyle.width;
+                if (float.IsNaN(w) || w <= 0f)
+                    w = cascadeRoot.layout.width;
+                if (!float.IsNaN(w) && w > 0f)
+                    SusBreakpointService.Attach(cascadeRoot).Update(w);
+            }
         }
 
         private void OnDetachFromPanelHandler(DetachFromPanelEvent evt)

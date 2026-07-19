@@ -13,7 +13,7 @@
 3. [Colors: three-layer token system](#3-colors-three-layer-token-system)
 4. [Icons: Phosphor Icons](#4-icons-phosphor-icons)
 5. [Themes: switching Light/Dark](#5-themes-switching-light-dark)
-6. [Screen resolutions (High/Low)](#6-screen-resolutions-high-low)
+6. [Responsive breakpoints](#6-responsive-breakpoints)
 7. [Bootstrap: how everything is put together](#7-bootstrap-how-everything-is-put-together)
 8. [File structure](#8-file-structure)
 9. [Task list](#9-task-list)
@@ -33,7 +33,7 @@
 ```
 The component writes: And receives:
   color: var(--sus-text-primary) → rgba(255,255,255,1) (in dark theme)
-  font-size: var(--sus-font-16) → 16px (on High resolution)
+  font-size: var(--sus-font-16) → 16px (from design tokens / breakpoints)
   -unity-font: var(--main-font-family) → Montserrat Regular
 ```
 
@@ -68,9 +68,10 @@ Theme is switched by adding/removing `.theme-dark` / `.theme-light` on the casca
 
 ### 1.3 How it works in the old scheme
 
-`SusDataManager.LoadUIResolutionThemes()` creates 6 theme presets (Dark/Light/CustomLight × High/Low), sets ` panel.themeStyleSheet` to one of `.tss`- entry points. `.tss` through `@import url(...)` builds a chain of three layers.
-
-**In SUS this is simplified** - fewer presets (Dark/Light only), less `.tss`-files, ` ThemeStyleSheet` is replaced by directly adding USS to ` root.styleSheets` through ` SusBootstrap`.
+`SusDataManager.LoadUIResolutionThemes()` (legacy) created multiple theme presets.
+**In SUS this is simplified** — Dark/Light only via `.theme-*` classes; screen-size adaptation
+is **breakpoints only** (`SusBreakpointService` + `.breakpoint-*` token overrides). See
+[06-responsive.md](./06-responsive.md).
 
 ---
 
@@ -458,7 +459,7 @@ Two constructors:
   ship icons inside your own package. Do **not** pass `"com.sharq-it.sus.core"` for your project
   icons — that points the scan at the core package.
 
-### 4.2 How resolution works
+### 4.2 How icon lookup works
 
 ```
 SusIcon / SusIconRegistry.Load(alias, weight)
@@ -630,83 +631,22 @@ receives the theme class. Prefer that path over manual `styleSheets.Add`.
 
 
 
-## 6. Screen resolutions (High/Low)
+## 6. Responsive breakpoints
 
+Screen-size adaptation is **only** `SusBreakpointService` (classes `.breakpoint-sm` …
+`.breakpoint-2xl` on the cascade root). There is no High/Low resolution axis and no
+automatic UI scale tied to monitor size.
 
+Width is read from **`cascadeRoot.resolvedStyle.width`** on geometry changes (same
+feed path as the removed `SusResolutionService`), with panel / Screen fallbacks
+only when the root is not laid out yet. See [06-responsive.md](./06-responsive.md).
 
-### 6.1 Breakpoint
+Downstream token sheets (e.g. kit `downstream-tokens.uss`) override `--sk-*` under those classes
+(heights, spacing, fonts). Components already consume `var(--sk-*)` — they pick up the
+active breakpoint without per-component C#.
 
-**1600px** (`SusResolutionService.ThresholdHigh`) — scale UI for wide (High) vs narrower (Low).
-
-### 6.2 Mechanics
-
-`SusResolutionService` (sus-core) only **toggles the class** `resolution-high` / `resolution-low`
-on the cascade root. The actual scaling **USS rules may live in a downstream UI package**
-(Layer 4 token sheets) — core's `_palette.uss` defines the base `--base-*` values but does
-**not** ship `.resolution-*` overrides. So:
-
-- **With a downstream UI package installed:** the classes scale `--base-*` automatically (rules below).
-- **Core-only:** the classes are added but nothing changes unless you define your own
-  `.resolution-low` / `.resolution-high` rules in a project USS.
-
-```css
-/* Example downstream package Layer-4 USS (base values come from core _palette.uss) */
-:root {
-    /* HIGH (>=1600px) — default */
-    --base-space-4:   4px;
-    --base-space-8:   8px;
-    --base-space-16:  16px;
-    /* ... font sizes, radii ... */
-}
-
-/* LOW (<1600px) — scaled through the class on root */
-.resolution-low {
-    --base-space-4:   3px;
-    --base-space-8:   6px;
-    --base-space-16:  12px;
-    /* ... font sizes, radii — scaled ... */
-}
-```
-
-> Not to be confused with `SusBreakpointService` (sm/md/lg/xl `.breakpoint-*` classes, see
-> [06-responsive.md](./06-responsive.md)). Resolution = one 1600px High/Low axis for global UI
-> scale; breakpoints = layout adaptation at multiple widths.
-
-In C# — `SusResolutionService` (singleton; no ` IsHighResolution` prop):
-
-```csharp
-// sus-core/Runtime/SusResolutionService.cs
-namespace Sharq.Core
-{
-    public class SusResolutionService
-    {
-        public static readonly SusResolutionService Instance = new();
-        public const float ThresholdHigh = 1600f;
-
-        public void Update(VisualElement root, float logicalWidth)
-        {
-            if (logicalWidth >= ThresholdHigh)
-            {
-                root.RemoveFromClassList("resolution-low");
-                root.AddToClassList("resolution-high");
-            }
-            else
-            {
-                root.RemoveFromClassList("resolution-high");
-                root.AddToClassList("resolution-low");
-            }
-        }
-    }
-}
-```
-
-`SusComponent.Updated()` calls
-`SusResolutionService.Instance.Update(cascadeRoot, cascadeRoot.resolvedStyle.width)` —
-automatic switching. Manual call:
-
-```csharp
-SusResolutionService.Instance.Update(root, root.resolvedStyle.width);
-```
+PanelSettings for samples/wizard use **ConstantPixelSize** so breakpoint width matches
+the panel (no Unity `ScaleWithScreenSize` auto-scale).
 
 ---
 
@@ -814,7 +754,7 @@ sus-core/
 │   │       ├── core/{regular,fill}/
 │   │       └── phosphor/{thin,light,regular,bold,fill,duotone}/
 │   ├── SusTheme.cs / Services/SusThemeService.cs
-│   ├── SusResolutionService.cs
+│   ├── SusBreakpointService.cs
 │   ├── SusIconRegistry.cs + icon providers
 │   ├── SusIcon.cs
 │   ├── SusApp.cs
@@ -870,14 +810,14 @@ Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
 
 
 
-### Phase C: Dimensions and resolutions
+### Phase C: Dimensions and breakpoints
 
 
 | # | Problem | Files | Status |
 | --- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------- |
 | C1 | Spacing, font-size, radius — in `_palette.uss` Layer 1 | ` sus-core/.../SusRuntime/_palette.uss` | ✅ |
-| C2 | Create `SusResolutionService` — ` ThresholdHigh` 1600, `.resolution-low`/`.resolution-high` | ` SusResolutionService.cs` | ✅ |
-| C3 | Integrate `SusResolutionService.Instance.Update(root, width)` in ` SusComponent.Updated()` | ` SusComponent.cs` | ✅ |
+| C2 | Breakpoint `--sk-*` overrides (sole screen-size axis) | kit `downstream-tokens.uss` | ✅ |
+| C3 | `SusBreakpointService` geometry auto-update | ` SusBreakpointService.cs`, ` SusComponent.cs` | ✅ |
 
 
 
@@ -905,7 +845,7 @@ Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
 | --- | ------------------------------------------------------------------------- | ---------------------------------- | -------- |
 | E1  | `SusBootstrap` / ` SusApp` — full cascade + OverlayHost | ` SusBootstrap.cs`, ` SusApp.cs` | ✅ |
 | E2 | Cascade on container: `_palette` → `_font` → `_theme` → ` design-tokens` → `_icon` | ` LoadDesignTokenCascade` | ✅ |
-| E3 | `SusResolutionService.Instance.Update` in ` SusComponent.Updated()` | ` SusComponent.cs` | ✅ |
+| E3 | Breakpoint class updates from geometry | ` SusComponent.cs` | ✅ |
 
 
 
