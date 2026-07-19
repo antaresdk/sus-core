@@ -314,10 +314,8 @@ namespace Sharq.Core.Editor
 
             var ps = ScriptableObject.CreateInstance<PanelSettings>();
             ps.name = Path.GetFileNameWithoutExtension(assetPath);
-            ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            ps.referenceResolution = new Vector2Int(1920, 1080);
-            ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
-            ps.match = 0.5f;
+            // ConstantPixelSize: breakpoints see real panel width — no Unity auto-scale.
+            ps.scaleMode = PanelScaleMode.ConstantPixelSize;
             AssetDatabase.CreateAsset(ps, assetPath);
             return ps;
         }

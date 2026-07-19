@@ -5,6 +5,16 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-07-19
+
+### Changed
+- Setup wizard PanelSettings default: `ConstantPixelSize` (no Unity auto-scale)
+- Docs: responsive = `SusBreakpointService` only; width from cascade root `resolvedStyle` (same path as removed resolution service)
+- `SusBreakpointService`: geometry push from every `SusComponent`, panel poll hook, optional `SetOverride` for Storybook/QA
+
+### Removed
+- `SusResolutionService` and High/Low resolution classes — screen adaptation is breakpoints only
+
 ## [1.0.3] - 2026-07-19
 
 ### Fixed

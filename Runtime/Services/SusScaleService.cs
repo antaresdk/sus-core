@@ -4,22 +4,9 @@ using UnityEngine.UIElements;
 namespace Sharq.Core
 {
     /// <summary>
-    /// Global scale service — applies a uniform scale factor to the root
-    /// VisualElement via style.scale (transform). Useful for accessibility,
-    /// 4K monitors, and couch-gaming.
-    ///
-    /// For component-level fine-grained control, CSS variable --sk-scale
-    /// (default 1 in a downstream token sheet) can be used with calc():
-    ///   width: calc(40px * var(--sk-scale));
-    ///
-    /// Usage:
-    /// <code>
-    /// // One-shot apply
-    /// SusScaleService.Instance.SetScale(root, 1.25f);
-    ///
-    /// // React to scale changes
-    /// Watch(SusScaleService.Current, (_, next) => AdaptTo(next));
-    /// </code>
+    /// Global scale service — **manual** accessibility zoom via root.style.scale.
+    /// Not used for screen-size adaptation (that is SusBreakpointService only).
+    /// Default remains 1.0; call SetScale only when the product explicitly offers zoom.
     /// </summary>
     public class SusScaleService
     {
