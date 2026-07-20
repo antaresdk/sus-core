@@ -321,20 +321,27 @@ namespace Sharq.Core
 
             RepositionFloating(popup, anchor);
 
+            // originalParent: null — do not reparent back to the field on Hide.
+            // Reparenting caused SusScrollView (inside popup) to Attach/Detach on every
+            // open/close and tripped RemountLoopAudit during rapid toggles.
             ShowFloating(popup, anchor, OverlayCategory.Dropdown,
                 onClose: onClose,
                 closeOthers: true,
-                originalParent: anchor);
+                originalParent: null);
         }
 
         public static void Hide(VisualElement popup, VisualElement originalParent)
         {
             if (popup == null) return;
-            for (int i = _floatings.Count - 1; i >= 0; i--)
+            // Only restore a parent when caller explicitly opts in AND Show left it unset.
+            // Select/Dropdown pass null to park the popup detached until the next Show.
+            if (originalParent != null)
             {
-                if (_floatings[i].Overlay == popup && originalParent != null
-                    && _floatings[i].OriginalParent == null)
-                    _floatings[i].OriginalParent = originalParent;
+                for (int i = _floatings.Count - 1; i >= 0; i--)
+                {
+                    if (_floatings[i].Overlay == popup && _floatings[i].OriginalParent == null)
+                        _floatings[i].OriginalParent = originalParent;
+                }
             }
             HideFloating(popup);
         }

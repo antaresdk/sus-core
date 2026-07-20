@@ -118,19 +118,26 @@ namespace Sharq.Core
             InstallClickGuard();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            // OverlayAudit: warn if overlay has clickable children that may block underlying UI
-            var pickableCount = 0;
-            element.Query<VisualElement>().ForEach(e =>
+            // OverlayAudit: full-screen / blocking overlays with accidental pickable chrome.
+            // Dropdown/Tooltip intentionally host interactive children (list rows, links) —
+            // do not warn for those categories (false positive for Select/Menu).
+            if (category != OverlayCategory.Modal
+                && category != OverlayCategory.Dropdown
+                && category != OverlayCategory.Tooltip)
             {
-                if (e.pickingMode == PickingMode.Position && e.visible)
-                    pickableCount++;
-            });
-            if (pickableCount > 0 && category != OverlayCategory.Modal)
-            {
-                Debug.LogWarning($"[OverlayAudit] '{element.GetType().Name}' added to overlay " +
-                    $"in {category} category with {pickableCount} pickable children. " +
-                    $"It may block clicks to underlying UI. " +
-                    $"Consider setting pickingMode=Ignore on children.");
+                var pickableCount = 0;
+                element.Query<VisualElement>().ForEach(e =>
+                {
+                    if (e.pickingMode == PickingMode.Position && e.visible)
+                        pickableCount++;
+                });
+                if (pickableCount > 0)
+                {
+                    Debug.LogWarning($"[OverlayAudit] '{element.GetType().Name}' added to overlay " +
+                        $"in {category} category with {pickableCount} pickable children. " +
+                        $"It may block clicks to underlying UI. " +
+                        $"Consider setting pickingMode=Ignore on children.");
+                }
             }
 
             // ModalStackDepthAudit: warn if too many modals are layered

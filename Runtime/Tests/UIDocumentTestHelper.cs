@@ -54,6 +54,13 @@ namespace Sharq.Core.Runtime.Tests
             settings.scaleMode = PanelScaleMode.ConstantPixelSize;
             settings.referenceResolution = new Vector2Int(1920, 1080);
             settings.match = 0.5f;
+
+            // Avoid console error: "No Theme Style Sheet set to PanelSettings …"
+            // Same default TSS as SusBootstrap (Resources/SusRuntime/SusDefault.tss).
+            var tss = Resources.Load<ThemeStyleSheet>("SusRuntime/SusDefault");
+            if (tss != null)
+                settings.themeStyleSheet = tss;
+
             return settings;
         }
 

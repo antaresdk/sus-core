@@ -532,10 +532,20 @@ namespace Sharq.Core
                 if (panel == null) return;
                 var wb = worldBound;
                 if (wb.width <= 0 || wb.height <= 0)
+                {
+                    // Decorative (Ignore) or collapsed (display:none self/ancestor) — not a hit-target bug.
+                    if (pickingMode == PickingMode.Ignore) return;
+                    if (resolvedStyle.display == DisplayStyle.None) return;
+                    for (var p = parent; p != null; p = p.parent)
+                    {
+                        if (p.resolvedStyle.display == DisplayStyle.None)
+                            return;
+                    }
                     UnityEngine.Debug.LogWarning($"[BoundsAudit] '{GetType().Name}' has zero bounds after mount " +
                         $"({wb.width:F0}×{wb.height:F0}). display={resolvedStyle.display}, " +
                         $"visible={visible}, pickingMode={pickingMode}. " +
                         $"Clicks will NOT reach this element.");
+                }
 
                 // ClickTargetSizeAudit: for interactive elements, check minimum tap target
                 if (!string.IsNullOrEmpty(_clickAuditDescription))
