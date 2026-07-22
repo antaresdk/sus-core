@@ -72,20 +72,50 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// UI Toolkit requires an EventSystem to process clicks/input.
-        /// Ensured once on first Mount() — idempotent across multiple calls.
-        /// Public so the <see cref="SusApp"/> facade can guarantee it for router/manual
-        /// apps that never go through <see cref="Mount{T}(VisualElement)"/>.
+        /// UI Toolkit requires an EventSystem + input module to process clicks/input.
+        /// Idempotent. Public so the <see cref="SusApp"/> facade can guarantee it for
+        /// router/manual apps that never go through <see cref="Mount{T}(VisualElement)"/>.
         /// </summary>
         public static void EnsureEventSystem()
         {
-            if (s_eventSystemEnsured) return;
-            s_eventSystemEnsured = true;
+            var existing = UnityEngine.EventSystems.EventSystem.current;
+            if (existing != null)
+            {
+                EnsureInputModule(existing.gameObject);
+                s_eventSystemEnsured = true;
+                return;
+            }
 
-            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            if (s_eventSystemEnsured)
+            {
+                // Flag set but EventSystem destroyed (domain / scene unload) — recreate.
+            }
 
             var go = new GameObject("EventSystem (SusBootstrap)");
             go.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            EnsureInputModule(go);
+            s_eventSystemEnsured = true;
+        }
+
+        /// <summary>
+        /// EventSystem alone is not enough — without a BaseInputModule UITK/uGUI
+        /// receive no pointer events (buttons look fine but never click).
+        /// </summary>
+        static void EnsureInputModule(UnityEngine.GameObject go)
+        {
+            if (go == null) return;
+            if (go.GetComponent<UnityEngine.EventSystems.BaseInputModule>() != null) return;
+
+#if ENABLE_INPUT_SYSTEM && !ENABLE_LEGACY_INPUT_MANAGER
+            var inputSystemType = System.Type.GetType(
+                "UnityEngine.InputSystem.UI.InputSystemUIInputModule, Unity.InputSystem");
+            if (inputSystemType != null)
+            {
+                go.AddComponent(inputSystemType);
+                return;
+            }
+#endif
+            go.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
 
         /// <summary>
