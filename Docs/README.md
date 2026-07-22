@@ -55,7 +55,7 @@ public class AppEntry : MonoBehaviour
 - **I want to start from scratch** → [00-integration.md](./00-integration.md)
 - **I want to understand the syntax of `.sharq`** → [02-sharq-format.md](./02-sharq-format.md)
 - **I want to understand Prop&lt;T&gt; and Computed&lt;T&gt;** → [03-reactivity.md](./03-reactivity.md)
-- **I want to make a modal/tooltip** → [07-overlayhost.md](./07-overlayhost.md)
+- **I want to make a modal/tooltip** → [07-overlayhost.md](./07-overlayhost.md) · kit [Tooltips](/docs/guide/tooltips)
 - **I want the full API** → [11-api-reference.md](./11-api-reference.md)
 - **I want to run an example** → [12-examples.md](./12-examples.md)
 - **I want to know about built-in audits (Debug/QA)** → [13-audits.md](./13-audits.md)
