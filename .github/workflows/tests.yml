@@ -1,0 +1,49 @@
+name: tests
+# Unity Test Runner for this UPM package via GameCI.
+#
+# REQUIRES setup (see planning/CI-SETUP.md in the umbrella repo):
+#   1. Secrets: UNITY_LICENSE (Personal) OR UNITY_EMAIL+UNITY_PASSWORD+UNITY_SERIAL (Plus/Pro).
+#   2. A package is not a Unity project, so CI scaffolds a minimal host project
+#      and embeds the package via file:. The com.unity.test-framework version may
+#      need adjusting for Unity 6000.3.17f1.
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pkg
+          lfs: true
+      - name: Scaffold host project
+        run: |
+          mkdir -p HostProject/Packages HostProject/ProjectSettings HostProject/Assets
+          echo 'm_EditorVersion: 6000.3.17f1' > HostProject/ProjectSettings/ProjectVersion.txt
+          cat > HostProject/Packages/manifest.json <<'JSON'
+          {
+            "dependencies": {
+              "com.sharq-it.sus.core": "file:../../pkg",
+              "com.unity.test-framework": "1.4.5"
+            },
+            "testables": ["com.sharq-it.sus.core"]
+          }
+          JSON
+      - uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: HostProject
+          unityVersion: 6000.3.17f1
+          testMode: all
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: artifacts
