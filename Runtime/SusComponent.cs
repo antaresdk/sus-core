@@ -508,6 +508,7 @@ namespace Sharq.Core
         private double _remountWindowStart;
         private int _layoutReentryCount;
         private double _layoutReentryWindow;
+        private bool _layoutReentryWarnedThisWindow;
 #endif
 
         protected SusComponent()
@@ -686,12 +687,17 @@ namespace Sharq.Core
             {
                 _layoutReentryCount = 0;
                 _layoutReentryWindow = now;
+                _layoutReentryWarnedThisWindow = false;
             }
             _layoutReentryCount++;
-            if (_layoutReentryCount > 20)
+            // Once per 500ms window — continuous warn flooded battle logs (GAP-20260729-001 T09).
+            if (_layoutReentryCount > 20 && !_layoutReentryWarnedThisWindow)
+            {
+                _layoutReentryWarnedThisWindow = true;
                 UnityEngine.Debug.LogWarning($"[LayoutReentryAudit] '{GetType().Name}' " +
-                    $"{_layoutReentryCount} geometry changes in 500ms. " +
+                    $"{_layoutReentryCount}+ geometry changes in 500ms. " +
                     $"Possible layout loop — WatchEffect modifying size/position.");
+            }
 #endif
 
             BreakpointService?.UpdateFromElement(this);
