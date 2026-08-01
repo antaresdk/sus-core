@@ -23,6 +23,9 @@ namespace Sharq.Core
         private static readonly Dictionary<VisualElement, SusBreakpointService> s_cache = new();
         private static readonly SusBreakpointService s_nullFallback = new();
 
+        /// <summary>Opt-in breakpoint-change logging (off by default; Storybook/QA may enable).</summary>
+        public bool VerboseLogging;
+
         /// <summary>Get-or-create the shared service for a root VisualElement.</summary>
         public static SusBreakpointService For(VisualElement root)
         {
@@ -174,7 +177,7 @@ namespace Sharq.Core
                 Current.Value = breakpoint.Value;
                 _lastWidth = float.NaN;
                 ApplyClass(force: true);
-                if (prev != Current.Value)
+                if (prev != Current.Value && VerboseLogging)
                     Debug.Log($"[SusBreakpoint] override {prev} → {Current.Value}");
             }
             else
@@ -219,7 +222,7 @@ namespace Sharq.Core
             };
             ApplyClass();
 
-            if (prev != Current.Value)
+            if (prev != Current.Value && VerboseLogging)
                 Debug.Log($"[SusBreakpoint] {prev} → {Current.Value} @ {logicalWidth:F0}px (class={ClassFor(Current.Value)})");
         }
 
