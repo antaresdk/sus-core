@@ -2,7 +2,7 @@
 
 **Foundation of the SUS UI system.** Analogue of Vue.js — reactivity, SFC compiler, directives, slots, CSS scoped, themes, breakpoints, world-space, console.
 
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.2`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.5`)
 
 ---
 
