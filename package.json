@@ -1,6 +1,6 @@
 ﻿{
   "name": "com.sharq-it.sus.core",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "displayName": "SusCore",
   "description": "Vue.js-like reactive UI framework for Unity UI Toolkit: .sharq compiler (AssetPostprocessor), reactivity (Prop<T>, Computed<T>, ReactiveEffect), directives (v-if, v-show, v-for with typed item access, slot, @event), component composition (SetChildProp/BindChildProp — case-insensitive, Prop<T>-safe mutation), SusBootstrap, SusBreakpointService, SusThemeService, SusIconRegistry, OverlayHost.",
   "unity": "6000.0",
