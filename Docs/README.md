@@ -21,7 +21,7 @@
 | 11 | [API Reference](./11-api-reference.md) | SusApp, SusComponent, Bind helpers, SusBootstrap |
 | 12 | [Running examples](./12-examples.md) | SusBootstrap + SusKeepAlive examples from Samples~ |
 | 13 | [Built-in audits (Debug / QA)](./13-audits.md) | ClickAudit, BoundsAudit, CallbackAudit, OverlayAudit, StateAudit, LifecycleAudit, … |
-| 14 | [Roadmap / Plans](./../roadmap/ROADMAP.md) | Tooltip, WorldSpace (healthbar/nameplate/floating damage) |
+| 18 | [MCP / AI probe](./18-mcp.md) | SusUiProbe JSON facade (tree/props/health), MCP phases |
 | 17 | [Dev console](./17-console.md) | SusConsoleService, hotkey `~`, OverlayCategory.Console |
 | — | [Design tokens](./DESIGN_TOKENS.md) | Stub → eng canon `internal-docs/ui/theme/DESIGN_TOKENS.md` (+ plan) |
 | — | [Audit vs Vue](./VUE_NOTES.md) | Stub → eng canon `internal-docs/sus/VUE_NOTES.md` (+ plan) |
@@ -71,3 +71,5 @@ public class AppEntry : MonoBehaviour
 - [Design tokens](./DESIGN_TOKENS.md) - stub → eng theming canon
 - [OverlayHost and portals](./07-overlayhost.md) - overlays: tooltips, popups, modals
 - [Audit vs Vue](./VUE_NOTES.md) - stub → eng Vue parity canon
+
+- [Integration known issues](./SUS_INTEGRATION_KNOWN_ISSUES.md) — resolved-issue log from consumer integration

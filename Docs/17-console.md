@@ -2,7 +2,6 @@
 
 > Service:`SusConsoleService` (sus-core/Runtime/Services/)
 > Driver:`SusConsoleDriver` (sus-core/Runtime/Services/)
-> Parent plan: [LAYER-CONSOLE.md](../roadmap/LAYER-CONSOLE.md)
 
 ---
 
