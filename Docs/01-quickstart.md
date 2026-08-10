@@ -162,9 +162,11 @@ instead:
 
 **Via Unity Package Manager (Git URL):**
 
+<!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git
+https://github.com/antaresdk/sus-core.git#v1.0.6
 ```
+<!-- /sus:gen -->
 
 ---
 
