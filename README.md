@@ -66,6 +66,20 @@ Configuration (`Assets/sus.config.json`):
 }
 ```
 
+## Built on sus-core
+
+`sus-core` itself has no visible widgets — it's the reactivity engine, theming cascade, OverlayHost and
+compiler that everything else in SUS renders through. Here's what that looks like once
+[`downstream library`](https://github.com/antaresdk/downstream library) components sit on top of it: <!-- sus:ok repo-ссылка, не install-тег -->
+
+<table>
+<tr>
+<td><img src="Documentation~/images/kit-app-bar.png" width="260" alt="Theme tokens"><br><sub>Theme tokens (`_theme.uss` / `design-tokens.uss`) — SusAppBar</sub></td>
+<td><img src="Documentation~/images/kit-diagnostics-panel.png" width="260" alt="Audit tooling"><br><sub>Audit tooling (`SusDiagnosticsPanel`) inspecting the reactive tree</sub></td>
+<td><img src="Documentation~/images/kit-avatar-group.png" width="260" alt="Bindings"><br><sub>`Prop&lt;T&gt;` / bindings driving a `SusAvatarGroup`</sub></td>
+</tr>
+</table>
+
 ## What replaces
 
 | Old (v1) | New (v2) |
