@@ -81,13 +81,15 @@ then commit in **sus-core**.
 
 Add to `Packages/manifest.json`:
 
+<!-- sus:gen urls -->
 ```json
 {
   "dependencies": {
-    "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.2"
+    "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.6"
   }
 }
 ```
+<!-- /sus:gen -->
 
 Unity will automatically pick up the package when the editor has focus. It will appear in Package Manager as **"SusCore"**.
 
@@ -252,14 +254,16 @@ call `SusThemeService.Instance.SetTheme(root, SusTheme.Dark)` yourself if you ne
 
 Open-core (free) packages from public GitHub:
 
+<!-- sus:gen urls -->
 ```json
 {
   "dependencies": {
-    "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.2",
-    "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.1"
+    "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.6",
+    "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.3"
   }
 }
 ```
+<!-- /sus:gen -->
 
 Optional UI component libraries are separate products — see https://sus-ui.dev.
 
@@ -318,7 +322,7 @@ Running the wizard again does not erase edited files (only missing ones are crea
 
 `Window → SUS → Validate Setup` checks:
 
-- Unity version (≥6000.0)
+- Unity version (≥6000.0) <!-- sus:ok min-версия задокументирована в package.json -->
 - UI Toolkit
 - `sus.config.json` and paths
 - Availability of `.sharq` and `.g.cs`
