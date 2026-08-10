@@ -87,4 +87,3 @@ sus-core (this package)
 
 Full documentation: [`Docs/README.md`](./Docs/README.md)
 
-Roadmaps and plans: [`roadmap/`](./roadmap/)

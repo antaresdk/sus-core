@@ -1,7 +1,6 @@
 # SusCore Theme System — extending the cascade
 
-> **Source of truth:** [`internal-docs/ui/theme/DESIGN_TOKENS.md`](../../internal-docs/ui/theme/DESIGN_TOKENS.md) (§5 themes).
-> Package stub: [`Docs/DESIGN_TOKENS.md`](../Docs/DESIGN_TOKENS.md).
+> **Source of truth:** [`Docs/DESIGN_TOKENS.md`](../Docs/DESIGN_TOKENS.md) (§5 themes; assembled from the internal docs).
 >
 > **For whom:** sus-core developers and apps that register their own L4/L5 token sheets.
 >
@@ -61,4 +60,4 @@ Order rules:
 - Downstream token sheets must come **after** `design-tokens` (core cascade does this).
 - OverlayHost receives the same registered extras via `SusBootstrap`.
 
-See also: [`internal-docs/ui/theme/DESIGN_TOKENS.md`](../../internal-docs/ui/theme/DESIGN_TOKENS.md).
+See also: [`Docs/DESIGN_TOKENS.md`](../Docs/DESIGN_TOKENS.md).
