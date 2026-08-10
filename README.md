@@ -70,7 +70,7 @@ Configuration (`Assets/sus.config.json`):
 
 `sus-core` itself has no visible widgets — it's the reactivity engine, theming cascade, OverlayHost and
 compiler that everything else in SUS renders through. Here's what that looks like once
-[`downstream library`](https://github.com/antaresdk/downstream library) components sit on top of it: <!-- sus:ok repo-ссылка, не install-тег -->
+`downstream library` components sit on top of it:
 
 <table>
 <tr>
