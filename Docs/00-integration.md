@@ -259,7 +259,7 @@ Open-core (free) packages from public GitHub:
 {
   "dependencies": {
     "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.8",
-    "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.5"
+    "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.6"
   }
 }
 ```
