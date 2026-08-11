@@ -383,7 +383,7 @@ The file that the components actually use:
 }
 ```
 
-**Layout usage of the space scale** (sibling gap ≥ `--sus-space-8`, row alignment, no clip, tokens-only — agent checklist L1–L5): internal docs `internal-docs/theming/LAYOUT_RULES.md` (internal agents; not shipped in package `Docs/`).
+**Layout usage of the space scale** (sibling gap ≥ `--sus-space-8`, row alignment, no clip, tokens-only) — see the layout guidance above.
 
 
 
