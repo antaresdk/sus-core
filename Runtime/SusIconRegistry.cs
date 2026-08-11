@@ -154,6 +154,8 @@ namespace Sharq.Core
         {
             ["settings"] = "gear",
             ["home"] = "house",
+            ["shop"] = "storefront",
+            ["store"] = "storefront",
             ["user"] = "user",
             ["users"] = "users",
             ["close"] = "x",
