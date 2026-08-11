@@ -24,7 +24,6 @@
 | 18 | [MCP / AI probe](./18-mcp.md) | SusUiProbe JSON facade (tree/props/health), MCP phases |
 | 17 | [Dev console](./17-console.md) | SusConsoleService, hotkey `~`, OverlayCategory.Console |
 | — | [Design tokens](./DESIGN_TOKENS.md) | Stub → eng canon `internal-docs/ui/theme/DESIGN_TOKENS.md` (+ plan) |
-| — | [Audit vs Vue](./VUE_NOTES.md) | Stub → eng canon `internal-docs/sus/VUE_NOTES.md` (+ plan) |
 
 ## Quick start
 
@@ -61,7 +60,6 @@ public class AppEntry : MonoBehaviour
 - **I want to know about built-in audits (Debug/QA)** → [13-audits.md](./13-audits.md)
 - **I want to configure the compiler** → [10-configuration.md](./10-configuration.md)
 - **I want themes / tokens / icons** → [DESIGN_TOKENS.md](./DESIGN_TOKENS.md) (stub → `internal-docs/ui/theme/`)
-- **I want Vue feature parity notes** → [VUE_NOTES.md](./VUE_NOTES.md) (stub → `internal-docs/sus/`)
 - **I want the in-game console** → [17-console.md](./17-console.md)
 
 ## Related documents
@@ -70,6 +68,5 @@ public class AppEntry : MonoBehaviour
 - [Integration from scratch](./00-integration.md) - installation and first screen
 - [Design tokens](./DESIGN_TOKENS.md) - stub → eng theming canon
 - [OverlayHost and portals](./07-overlayhost.md) - overlays: tooltips, popups, modals
-- [Audit vs Vue](./VUE_NOTES.md) - stub → eng Vue parity canon
 
 - [Integration known issues](./SUS_INTEGRATION_KNOWN_ISSUES.md) — resolved-issue log from consumer integration

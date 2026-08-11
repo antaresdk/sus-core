@@ -74,17 +74,17 @@ if (-not (Test-VersionGreaterThan $newVersion $oldVersion)) {
     exit 1
 }
 
-# --- docs tooling gate (workspace umbrella; skip when absent) ---
+# --- docs consistency gate (skip when tooling absent) ---
 $pkgName = Split-Path -Leaf $repoRoot
 $docs-tool = Join-Path (Split-Path -Parent $repoRoot) "tools\docs-tool\index.mjs"
 if (Test-Path $docs-tool) {
     node $docs-tool verify --scope $pkgName
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[pre-push] docs tooling verify failed - run 'npm run docs:loop' in the umbrella, commit, retry" -ForegroundColor Red
+        Write-Host "[pre-push] docs check failed - fix docs consistency and retry" -ForegroundColor Red
         exit 1
     }
 } else {
-    Write-Host "[pre-push] docs tooling not found - skipped" -ForegroundColor DarkGray
+    Write-Host "[pre-push] docs check skipped" -ForegroundColor DarkGray
 }
 
 Write-Host "[pre-push] Version check OK: $oldVersion -> $newVersion" -ForegroundColor Green
