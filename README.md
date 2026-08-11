@@ -67,6 +67,18 @@ Configuration (`Assets/sus.config.json`):
 ```
 
 
+## Gallery
+
+Samples from this package (ThemeShowcase + Comp) — design tokens and composition on raw UITK:
+
+<table>
+<tr>
+<td><img src="Documentation~/images/theme-tokens-dark.png" width="280" alt="Design tokens dark"><br><sub>ThemeShowcase — colors / typography / icons (Dark)</sub></td>
+<td><img src="Documentation~/images/theme-tokens-light.png" width="280" alt="Design tokens light"><br><sub>ThemeShowcase — same tokens (Light)</sub></td>
+<td><img src="Documentation~/images/composition.png" width="280" alt="Component composition"><br><sub>Comp — parent→child props on UITK</sub></td>
+</tr>
+</table>
+
 ## What replaces
 
 | Old (v1) | New (v2) |
