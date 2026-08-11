@@ -52,7 +52,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void ReloadCompanionStyleSheets_RemovesCompanionSheets()
         {
-            // Companion sheets have class name + ".g" in name (e.g. "SusTabs_scoped.g")
+            // Companion sheets have class name + ".g" in name (e.g. "MyWidget_scoped.g")
             var companionSheet = ScriptableObject.CreateInstance<StyleSheet>();
             companionSheet.name = "DummySusComponent.g";
             var companionScoped = ScriptableObject.CreateInstance<StyleSheet>();

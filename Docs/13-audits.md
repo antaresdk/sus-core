@@ -53,7 +53,7 @@
 [ClickAudit] Active: 'SusButton' blocked at center. Reason: Covered by 'SusTooltip'
 ```
 
-**Integration:** element is registered via`SetClickAuditDescription("Name")` V`Created()`. Already built into 11 components <!-- sus:ok локальный счётчик аудита --> (` SusButton`, ` SusLink`, ` SusToggle`, ` SusUnitCard`, ` SusDropdown`, ` SusListGroup`, ` SusModal`, ` SusTable`, ` SusForm`, ` SusDiagnosticsPanel`, ` MigratedMainMenuScreen`).
+**Integration:** element is registered via`SetClickAuditDescription("Name")` V`Created()`. Already built into 11 downstream components <!-- sus:ok локальный счётчик аудита -->.
 
 ---
 

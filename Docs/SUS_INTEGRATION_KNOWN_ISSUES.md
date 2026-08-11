@@ -284,7 +284,7 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 | `Runtime/SusTransitionService.cs` | Created by: Transition Animation Stub |
 | `Runtime/SusOverlayServices.cs` | Created by: aggregation ` Host`/` ModalService`/` TransitionService` |
 | `Runtime/SusRouter.cs` | ` FindCommonPrefixDepth`internal→public; ` SetRouteView`internal→public; ` Init()`fix ` OverlayServices.Host`; ` BeforeEnter`/` BeforeLeave`return ` bool`instead of ` void` |
-| `Runtime/StandardScreens/*.cs` (5 files) | Access modifiers override → ` public`; ` SusLobbyScreen`/` DownstreamLibSessionScreen`/` SusMenuScreen` — ` new`workaround for bug CS0507 |
+| `Runtime/StandardScreens/*.cs` (5 files) | Access modifiers override → ` public`; `HostScreen*` — ` new`workaround for bug CS0507 |
 | `Runtime/Tests/*.cs` + ` Editor/Tests/*.cs` (3 files) | Access modifiers override → ` public`
 
 ### sus-core/Tools~ (no changes required)
@@ -408,7 +408,7 @@ error CS0507: 'X.Left()': cannot change access modifiers when overriding 'public
 error CS0507: 'X.BeforeLeave(SusRoute)': cannot change access modifiers when overriding 'protected internal' inherited member 'SusScreen.BeforeLeave(SusRoute)'
 ```
 
-**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, Part ` protected internal`. Standard screens (` SusLoadingScreen`, ` SusSplashScreen`, ` SusMenuScreen`, ` SusLobbyScreen`, ` DownstreamLibSessionScreen`) and tests used ` protected internal override`/` public override`in different combinations, which caused CS0507 when there was a mismatch with the base class.
+**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, Part ` protected internal`. Standard screens (` HostScreen`, ` HostScreen`, ` HostScreen`, ` HostScreen`, ` HostScreen`) and tests used ` protected internal override`/` public override`in different combinations, which caused CS0507 when there was a mismatch with the base class.
 
 **Correction (07/08/2026):**
 1. Base class `SusScreen` — all lifecycle methods are reduced to ` public virtual`:
@@ -420,7 +420,7 @@ error CS0507: 'X.BeforeLeave(SusRoute)': cannot change access modifiers when ove
 
 2. All override in heirs - `public override`.
 
-3. **Bug workaround in 3 files:** `SusLobbyScreen`, ` DownstreamLibSessionScreen`, ` SusMenuScreen` - methods ` Entered()`And ` Left()`use ` public new void`instead of ` public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
+3. **Bug workaround in 3 files:** `HostScreen`, ` HostScreen`, ` HostScreen` - methods ` Entered()`And ` Left()`use ` public new void`instead of ` public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
 
 **Side effect of bypassing `new`:** router calls ` SusScreen.Entered()`/` SusScreen.Left()`by reference of the base type, so with ` new`an empty base implementation will be called. The life cycle of these three screens is incomplete. The correct solution is the Template Method pattern (` public void Left() { OnLeft(); }` + ` protected virtual void OnLeft()`).
 

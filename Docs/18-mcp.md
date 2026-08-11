@@ -46,7 +46,7 @@ string setup  = Sharq.Core.Editor.Diagnostics.SusUiProbeEditor.ValidateSetupJson
 ## Связь с существующим
 
 - `ScreenAudit` (Runtime/Diagnostics) — human-facing dump в Console (остаётся для ручной отладки).
-- `SusDiagnostics` (downstream library) — JSON-дампы для панели диагностики kit; `SusUiProbe` повторяет
+- `SusDiagnostics` (в downstream-библиотеках) — JSON-дампы для панели диагностики; `SusUiProbe` повторяет
   их логику в core (core не зависит от kit), чтобы фасад жил в бесплатном пакете.
 - `SusSetupValidator` (Editor) — источник для `ValidateSetupJson`.
 

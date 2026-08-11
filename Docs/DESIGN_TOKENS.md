@@ -644,7 +644,7 @@ Width is read from **`cascadeRoot.resolvedStyle.width`** on geometry changes (sa
 feed path as the removed `SusResolutionService`), with panel / Screen fallbacks
 only when the root is not laid out yet. See [06-responsive.md](./06-responsive.md).
 
-Downstream token sheets (e.g. kit `downstream-tokens.uss`) override `--sk-*` under those classes
+Downstream token sheets override `--sk-*` under those classes
 (heights, spacing, fonts). Components already consume `var(--sk-*)` — they pick up the
 active breakpoint without per-component C#.
 
@@ -819,7 +819,7 @@ Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
 | # | Problem | Files | Status |
 | --- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------- |
 | C1 | Spacing, font-size, radius — in `_palette.uss` Layer 1 | ` sus-core/.../SusRuntime/_palette.uss` | ✅ |
-| C2 | Breakpoint `--sk-*` overrides (sole screen-size axis) | kit `downstream-tokens.uss` | ✅ |
+| C2 | Breakpoint `--sk-*` overrides (sole screen-size axis) | downstream token sheets | ✅ |
 | C3 | `SusBreakpointService` geometry auto-update | ` SusBreakpointService.cs`, ` SusComponent.cs` | ✅ |
 
 
