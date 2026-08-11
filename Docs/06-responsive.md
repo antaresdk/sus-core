@@ -61,7 +61,7 @@ width across the thresholds below, or force a breakpoint in Storybook
 ## Tokens (`--sk-*`)
 
 Downstream UI packages override spacing / heights / fonts under `.breakpoint-*`
-(e.g. kit `downstream-tokens.uss`). Components already use `var(--sk-button-height)`,
+(e.g. a downstream `*-tokens.uss` sheet). Components already use `var(--sk-button-height)`,
 `var(--sk-space-16)`, `var(--sk-font-body)`, etc. — they react automatically when
 the root class changes.
 

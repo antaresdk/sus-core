@@ -18,7 +18,7 @@ namespace Sharq.Core.Editor
 
         /// <summary>
         /// Fired when USS files for a component are regenerated (style-only change).
-        /// className: e.g. "SusTabs"
+        /// className: e.g. "MyWidget"
         /// ussPaths: absolute paths to generated .uss files
         /// Legacy per-contour event; prefer <see cref="SharqCompileEvents.OnUssGenerated"/>,
         /// which covers the package contour (SharqBatchCompiler) as well.

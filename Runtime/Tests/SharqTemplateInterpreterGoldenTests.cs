@@ -55,7 +55,7 @@ namespace Sharq.Core.Runtime.Tests
     </ui:VisualElement>
 </ui:VisualElement>";
 
-        // Simplified SusChip (variants without || empty defaults)
+        // Simplified chip-style component (variants without || empty defaults)
         const string FixtureChipSimple = @"
 <ui:VisualElement $MainElement class=""sus-chip""
                   :class='{

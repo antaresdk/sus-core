@@ -5,6 +5,12 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-08-11
+
+### Changed
+- Docs: public-repo reference hygiene — external product references and bundled gallery images removed; neutral wording in integration notes.
+- CI: tests workflow is manual-only (`workflow_dispatch`) until license secrets are configured.
+
 ## [1.0.7] - 2026-08-11
 
 ### Added
