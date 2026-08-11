@@ -42,23 +42,30 @@ namespace Sharq.Core
         /// </summary>
         protected bool MountSelfInOverlay(bool dismissOnClickOutside = false, Action onDismiss = null)
         {
+            // Capture restore parent whenever we leave a non-host ancestor.
+            // Previously only set when _selfHost was null — second open lost restore (T-251).
+            if (parent != null && parent is not OverlayHost)
+                _selfOriginalParent = parent;
+
             if (_selfHost == null)
             {
-                _selfOriginalParent = parent;
                 var p = parent;
                 while (p != null) { if (p is OverlayHost oh) { _selfHost = oh; break; } p = p.parent; }
                 if (_selfHost == null && panel?.visualTree != null)
                     _selfHost = panel.visualTree.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
             }
 
-            if (_selfHost != null && parent != _selfHost)
-            {
-                // Apply theme + tokens BEFORE reparenting so var() resolves in the overlay.
-                SusThemeService.ApplyThemeClasses(this);
-                _selfEntry = _selfHost.AddToOverlay(this, Layer, dismissOnClickOutside, onDismiss);
+            if (_selfHost == null)
+                return false;
+
+            // Already on host — treat as mounted; do not reparent (AttachToPanel-safe).
+            if (parent == _selfHost)
                 return true;
-            }
-            return false;
+
+            // Apply theme + tokens BEFORE reparenting so var() resolves in the overlay.
+            SusThemeService.ApplyThemeClasses(this);
+            _selfEntry = _selfHost.AddToOverlay(this, Layer, dismissOnClickOutside, onDismiss);
+            return true;
         }
 
         /// <summary>Removes this element from the overlay and restores it to its original parent.</summary>
@@ -68,7 +75,23 @@ namespace Sharq.Core
             {
                 _selfHost.RemoveFromOverlay(_selfEntry);
                 _selfEntry = null;
-                if (_selfOriginalParent != null) { _selfOriginalParent.Add(this); _selfOriginalParent = null; }
+                if (_selfOriginalParent != null)
+                {
+                    _selfOriginalParent.Add(this);
+                    _selfOriginalParent = null;
+                }
+            }
+            else if (parent is OverlayHost && _selfOriginalParent != null)
+            {
+                // Stale DOM on host without stack entry (T-251). Defer restore — Unmounted
+                // may run inside DetachFromPanel where hierarchy mutation is illegal.
+                var restore = _selfOriginalParent;
+                _selfOriginalParent = null;
+                restore.schedule.Execute(() =>
+                {
+                    if (parent != restore)
+                        restore.Add(this);
+                }).ExecuteLater(0);
             }
         }
     }
