@@ -1,4 +1,4 @@
-<!-- assembled by docs-tool from internal-docs/theming/DESIGN_TOKENS.md — DO NOT EDIT; edit the canon and run: node tools/docs-tool/index.mjs assemble -->
+<!-- generated file — do not edit -->
 # SUS — Design Tokens: fonts, colors, icons, themes
 
 > Design token architecture for the new SUS.  
