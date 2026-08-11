@@ -76,9 +76,9 @@ if (-not (Test-VersionGreaterThan $newVersion $oldVersion)) {
 
 # --- docs consistency gate (skip when tooling absent) ---
 $pkgName = Split-Path -Leaf $repoRoot
-$docs-tool = Join-Path (Split-Path -Parent $repoRoot) "tools\docs-tool\index.mjs"
-if (Test-Path $docs-tool) {
-    node $docs-tool verify --scope $pkgName
+$docsTool = Join-Path (Split-Path -Parent $repoRoot) "tools\docs-tool\index.mjs"
+if (Test-Path $docsTool) {
+    node $docsTool verify --scope $pkgName
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[pre-push] docs check failed - fix docs consistency and retry" -ForegroundColor Red
         exit 1
