@@ -6,10 +6,9 @@ name: tests
 #   2. A package is not a Unity project, so CI scaffolds a minimal host project
 #      and embeds the package via file:. The com.unity.test-framework version may
 #      need adjusting for Unity 6000.3.17f1.
+# Auto-runs paused: GitHub account billing lock blocks all Actions jobs.
+# License secret is configured; restore push/pull_request triggers once billing is resolved.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
 jobs:
   tests:
