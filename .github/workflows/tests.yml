@@ -6,8 +6,10 @@ name: tests
 #   2. A package is not a Unity project, so CI scaffolds a minimal host project
 #      and embeds the package via file:. The com.unity.test-framework version may
 #      need adjusting for Unity 6000.3.17f1.
-# Manual-only until Unity license secrets (UNITY_LICENSE etc.) are configured in repo settings.
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 jobs:
   tests:
@@ -35,7 +37,6 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
         with:
           projectPath: HostProject
           unityVersion: 6000.3.17f1
