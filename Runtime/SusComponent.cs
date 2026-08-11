@@ -188,9 +188,17 @@ namespace Sharq.Core
         /// Batches a bind-update action to execute once per frame.
         /// De-duplicates: same Action is only queued once.
         /// </summary>
+        /// <remarks>
+        /// UITK <see cref="VisualElement.schedule"/> is a no-op until the element is
+        /// attached to a panel. Actions are still queued in <see cref="_pendingBindActions"/>
+        /// and flushed from <see cref="OnAttachToPanelHandler"/> so Prop changes during
+        /// Build / SetChildProp before <c>parent.Add()</c> still reach Bind*.
+        /// </remarks>
         private void ScheduleBindUpdate(Action apply)
         {
             _pendingBindActions.Add(apply);
+            if (panel == null)
+                return;
             _bindScheduleItem ??= schedule.Execute(ApplyAllBindUpdates);
             _bindScheduleItem.ExecuteLater(0);
         }
@@ -203,6 +211,17 @@ namespace Sharq.Core
             _pendingBindActions.Clear();
             foreach (var action in actions)
                 action();
+        }
+
+        /// <summary>
+        /// Re-arm the bind schedule after panel attach. Queued invalidations that
+        /// arrived while detached never ran (schedule was a no-op).
+        /// </summary>
+        private void FlushPendingBindUpdatesOnAttach()
+        {
+            if (_pendingBindActions.Count == 0) return;
+            _bindScheduleItem = schedule.Execute(ApplyAllBindUpdates);
+            _bindScheduleItem.ExecuteLater(0);
         }
 
         /// <summary>
@@ -274,10 +293,12 @@ namespace Sharq.Core
 #endif
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Always present so downstream UI packages can call these from generated code
+        // in Release Player builds. Logging bodies are Editor / Development Build only.
         /// <summary>
         /// Logs a warning if the click was blocked by a guard condition.
         /// Call inside a ClickEvent handler on early return.
+        /// No-op outside Editor / Development Build.
         ///
         /// Example:
         /// if (Disabled.Value) {
@@ -287,28 +308,45 @@ namespace Sharq.Core
         /// </summary>
         protected void AuditClickBlocked(string reason)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             var desc = _clickAuditDescription ?? GetType().Name;
             UnityEngine.Debug.LogWarning($"[CallbackAudit] '{desc}' click blocked: {reason}");
+#else
+            _ = reason;
+#endif
+        }
+
+        /// <summary>
+        /// Marks the start of a click handler for duration audit.
+        /// Returns 0 outside Editor / Development Build.
+        /// </summary>
+        protected double AuditClickStart()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            return UnityEngine.Time.realtimeSinceStartupAsDouble;
+#else
+            return 0d;
+#endif
         }
 
         /// <summary>
         /// Logs if the handler ran but took longer than the threshold ms.
+        /// No-op outside Editor / Development Build.
         /// </summary>
-        protected double AuditClickStart()
-        {
-            return UnityEngine.Time.realtimeSinceStartupAsDouble;
-        }
-
         protected void AuditClickEnd(double startTime, string action = "OnClick")
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
             var elapsed = (UnityEngine.Time.realtimeSinceStartupAsDouble - startTime) * 1000.0;
             if (elapsed > 50.0)
             {
                 var desc = _clickAuditDescription ?? GetType().Name;
                 UnityEngine.Debug.LogWarning($"[CallbackAudit] '{desc}' {action} took {elapsed:F1}ms");
             }
-        }
+#else
+            _ = startTime;
+            _ = action;
 #endif
+        }
 
         // ─── Overlay convenience methods ──────────────────────────────────
 
@@ -674,6 +712,9 @@ namespace Sharq.Core
 
             ScheduleReactiveUpdates();
 
+            // Prop invalidations before Add() queued actions but schedule was a no-op.
+            FlushPendingBindUpdatesOnAttach();
+
             // Wire breakpoint service to geometry changes
             BreakpointService?.UpdateFromElement(this);
             RegisterCallback<GeometryChangedEvent>(OnGeometryChangedForBreakpoint);
@@ -728,6 +769,8 @@ namespace Sharq.Core
             BeforeUnmounted();
             _updateItem?.Pause();
             DisposeAllBindings();
+            _pendingBindActions.Clear();
+            _bindScheduleItem = null;
             UnregisterCallback<GeometryChangedEvent>(OnGeometryChangedForBreakpoint);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevConsole.ShouldTrace(GetType(), "Unmounted", "");
