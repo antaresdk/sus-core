@@ -6,7 +6,7 @@ param(
 
 if (-not (Test-Path $CommitMsgFile)) { exit 0 }
 
-$raw = Get-Content -Path $CommitMsgFile -Raw -ErrorAction SilentlyContinue
+$raw = Get-Content -Path $CommitMsgFile -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
 if (-not $raw) { exit 0 }
 
 $cleaned = [regex]::Replace($raw, '(?im)^\s*Co-authored-by:\s*Cursor(\s+Agent)?\s*<cursoragent@cursor\.com>\s*\r?\n', '')
