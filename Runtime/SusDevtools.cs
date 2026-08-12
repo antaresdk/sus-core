@@ -347,7 +347,7 @@ namespace Sharq.Core
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"[SusDevtools] Edit failed: {e.Message}");
+                    SusLog.Warn($"[SusDevtools] Edit failed: {e.Message}");
                 }
             })
             { text = "✓", style = { width = 24, height = 20, fontSize = 11, marginLeft = 4 } };

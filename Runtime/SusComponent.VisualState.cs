@@ -44,7 +44,7 @@ namespace Sharq.Core
 
             if (!VisualStateNames.Contains(state))
             {
-                UnityEngine.Debug.LogWarning(
+                SusLog.Warn(
                     $"[SusComponent] Unknown visual state '{state}' on {GetType().Name}. " +
                     "Known: " + string.Join(", ", VisualStateNames));
                 return;

@@ -41,7 +41,7 @@ namespace Sharq.Core
                 var alias = Icons[i].Alias;
                 if (string.IsNullOrEmpty(alias)) continue;
                 if (!seen.Add(alias))
-                    Debug.LogWarning($"[SusIconSetAsset] Duplicate alias '{alias}' at index {i} in {name}.");
+                    SusLog.Warn($"[SusIconSetAsset] Duplicate alias '{alias}' at index {i} in {name}.");
             }
         }
 #endif

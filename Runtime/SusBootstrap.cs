@@ -271,14 +271,14 @@ namespace Sharq.Core
             var tss = UnityEngine.Resources.Load<UnityEngine.UIElements.ThemeStyleSheet>(ResourcePath + "SusDefault");
             if (tss == null)
             {
-                UnityEngine.Debug.LogWarning("[SusBootstrap] SusDefault.tss not found in Resources/SusRuntime — using Unity default theme.");
+                SusLog.Warn("[SusBootstrap] SusDefault.tss not found in Resources/SusRuntime — using Unity default theme.");
                 return;
             }
 
             var ps = uiDocument.panelSettings;
             if (ps == null)
             {
-                UnityEngine.Debug.LogWarning(
+                SusLog.Warn(
                     "[SusBootstrap] UIDocument.panelSettings is null — creating fallback PanelSettings " +
                     "with SusDefault.tss. For production, assign a PanelSettings asset to the UIDocument " +
                     "in the scene to control resolution, scale mode, and theming.");
@@ -310,7 +310,7 @@ namespace Sharq.Core
             if (sheet == null)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                UnityEngine.Debug.LogWarning($"[SusBootstrap] StyleSheet not found: {resourcePath}");
+                SusLog.Warn($"[SusBootstrap] StyleSheet not found: {resourcePath}");
 #endif
                 return false;
             }

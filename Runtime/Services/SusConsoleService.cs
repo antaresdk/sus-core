@@ -225,7 +225,7 @@ namespace Sharq.Core
                 return true;
             }
 
-            Debug.LogWarning($"[Console] Unknown command: {name}. Type 'help' for a list.");
+            SusLog.Warn($"[Console] Unknown command: {name}. Type 'help' for a list.");
             return false;
         }
 
@@ -243,9 +243,9 @@ namespace Sharq.Core
             RegisterCommand("clear", _ => Clear(), "Clear the console.");
             RegisterCommand("help", _ =>
             {
-                Debug.Log("[Console] Commands:");
+                SusLog.Verbose("[Console] Commands:");
                 foreach (var line in GetCommandList())
-                    Debug.Log(line);
+                    SusLog.Verbose(line);
             }, "List all commands.");
             RegisterCommand("filter", args =>
             {

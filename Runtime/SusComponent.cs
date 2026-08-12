@@ -310,7 +310,7 @@ namespace Sharq.Core
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             var desc = _clickAuditDescription ?? GetType().Name;
-            UnityEngine.Debug.LogWarning($"[CallbackAudit] '{desc}' click blocked: {reason}");
+            SusLog.Verbose($"[CallbackAudit] '{desc}' click blocked: {reason}");
 #else
             _ = reason;
 #endif
@@ -340,7 +340,7 @@ namespace Sharq.Core
             if (elapsed > 50.0)
             {
                 var desc = _clickAuditDescription ?? GetType().Name;
-                UnityEngine.Debug.LogWarning($"[CallbackAudit] '{desc}' {action} took {elapsed:F1}ms");
+                SusLog.Verbose($"[CallbackAudit] '{desc}' {action} took {elapsed:F1}ms");
             }
 #else
             _ = startTime;
@@ -580,7 +580,7 @@ namespace Sharq.Core
                         if (p.resolvedStyle.display == DisplayStyle.None)
                             return;
                     }
-                    UnityEngine.Debug.LogWarning($"[BoundsAudit] '{GetType().Name}' has zero bounds after mount " +
+                    SusLog.Verbose($"[BoundsAudit] '{GetType().Name}' has zero bounds after mount " +
                         $"({wb.width:F0}×{wb.height:F0}). display={resolvedStyle.display}, " +
                         $"visible={visible}, pickingMode={pickingMode}. " +
                         $"Clicks will NOT reach this element.");
@@ -590,7 +590,7 @@ namespace Sharq.Core
                 if (!string.IsNullOrEmpty(_clickAuditDescription))
                 {
                     if (wb.width > 0 && wb.height > 0 && (wb.width < 30 || wb.height < 30))
-                        UnityEngine.Debug.LogWarning($"[ClickTargetAudit] '{_clickAuditDescription}' " +
+                        SusLog.Verbose($"[ClickTargetAudit] '{_clickAuditDescription}' " +
                             $"tap target is small ({wb.width:F0}×{wb.height:F0}px). " +
                             $"HIG recommends ≥44×44. Consider padding or min-size.");
                 }
@@ -602,7 +602,7 @@ namespace Sharq.Core
                 if (panel == null) return;
                 var count = this.Query<VisualElement>().Build().ToList().Count;
                 if (count > 500)
-                    UnityEngine.Debug.LogWarning($"[PerfAudit] '{GetType().Name}' has {count} VisualElements. " +
+                    SusLog.Verbose($"[PerfAudit] '{GetType().Name}' has {count} VisualElements. " +
                         $"Consider virtualization (SusTable) or paging.");
             }).StartingIn(500);
 
@@ -615,7 +615,7 @@ namespace Sharq.Core
                 var elapsed = (now - _lastClickTime) * 1000.0;
                 _lastClickTime = now;
                 if (elapsed < 300.0 && elapsed >= 0)
-                    UnityEngine.Debug.LogWarning($"[DebounceAudit] '{_clickAuditDescription}' " +
+                    SusLog.Verbose($"[DebounceAudit] '{_clickAuditDescription}' " +
                         $"rapid double-click ({elapsed:F0}ms). Possible unintended double-submit.");
             });
 
@@ -626,7 +626,7 @@ namespace Sharq.Core
                 {
                     if (panel == null || !visible || resolvedStyle.display == DisplayStyle.None) return;
                     if (_lastClickTime == 0)
-                        UnityEngine.Debug.LogWarning($"[IdleGuardAudit] '{_clickAuditDescription}' " +
+                        SusLog.Verbose($"[IdleGuardAudit] '{_clickAuditDescription}' " +
                             $"visible but never clicked. " +
                             $"pickingMode={pickingMode}, worldBound=({worldBound.x:F0},{worldBound.y:F0} " +
                             $"{worldBound.width:F0}×{worldBound.height:F0}).");
@@ -650,7 +650,7 @@ namespace Sharq.Core
                         overflowCount++;
                 });
                 if (overflowCount > 0)
-                    UnityEngine.Debug.LogWarning($"[OverflowAudit] '{GetType().Name}' has " +
+                    SusLog.Verbose($"[OverflowAudit] '{GetType().Name}' has " +
                         $"{overflowCount} child(ren) exceeding parent bounds " +
                         $"({parentBounds.width:F0}×{parentBounds.height:F0}). " +
                         $"Unity UITK does NOT clip overflow (no overflow:hidden).");
@@ -704,7 +704,7 @@ namespace Sharq.Core
             if (_remountCount > 5)
             {
                 // F3.4: escalate to Error so STRICT OnLog → BattleFailFast CreationFlood
-                UnityEngine.Debug.LogError($"[RemountLoopAudit] '{GetType().Name}' " +
+                SusLog.Error($"[RemountLoopAudit] '{GetType().Name}' " +
                     $"attached {_remountCount} times in 1s. Possible Reactivity loop " +
                     $"(WatchEffect modifying visibility/layout).");
             }
@@ -735,7 +735,7 @@ namespace Sharq.Core
             if (_layoutReentryCount > 20 && !_layoutReentryWarnedThisWindow)
             {
                 _layoutReentryWarnedThisWindow = true;
-                UnityEngine.Debug.LogWarning($"[LayoutReentryAudit] '{GetType().Name}' " +
+                SusLog.Verbose($"[LayoutReentryAudit] '{GetType().Name}' " +
                     $"{_layoutReentryCount}+ geometry changes in 500ms. " +
                     $"Possible layout loop — WatchEffect modifying size/position.");
             }
@@ -784,7 +784,7 @@ namespace Sharq.Core
                 schedule.Execute(() =>
                 {
                     if (panel == null && _bindings.Count > 0)
-                        UnityEngine.Debug.LogWarning($"[LifecycleAudit] '{GetType().Name}' detached " +
+                        SusLog.Verbose($"[LifecycleAudit] '{GetType().Name}' detached " +
                             $"with {_bindings.Count} leaked bindings (had {bindCount} before detach).");
                 }).StartingIn(1000);
             }

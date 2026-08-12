@@ -35,13 +35,13 @@ namespace Sharq.Core
                 var docs = UnityEngine.Object.FindObjectsByType<UIDocument>(UnityEngine.FindObjectsSortMode.None);
                 if (docs.Length == 0)
                 {
-                    Debug.Log("[sus.inspect] No UIDocument found in scene.");
+                    SusLog.Verbose("[sus.inspect] No UIDocument found in scene.");
                     return;
                 }
                 root = docs[0].rootVisualElement;
             }
 
-            Debug.Log($"[sus.inspect] SusComponent tree:");
+            SusLog.Verbose($"[sus.inspect] SusComponent tree:");
             WalkAndPrint(root, 0);
         }
 
@@ -60,7 +60,7 @@ namespace Sharq.Core
                     : "";
                 var bindingsStr = bindingCount > 0 ? $" ({bindingCount} bindings)" : "";
 
-                Debug.Log($"{indent}⚙ {name}{propsStr}{bindingsStr}");
+                SusLog.Verbose($"{indent}⚙ {name}{propsStr}{bindingsStr}");
             }
 
             foreach (var child in el.Children())
@@ -75,14 +75,14 @@ namespace Sharq.Core
         {
             if (string.IsNullOrEmpty(path))
             {
-                Debug.LogWarning("[sus.set] Usage: DevConsole.Set(\"ComponentName.propName\", value)");
+                SusLog.Verbose("[sus.set] Usage: DevConsole.Set(\"ComponentName.propName\", value)");
                 return;
             }
 
             var parts = path.Split('.');
             if (parts.Length != 2)
             {
-                Debug.LogWarning($"[sus.set] Invalid path '{path}'. Expected 'ComponentName.propName'.");
+                SusLog.Verbose($"[sus.set] Invalid path '{path}'. Expected 'ComponentName.propName'.");
                 return;
             }
 
@@ -93,7 +93,7 @@ namespace Sharq.Core
             var sc = FindSusComponent(compName);
             if (sc == null)
             {
-                Debug.LogWarning($"[sus.set] Component '{compName}' not found in scene.");
+                SusLog.Verbose($"[sus.set] Component '{compName}' not found in scene.");
                 return;
             }
 
@@ -101,21 +101,21 @@ namespace Sharq.Core
             var field = sc.GetType().GetField(propName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
             if (field == null)
             {
-                Debug.LogWarning($"[sus.set] Prop '{propName}' not found on '{compName}'.");
+                SusLog.Verbose($"[sus.set] Prop '{propName}' not found on '{compName}'.");
                 return;
             }
 
             var propObj = field.GetValue(sc);
             if (propObj == null)
             {
-                Debug.LogWarning($"[sus.set] Prop '{propName}' is null.");
+                SusLog.Verbose($"[sus.set] Prop '{propName}' is null.");
                 return;
             }
 
             var valueProp = propObj.GetType().GetProperty("Value");
             if (valueProp == null || !valueProp.CanWrite)
             {
-                Debug.LogWarning($"[sus.set] Cannot set Value on '{propName}'.");
+                SusLog.Verbose($"[sus.set] Cannot set Value on '{propName}'.");
                 return;
             }
 
@@ -126,11 +126,11 @@ namespace Sharq.Core
                     ? value
                     : Convert.ChangeType(value, targetType, System.Globalization.CultureInfo.InvariantCulture);
                 valueProp.SetValue(propObj, converted);
-                Debug.Log($"[sus.set] ✓ {compName}.{propName} = {converted}");
+                SusLog.Verbose($"[sus.set] ✓ {compName}.{propName} = {converted}");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[sus.set] Failed: {e.Message}");
+                SusLog.Verbose($"[sus.set] Failed: {e.Message}");
             }
         }
 
@@ -142,7 +142,7 @@ namespace Sharq.Core
             var docs = UnityEngine.Object.FindObjectsByType<UIDocument>(UnityEngine.FindObjectsSortMode.None);
             if (docs.Length == 0)
             {
-                Debug.Log("[sus.overlays] No UIDocument found.");
+                SusLog.Verbose("[sus.overlays] No UIDocument found.");
                 return;
             }
 
@@ -150,25 +150,25 @@ namespace Sharq.Core
             var overlayHost = root.Q<OverlayHost>();
             if (overlayHost == null)
             {
-                Debug.Log("[sus.overlays] No OverlayHost found. Call SusBootstrap to mount first.");
+                SusLog.Verbose("[sus.overlays] No OverlayHost found. Call SusBootstrap to mount first.");
                 return;
             }
 
             var stack = overlayHost.Stack;
             if (stack.Count == 0)
             {
-                Debug.Log("[sus.overlays] Stack is empty.");
+                SusLog.Verbose("[sus.overlays] Stack is empty.");
                 return;
             }
 
-            Debug.Log($"[sus.overlays] Stack ({stack.Count} entries):");
+            SusLog.Verbose($"[sus.overlays] Stack ({stack.Count} entries):");
             for (int i = 0; i < stack.Count; i++)
             {
                 var e = stack[i];
                 var size = e.Element?.resolvedStyle;
                 var w = size?.width ?? 0;
                 var h = size?.height ?? 0;
-                Debug.Log($"  [{i}] cat={e.Category} name='{e.Element?.GetType().Name}' " +
+                SusLog.Verbose($"  [{i}] cat={e.Category} name='{e.Element?.GetType().Name}' " +
                     $"size={w:F0}x{h:F0} dismissOnClick={e.DismissOnClickOutside}");
             }
         }
@@ -183,7 +183,7 @@ namespace Sharq.Core
             if (!TraceFilters.Contains(typeFilter))
             {
                 TraceFilters.Add(typeFilter);
-                Debug.Log($"[sus.trace] Tracing lifecycle events for '{typeFilter}'.");
+                SusLog.Verbose($"[sus.trace] Tracing lifecycle events for '{typeFilter}'.");
             }
         }
 
@@ -192,7 +192,7 @@ namespace Sharq.Core
         {
             if (TraceFilters.Count > 0)
             {
-                Debug.Log($"[sus.trace] Tracing disabled ({TraceFilters.Count} filter(s) cleared).");
+                SusLog.Verbose($"[sus.trace] Tracing disabled ({TraceFilters.Count} filter(s) cleared).");
                 TraceFilters.Clear();
             }
         }
@@ -207,7 +207,7 @@ namespace Sharq.Core
             {
                 if (typeName.Contains(filter))
                 {
-                    Debug.Log($"[sus.trace] {typeName}.{hook}: {details}");
+                    SusLog.Verbose($"[sus.trace] {typeName}.{hook}: {details}");
                     return true;
                 }
             }

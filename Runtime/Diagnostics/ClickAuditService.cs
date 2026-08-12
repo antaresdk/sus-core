@@ -56,7 +56,7 @@ namespace Sharq.Core.Diagnostics
             _installed = true;
 
             panel.visualTree.RegisterCallback<ClickEvent>(OnAnyClick, TrickleDown.TrickleDown);
-            Debug.Log("[ClickAudit] Installed — will warn on blocked clicks.");
+            SusLog.Verbose("[ClickAudit] Installed — will warn on blocked clicks.");
         }
 
         public void Suspend() => _suspended = true;
@@ -92,13 +92,13 @@ namespace Sharq.Core.Diagnostics
             // Layout audit at registration time
             if (element.worldBound.width <= 0 || element.worldBound.height <= 0)
             {
-                Debug.LogWarning($"[ClickAudit] '{description}' registered with zero bounds " +
+                SusLog.Verbose($"[ClickAudit] '{description}' registered with zero bounds " +
                     $"({element.worldBound.width:F0}×{element.worldBound.height:F0}). " +
                     $"Layout may not be computed yet.");
             }
             if (element.pickingMode == PickingMode.Ignore)
             {
-                Debug.LogWarning($"[ClickAudit] '{description}' has pickingMode=Ignore. " +
+                SusLog.Verbose($"[ClickAudit] '{description}' has pickingMode=Ignore. " +
                     $"Clicks will NOT reach this element.");
             }
         }
@@ -155,7 +155,7 @@ namespace Sharq.Core.Diagnostics
                 if (!reached)
                 {
                     var reason = DiagnoseWhyBlocked(entry.Element, center, panel);
-                    Debug.LogWarning($"[ClickAudit] Active: '{entry.Description}' blocked at center. {reason}");
+                    SusLog.Verbose($"[ClickAudit] Active: '{entry.Description}' blocked at center. {reason}");
                 }
             }
         }
@@ -212,7 +212,7 @@ namespace Sharq.Core.Diagnostics
 
                     var reason = DiagnoseWhyBlocked(candidate.Element, point, panel);
                     var topPicked = picked.Count > 0 ? picked[picked.Count - 1] : null;
-                    Debug.LogWarning(
+                    SusLog.Warn(
                         $"[ClickAudit] Click at ({point.x:F0},{point.y:F0}) " +
                         $"did NOT reach '{candidate.Description}'. " +
                         $"Top: '{topPicked?.GetType().Name}' " +
@@ -309,7 +309,7 @@ namespace Sharq.Core.Diagnostics
 
         public void DumpReport()
         {
-            Debug.Log($"[ClickAudit] === Report ===\n" +
+            SusLog.Verbose($"[ClickAudit] === Report ===\n" +
                 $"Registered clickables: {_registry.Count}\n" +
                 $"Transparent overlays: {_transparentOverlays.Count}\n" +
                 $"Ignored elements: {_ignoredElements.Count}\n" +
@@ -319,7 +319,7 @@ namespace Sharq.Core.Diagnostics
             {
                 var e = _registry[i];
                 var wb = e.LastBounds;
-                Debug.Log($"  [{i}] '{e.Description}' " +
+                SusLog.Verbose($"  [{i}] '{e.Description}' " +
                     $"bounds=({wb.x:F0},{wb.y:F0})-({wb.xMax:F0},{wb.yMax:F0}) " +
                     $"size={wb.width:F0}×{wb.height:F0} " +
                     $"pickingMode={e.Element?.pickingMode} " +

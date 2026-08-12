@@ -35,9 +35,9 @@ namespace Sharq.Core.Diagnostics
             {
                 var trimmed = line.TrimEnd('\r');
                 if (string.IsNullOrEmpty(trimmed))
-                    Debug.Log($"{tag} "); // empty line
+                    SusLog.Verbose($"{tag} "); // empty line
                 else
-                    Debug.Log($"{tag} {trimmed}");
+                    SusLog.Verbose($"{tag} {trimmed}");
             }
         }
 
@@ -313,11 +313,11 @@ namespace Sharq.Core.Diagnostics
             {
                 if (evt.ctrlKey && evt.shiftKey && evt.keyCode == KeyCode.BackQuote)
                 {
-                    Debug.Log("═════════ ScreenAudit triggered (Ctrl+Shift+~) ═════════");
+                    SusLog.Verbose("═════════ ScreenAudit triggered (Ctrl+Shift+~) ═════════");
                     LayoutDump(root);
                     PickableLayerAudit(root);
                     FullPropsDump(root);
-                    Debug.Log("═════════ ScreenAudit complete ═════════");
+                    SusLog.Verbose("═════════ ScreenAudit complete ═════════");
                     evt.StopPropagation();
                 }
             });
@@ -326,7 +326,7 @@ namespace Sharq.Core.Diagnostics
             if (!root.focusable)
                 root.focusable = true;
 
-            Debug.Log("[ScreenAudit] Hotkey installed: Ctrl+Shift+~ to dump screen state.");
+            SusLog.Verbose("[ScreenAudit] Hotkey installed: Ctrl+Shift+~ to dump screen state.");
         }
 
         /// <summary>

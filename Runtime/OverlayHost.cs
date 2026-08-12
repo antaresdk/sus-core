@@ -133,7 +133,7 @@ namespace Sharq.Core
                 });
                 if (pickableCount > 0)
                 {
-                    Debug.LogWarning($"[OverlayAudit] '{element.GetType().Name}' added to overlay " +
+                    SusLog.Verbose($"[OverlayAudit] '{element.GetType().Name}' added to overlay " +
                         $"in {category} category with {pickableCount} pickable children. " +
                         $"It may block clicks to underlying UI. " +
                         $"Consider setting pickingMode=Ignore on children.");
@@ -144,7 +144,7 @@ namespace Sharq.Core
             var modalCount = _stack.Count(e => e.Category == OverlayCategory.Modal);
             if (modalCount > 5)
             {
-                Debug.LogWarning($"[ModalStackAudit] {modalCount} modals on screen. " +
+                SusLog.Verbose($"[ModalStackAudit] {modalCount} modals on screen. " +
                     $"Deep modal stacking may indicate a flow bug or unclosed modals.");
             }
 #endif
@@ -326,7 +326,7 @@ namespace Sharq.Core
             var lastChild = parent.ElementAt(parent.childCount - 1);
             if (lastChild != this)
             {
-                Debug.LogWarning(
+                SusLog.Warn(
                     $"[OverlayHost] NOT last child of '{parent.name}'! " +
                     $"Overlays may render behind content. Call BringToFront() to fix.");
                 return false;
@@ -340,18 +340,18 @@ namespace Sharq.Core
         /// </summary>
         public void DumpStack()
         {
-            Debug.Log($"[OverlayHost] Stack ({_stack.Count} entries):");
+            SusLog.Verbose($"[OverlayHost] Stack ({_stack.Count} entries):");
             for (int i = 0; i < _stack.Count; i++)
             {
                 var e = _stack[i];
                 var size = e.Element?.resolvedStyle;
                 var w = size?.width ?? 0;
                 var h = size?.height ?? 0;
-                Debug.Log($"  [{i}] cat={e.Category} name='{e.Element?.name}' " +
+                SusLog.Verbose($"  [{i}] cat={e.Category} name='{e.Element?.name}' " +
                     $"size={w:F0}x{h:F0} dismissOnClick={e.DismissOnClickOutside}");
             }
             if (_stack.Count == 0)
-                Debug.Log("  (empty)");
+                SusLog.Verbose("  (empty)");
         }
 
         // ── Convenience methods for common overlay patterns ──

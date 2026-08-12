@@ -35,7 +35,7 @@ namespace Sharq.Core.Diagnostics
             AppendNode(root, sb, 0, maxDepth, ref written);
             sb.Append(']');
             var json = sb.ToString();
-            if (emitToConsole) Debug.Log($"[SusUiProbe.tree] {json}");
+            if (emitToConsole) SusLog.Verbose($"[SusUiProbe.tree] {json}");
             return json;
         }
 
@@ -72,7 +72,7 @@ namespace Sharq.Core.Diagnostics
         public static string GetPropsJson(SusComponent component, bool emitToConsole = false)
         {
             var json = BuildPropsJson(component);
-            if (emitToConsole) Debug.Log($"[SusUiProbe.props] {json}");
+            if (emitToConsole) SusLog.Verbose($"[SusUiProbe.props] {json}");
             return json;
         }
 
@@ -83,7 +83,7 @@ namespace Sharq.Core.Diagnostics
             if (target == null)
             {
                 var miss = $"{{\"error\":\"not found\",\"query\":{Q(nameOrType)}}}";
-                if (emitToConsole) Debug.Log($"[SusUiProbe.props] {miss}");
+                if (emitToConsole) SusLog.Verbose($"[SusUiProbe.props] {miss}");
                 return miss;
             }
             return GetPropsJson(target, emitToConsole);
@@ -147,7 +147,7 @@ namespace Sharq.Core.Diagnostics
             }
             sb.Append("]}");
             var json = sb.ToString();
-            if (emitToConsole) Debug.Log($"[SusUiProbe.health] {json}");
+            if (emitToConsole) SusLog.Verbose($"[SusUiProbe.health] {json}");
             return json;
         }
 
@@ -230,7 +230,7 @@ namespace Sharq.Core.Diagnostics
             if (root == null)
             {
                 var miss = "{\"ok\":false,\"error\":\"root is null\"}";
-                if (emitToConsole) Debug.Log($"[SusUiProbe.scroll] {miss}");
+                if (emitToConsole) SusLog.Verbose($"[SusUiProbe.scroll] {miss}");
                 return miss;
             }
 
@@ -238,7 +238,7 @@ namespace Sharq.Core.Diagnostics
             if (resolved == null)
             {
                 var miss = $"{{\"ok\":false,\"error\":\"scroll view not found\",\"query\":{Q(target ?? string.Empty)}}}";
-                if (emitToConsole) Debug.Log($"[SusUiProbe.scroll] {miss}");
+                if (emitToConsole) SusLog.Verbose($"[SusUiProbe.scroll] {miss}");
                 return miss;
             }
 
@@ -246,7 +246,7 @@ namespace Sharq.Core.Diagnostics
             if (m != "offset" && m != "wheel")
             {
                 var bad = $"{{\"ok\":false,\"error\":\"unknown mode\",\"mode\":{Q(mode)}}}";
-                if (emitToConsole) Debug.Log($"[SusUiProbe.scroll] {bad}");
+                if (emitToConsole) SusLog.Verbose($"[SusUiProbe.scroll] {bad}");
                 return bad;
             }
 
@@ -259,7 +259,7 @@ namespace Sharq.Core.Diagnostics
                 if (child == null)
                 {
                     var miss = $"{{\"ok\":false,\"error\":\"into target not found\",\"into\":{Q(into)}}}";
-                    if (emitToConsole) Debug.Log($"[SusUiProbe.scroll] {miss}");
+                    if (emitToConsole) SusLog.Verbose($"[SusUiProbe.scroll] {miss}");
                     return miss;
                 }
                 resolved.ScrollTo(child);
@@ -318,7 +318,7 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"content\":{{\"w\":{F(cwb.width)},\"h\":{F(cwb.height)}}}");
             sb.Append('}');
             var json = sb.ToString();
-            if (emitToConsole) Debug.Log($"[SusUiProbe.scroll] {json}");
+            if (emitToConsole) SusLog.Verbose($"[SusUiProbe.scroll] {json}");
             return json;
         }
 

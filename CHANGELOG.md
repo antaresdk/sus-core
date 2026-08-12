@@ -5,6 +5,14 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.10] - 2026-08-12
+
+### Added
+- `SusLog` / `SusLogLevel` gated logger + `SusApp.UseLogLevel` (default Warn; `SUS_VERBOSE_LOGS` / `sus.config.json` `logLevel`).
+
+### Changed
+- Runtime diagnostics and *Audit call-sites emit via `SusLog.Verbose` (buyer default stays quiet).
+
 ## [1.0.9] - 2026-08-12
 
 ### Fixed

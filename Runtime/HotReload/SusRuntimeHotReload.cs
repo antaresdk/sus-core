@@ -37,7 +37,7 @@ namespace Sharq.Core
 
             if (StyleSheetFromUss == null)
             {
-                Debug.LogWarning(
+                SusLog.Warn(
                     "[SusRuntimeHotReload] ApplyUss: no StyleSheetFromUss factory " +
                     "(Editor registers it; player builds cannot parse USS without it).");
                 return 0;
@@ -50,7 +50,7 @@ namespace Sharq.Core
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[SusRuntimeHotReload] StyleSheet parse failed: {ex.Message}");
+                SusLog.Error($"[SusRuntimeHotReload] StyleSheet parse failed: {ex.Message}");
                 return 0;
             }
 
@@ -63,7 +63,7 @@ namespace Sharq.Core
                 count++;
             });
 
-            Debug.Log($"[SusRuntimeHotReload] ApplyUss {className}{suffix} → {count} instance(s)");
+            SusLog.Verbose($"[SusRuntimeHotReload] ApplyUss {className}{suffix} → {count} instance(s)");
             return count;
         }
 
@@ -87,7 +87,7 @@ namespace Sharq.Core
                     fallback++;
             });
 
-            Debug.Log(
+            SusLog.Verbose(
                 $"[SusRuntimeHotReload] ApplyTemplate {className} → applied={applied} fallback={fallback}");
             return (applied, fallback);
         }

@@ -76,12 +76,12 @@ namespace Sharq.Core
             }
             catch (FallbackException ex)
             {
-                Debug.LogWarning($"[SharqInterp] Fallback on {component.GetType().Name}: {ex.Message}");
+                SusLog.Warn($"[SharqInterp] Fallback on {component.GetType().Name}: {ex.Message}");
                 return FallbackFailed(component, snap ?? new List<SusComponentSnapshot.Entry>());
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[SharqInterp] Unexpected error on {component.GetType().Name}: {ex.Message}");
+                SusLog.Warn($"[SharqInterp] Unexpected error on {component.GetType().Name}: {ex.Message}");
                 if (snap != null)
                     FallbackFailed(component, snap);
                 return false;
@@ -287,7 +287,7 @@ namespace Sharq.Core
                 // @events → log + skip (do not hard-fail the whole template)
                 if (key.StartsWith("@"))
                 {
-                    Debug.LogWarning(
+                    SusLog.Warn(
                         $"[SharqInterp] Skipping unsupported event binding '{key}' on {el.GetType().Name} " +
                         $"({ctx.Component.GetType().Name}). Full recompile needed for live handlers.");
                     continue;
@@ -546,7 +546,7 @@ namespace Sharq.Core
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[SharqInterp] FallbackFailed recovery error: {ex.Message}");
+                SusLog.Warn($"[SharqInterp] FallbackFailed recovery error: {ex.Message}");
             }
             return false;
         }
