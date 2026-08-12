@@ -40,6 +40,36 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void ClearSubscribers_DropsHandlersButKeepsValue()
+        {
+            var p = new Prop<int>(1);
+            int changed = 0, bindingNotified = 0;
+            p.Changed += (_, _) => changed++;
+            p.propertyChanged += (_, _) => bindingNotified++;
+
+            p.ClearSubscribers();
+            p.Value = 2;
+
+            Assert.AreEqual(0, changed, "Changed must not fire after ClearSubscribers");
+            Assert.AreEqual(0, bindingNotified, "propertyChanged must not fire after ClearSubscribers");
+            Assert.AreEqual(2, p.Value, "the value itself must still update");
+        }
+
+        [Test]
+        public void ClearSubscribers_AllowsResubscribing()
+        {
+            var p = new Prop<int>(1);
+            p.Changed += (_, _) => Assert.Fail("handler from before the clear must not run");
+            p.ClearSubscribers();
+
+            int changed = 0;
+            p.Changed += (_, _) => changed++;
+            p.Value = 2;
+
+            Assert.AreEqual(1, changed);
+        }
+
+        [Test]
         public void ImplicitOperator_ReturnsValue()
         {
             var p = new Prop<float>(3.14f);

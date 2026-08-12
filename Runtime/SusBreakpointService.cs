@@ -26,6 +26,14 @@ namespace Sharq.Core
         /// <summary>Opt-in breakpoint-change logging (off by default; Storybook/QA may enable).</summary>
         public bool VerboseLogging;
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled the cache survives leaving Play Mode and keeps every
+        // VisualElement of the previous session alive as a dictionary key, so the next session
+        // can resolve a service bound to a destroyed panel.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_cache.Clear();
+#endif
+
         /// <summary>Get-or-create the shared service for a root VisualElement.</summary>
         public static SusBreakpointService For(VisualElement root)
         {
