@@ -7,6 +7,17 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-08-12
+
+### Changed
+- The full Phosphor set (1,512 icons x 6 weights, 31 MB) moved out of `Runtime/Resources` into the
+  optional `Phosphor Icon Set` sample. The package now ships a 127-icon subset — everything the
+  built-in components use — so `Resources`, which lands in **every** player build, is 1.6 MB
+  instead of 32.5 MB. Import the sample if you need the long tail; it keeps the same
+  `SusRuntime/Icons/phosphor/{weight}/{name}` resource path, so no code changes are required.
+  The manifest already declared this sample, but the assets had never been moved, which also
+  broke store packaging.
+
 ## [1.0.10] - 2026-08-12
 
 ### Added
