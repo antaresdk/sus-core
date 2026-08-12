@@ -178,7 +178,7 @@ namespace Sharq.Core
                 _lastWidth = float.NaN;
                 ApplyClass(force: true);
                 if (prev != Current.Value && VerboseLogging)
-                    Debug.Log($"[SusBreakpoint] override {prev} → {Current.Value}");
+                    SusLog.Verbose($"[SusBreakpoint] override {prev} → {Current.Value}");
             }
             else
             {
@@ -223,7 +223,7 @@ namespace Sharq.Core
             ApplyClass();
 
             if (prev != Current.Value && VerboseLogging)
-                Debug.Log($"[SusBreakpoint] {prev} → {Current.Value} @ {logicalWidth:F0}px (class={ClassFor(Current.Value)})");
+                SusLog.Verbose($"[SusBreakpoint] {prev} → {Current.Value} @ {logicalWidth:F0}px (class={ClassFor(Current.Value)})");
         }
 
         /// <summary>USS class name for a breakpoint (Tailwind naming, Xxl → "2xl").</summary>

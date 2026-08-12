@@ -211,6 +211,18 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Sets the process-wide <see cref="SusLog.Level"/> (call before <see cref="Run"/> /
+        /// <see cref="Mount{T}"/>). Does not depend on scaffold finalization.
+        /// When scripting define <c>SUS_VERBOSE_LOGS</c> is present, levels below Verbose
+        /// are ignored (define floor).
+        /// </summary>
+        public SusApp UseLogLevel(SusLogLevel level)
+        {
+            SusLog.Level = level;
+            return this;
+        }
+
+        /// <summary>
         /// Registers a callback run against the root during finalization, after the cascade
         /// and custom styles but before the theme is applied. Escape hatch for manual UI and
         /// for the sus-router <c>UseRouter</c> extension. Multiple callbacks run in order.

@@ -98,7 +98,7 @@ namespace Sharq.Core
             if (!changed) return;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning(
+            SusLog.Warn(
                 $"[PropAllowed] {propName ?? "Prop"}: '{raw}' → '{next}' (not in allowed set)");
 #endif
             prop.Value = next;
@@ -115,7 +115,7 @@ namespace Sharq.Core
             if (next == raw) return;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.LogWarning(
+            SusLog.Warn(
                 $"[PropAllowed] {propName ?? "Prop"}: {raw} → {next} (not in allowed set)");
 #endif
             prop.Value = next;

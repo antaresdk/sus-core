@@ -32,7 +32,10 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreSame(app, app.UseTokenCascade(false));
             Assert.AreSame(app, app.UseWorldSpace(false));
             Assert.AreSame(app, app.UseCustomStyles("SusRuntime/nope"));
+            Assert.AreSame(app, app.UseLogLevel(SusLogLevel.Info));
             Assert.AreSame(app, app.Configure(_ => { }));
+            Assert.AreEqual(SusLogLevel.Info, SusLog.Level);
+            SusLog.ResetForTests(SusLogLevel.Warn);
         }
 
         [Test]

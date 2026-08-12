@@ -81,7 +81,7 @@ namespace Sharq.Core
             _root = _document.rootVisualElement;
 
             if (_root == null)
-                Debug.LogError("[SusWorldSpacePanel] UIDocument has no rootVisualElement. " +
+                SusLog.Error("[SusWorldSpacePanel] UIDocument has no rootVisualElement. " +
                                "Make sure PanelSettings is assigned and renderMode = WorldSpace.", this);
         }
 
@@ -159,24 +159,24 @@ namespace Sharq.Core
         {
             if (element == null)
             {
-                if (VerboseLogging) Debug.LogWarning("[SusWorldSpacePanel] AttachElement: element is null.");
+                if (VerboseLogging) SusLog.Warn("[SusWorldSpacePanel] AttachElement: element is null.");
                 return;
             }
             if (target == null)
             {
-                if (VerboseLogging) Debug.LogWarning("[SusWorldSpacePanel] AttachElement: target is null.");
+                if (VerboseLogging) SusLog.Warn("[SusWorldSpacePanel] AttachElement: target is null.");
                 return;
             }
             if (_root == null)
             {
-                Debug.LogError("[SusWorldSpacePanel] AttachElement: panel not initialised (no rootVisualElement).");
+                SusLog.Error("[SusWorldSpacePanel] AttachElement: panel not initialised (no rootVisualElement).");
                 return;
             }
 
             // Already attached → detach first
             if (_attachments.TryGetValue(element, out var old))
             {
-                if (VerboseLogging) Debug.Log("[SusWorldSpacePanel] Re-attaching element, detaching previous.");
+                if (VerboseLogging) SusLog.Verbose("[SusWorldSpacePanel] Re-attaching element, detaching previous.");
                 old.Container.RemoveFromHierarchy();
             }
 
@@ -200,7 +200,7 @@ namespace Sharq.Core
             };
 
             if (VerboseLogging)
-                Debug.Log($"[SusWorldSpacePanel] Attached '{element.name}' to '{target.name}' at {worldPos}");
+                SusLog.Verbose($"[SusWorldSpacePanel] Attached '{element.name}' to '{target.name}' at {worldPos}");
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace Sharq.Core
             _attachments.Remove(element);
 
             if (VerboseLogging)
-                Debug.Log($"[SusWorldSpacePanel] Detached '{element.name}'");
+                SusLog.Verbose($"[SusWorldSpacePanel] Detached '{element.name}'");
         }
 
         /// <summary>
