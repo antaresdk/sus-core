@@ -3,7 +3,7 @@
 **Foundation of the SUS UI system.** Analogue of Vue.js — reactivity, SFC compiler, directives, slots, CSS scoped, themes, breakpoints, world-space, console.
 
 <!-- sus:gen ver pkg=sus-core -->
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.11`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.12`)
 <!-- /sus:gen -->
 
 ---
@@ -49,7 +49,7 @@ public class AppEntry : MonoBehaviour
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.11
+https://github.com/antaresdk/sus-core.git#v1.0.12
 ```
 <!-- /sus:gen -->
 

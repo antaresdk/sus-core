@@ -7,6 +7,18 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-08-12
+
+### Fixed
+- Icon SVGs were imported with the vector cropped to its geometry bounds instead of the source
+  `viewBox`. Since a `VectorImage` is painted as a stretched background, sparse glyphs came out
+  distorted: `minus` (an 18×1 bar inside a 24×24 box) filled its element as a solid block, and
+  `check` / the carets rendered visibly larger than the rest of the set. All shipped icons — the
+  built-in subset and the optional Phosphor sample — now preserve the viewBox, so one set of
+  icons is optically consistent at any size.
+- New icon SVGs dropped into a `Resources/SusRuntime/Icons/**` folder get that import setting by
+  default (`SusIconImportDefaults`); existing `.meta` files are never overwritten.
+
 ## [1.0.11] - 2026-08-12
 
 ### Changed

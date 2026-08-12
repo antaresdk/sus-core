@@ -22,8 +22,9 @@ namespace Sharq.Core
     /// <see cref="VectorImage"/> by querying registered <see cref="ISusIconProvider"/>s in
     /// priority order. Alias map and providers are configurable — the registry itself is
     /// icon-set-agnostic. The default provider is <see cref="CoreIconProvider"/> (minimal
-    /// built-in set); the full Phosphor set (1512×6 SVG) also ships in sus-core and is
-    /// self-registered by <see cref="PhosphorIconBootstrap"/> as a lower-priority provider.
+    /// built-in set); <see cref="PhosphorIconBootstrap"/> self-registers a lower-priority
+    /// provider for the full Phosphor set, which resolves once the optional
+    /// <c>PhosphorIcons</c> sample is imported.
     ///
     /// Backward-compatible: existing callers keep using <see cref="Load(string, SusIconWeight)"/>,
     /// <see cref="KnownAliases"/> and <see cref="Categories"/> unchanged.
