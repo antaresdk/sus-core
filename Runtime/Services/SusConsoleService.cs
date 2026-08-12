@@ -45,12 +45,16 @@ namespace Sharq.Core
         private string _searchText = string.Empty;
         private readonly Dictionary<string, (Action<string[]> handler, string help)> _commands = new();
 
+        /// <summary>BEM root for the console's USS classes (<c>Resources/SusRuntime/sus-console.uss</c>).</summary>
+        private const string RootClass = "sus-console";
+
         // UI elements (lazy, built on first Show)
         private VisualElement _root;
         private ScrollView _scrollView;
         private Label _filterLabel;
         private bool _userScrolledUp;
         private TextField _cmdField; // captured for tab-completion
+        private readonly Dictionary<ConsoleFilter, Button> _filterChips = new();
 
         // ─── Attach / Detach ────────────────────────────────────────────────
 
@@ -81,6 +85,18 @@ namespace Sharq.Core
             RegisterBuiltinCommands();
             Instance = this;
         }
+
+#if UNITY_EDITOR
+        // With Domain Reload disabled Instance survives leaving Play Mode, pointing at a console
+        // whose UI belongs to a destroyed panel and whose log subscription is already gone;
+        // OnDuplicateCommand would keep a handler closing over the previous session.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            Instance = null;
+            OnDuplicateCommand = null;
+        }
+#endif
 
         public void Detach()
         {
@@ -174,6 +190,7 @@ namespace Sharq.Core
         public void SetFilter(ConsoleFilter filter)
         {
             _filter = filter;
+            UpdateFilterChips();
             if (IsOpen)
                 UpdateLogList();
         }
@@ -268,82 +285,44 @@ namespace Sharq.Core
             {
                 name = "sus-console",
                 pickingMode = PickingMode.Position,
-                style =
-                {
-                    position = Position.Absolute,
-                    left = 0,
-                    right = 0,
-                    bottom = 0,
-                    height = Length.Percent(40),
-                    backgroundColor = new Color(0.05f, 0.05f, 0.05f, 0.92f),
-                    flexDirection = FlexDirection.Column,
-                    paddingTop = 4,
-                    paddingBottom = 4,
-                    paddingLeft = 8,
-                    paddingRight = 8,
-                }
             };
+            _root.AddToClassList(RootClass);
+
+            // Styles come from Resources, not from C#, so a project can restyle the console.
+            // The sheet is added to the console root rather than the panel: the console is an
+            // overlay that comes and goes, and nothing else should inherit its rules.
+            SusBootstrap.AddStyleSheet(_root, SusBootstrap.ResourcePath + "sus-console");
 
             // ── Toolbar ──
-            var toolbar = new VisualElement
-            {
-                style =
-                {
-                    flexDirection = FlexDirection.Row,
-                    height = 24,
-                    marginBottom = 4,
-                }
-            };
+            var toolbar = new VisualElement();
+            toolbar.AddToClassList(RootClass + "__toolbar");
 
-            // Filter buttons
+            // Filter chips
             foreach (var (label, filter) in new[]
             {
                 ("All", ConsoleFilter.All), ("Log", ConsoleFilter.Log),
                 ("Warn", ConsoleFilter.Warning), ("Err", ConsoleFilter.Error)
             })
             {
-                var btn = new Button(() =>
-                {
-                    SetFilter(filter);
-                    UpdateFilterLabel();
-                })
-                {
-                    text = label,
-                    style =
-                    {
-                        marginRight = 4,
-                        height = 22,
-                        fontSize = 11,
-                    }
-                };
+                var btn = new Button(() => SetFilter(filter)) { text = label };
+                btn.AddToClassList(RootClass + "__filter");
+                _filterChips[filter] = btn;
                 toolbar.Add(btn);
             }
 
             // Search field
-            var searchField = new TextField
-            {
-                style =
-                {
-                    flexGrow = 1,
-                    height = 22,
-                    marginLeft = 8,
-                    fontSize = 11,
-                }
-            };
+            var searchField = new TextField();
+            searchField.AddToClassList(RootClass + "__field");
+            searchField.AddToClassList(RootClass + "__search");
+            SetPlaceholder(searchField, "search…");
             searchField.RegisterValueChangedCallback(evt => SetSearch(evt.newValue));
             toolbar.Add(searchField);
 
             // Command input
-            _cmdField = new TextField
-            {
-                style =
-                {
-                    width = 200,
-                    height = 22,
-                    marginLeft = 8,
-                    fontSize = 11,
-                }
-            };
+            _cmdField = new TextField();
+            _cmdField.AddToClassList(RootClass + "__field");
+            _cmdField.AddToClassList(RootClass + "__command");
+            SetPlaceholder(_cmdField, "command (Tab completes, try help)");
             _cmdField.RegisterCallback<KeyDownEvent>(evt =>
             {
                 if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
@@ -361,35 +340,44 @@ namespace Sharq.Core
             toolbar.Add(_cmdField);
 
             // Close button
-            var closeBtn = new Button(Hide) { text = "✕",
-                style = { marginLeft = 4, height = 22, fontSize = 11, width = 22 }
-            };
+            var closeBtn = new Button(Hide) { text = "✕" };
+            closeBtn.AddToClassList(RootClass + "__close");
             toolbar.Add(closeBtn);
 
             _root.Add(toolbar);
 
             // ── Scroll view ──
-            _scrollView = new ScrollView
-            {
-                style = { flexGrow = 1 },
-            };
+            _scrollView = new ScrollView();
+            _scrollView.AddToClassList(RootClass + "__list");
             _scrollView.verticalScroller.valueChanged += v =>
                 _userScrolledUp = v < _scrollView.verticalScroller.highValue - 0.01f;
 
             _root.Add(_scrollView);
 
-            // Filter status label
-            _filterLabel = new Label
-            {
-                style =
-                {
-                    fontSize = 10,
-                    color = new Color(0.5f, 0.5f, 0.5f),
-                    unityTextAlign = TextAnchor.MiddleRight,
-                    height = 16,
-                }
-            };
+            // Status line: active filter + how much of the buffer is on screen
+            _filterLabel = new Label();
+            _filterLabel.AddToClassList(RootClass + "__status");
             _root.Add(_filterLabel);
+
+            UpdateFilterChips();
+        }
+
+        /// <summary>
+        /// Placeholder text is set through the text edition API when the Unity version exposes
+        /// it; on versions that do not, the field simply stays empty.
+        /// </summary>
+        private static void SetPlaceholder(TextField field, string text)
+        {
+#if UNITY_2023_2_OR_NEWER
+            field.textEdition.placeholder = text;
+            field.textEdition.hidePlaceholderOnFocus = true;
+#endif
+        }
+
+        private void UpdateFilterChips()
+        {
+            foreach (var pair in _filterChips)
+                pair.Value.EnableInClassList(RootClass + "__filter--active", pair.Key == _filter);
         }
 
         private void UpdateLogList()
@@ -407,41 +395,31 @@ namespace Sharq.Core
                     !entry.Message.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                var color = entry.Type switch
+                var line = new Label { text = entry.Message };
+                line.AddToClassList(RootClass + "__line");
+                switch (entry.Type)
                 {
-                    LogType.Warning => new Color(0.9f, 0.8f, 0.1f),
-                    LogType.Error or LogType.Exception or LogType.Assert => new Color(0.95f, 0.3f, 0.3f),
-                    _ => new Color(0.65f, 0.65f, 0.65f),
-                };
-
-                var line = new Label
-                {
-                    text = entry.Message,
-                    style =
-                    {
-                        color = color,
-                        fontSize = 11,
-                        unityFontStyleAndWeight = FontStyle.Normal,
-                        whiteSpace = WhiteSpace.Normal,
-                        paddingBottom = 1,
-                        paddingTop = 1,
-                    }
-                };
+                    case LogType.Warning:
+                        line.AddToClassList(RootClass + "__line--warning");
+                        break;
+                    case LogType.Error:
+                    case LogType.Exception:
+                    case LogType.Assert:
+                        line.AddToClassList(RootClass + "__line--error");
+                        break;
+                }
                 _scrollView.Add(line);
                 shown++;
             }
 
-            _filterLabel.text = $"{shown}/{_buffer.Count} entries";
+            _filterLabel.text = _filter == ConsoleFilter.All
+                ? $"{shown}/{_buffer.Count} entries"
+                : $"{_filter} · {shown}/{_buffer.Count} entries";
 
             if (!_userScrolledUp)
                 _scrollView.schedule.Execute(() => _scrollView.verticalScroller.value = 0).StartingIn(0);
         }
 
-        private void UpdateFilterLabel()
-        {
-            if (_filterLabel != null)
-                _filterLabel.text = $"Filter: {_filter}";
-        }
 
         // ─── C4.4: Tab-completion ────────────────────────────────────────────
 

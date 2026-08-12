@@ -7,6 +7,26 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.14] - 2026-08-12
+
+### Changed
+- The dev console (`SusConsoleService`) is now styled by a stylesheet instead of C# inline styles:
+  `Runtime/Resources/SusRuntime/sus-console.uss`, loaded onto the console root on first `Show()`.
+  Every colour is a design token, so the console follows the active theme, and a project can
+  restyle it by overriding the `.sus-console*` classes — previously the look was compiled into the
+  service and could not be changed at all. Documented in `Docs/17-console.md`.
+
+### Fixed
+- The open console looked broken: filter buttons, text fields and the scrollbar rendered with the
+  UI Toolkit defaults (light grey controls, white input boxes, editor-chrome scroller) on top of a
+  dark game UI. Filters are now chips that show which one is active, inputs are dark with
+  placeholders, and the scroller is a thin dragger.
+- The status line under the log said either the active filter or how many entries were shown,
+  depending on which code path updated it last. It now always shows both.
+- `SusConsoleService.Instance` and `OnDuplicateCommand` survived leaving Play Mode with Domain
+  Reload disabled (Fast Enter Playmode), so the next session could start with a console pointing
+  at a destroyed panel. Both are reset on `SubsystemRegistration`, matching the other services.
+
 ## [1.0.13] - 2026-08-12
 
 ### Fixed

@@ -1,0 +1,163 @@
+/* Dev console (SusConsoleService).
+ *
+ * Lives here rather than in C# so a project can restyle the console by overriding these
+ * classes, and so the colours come from theme tokens instead of Unity's editor defaults —
+ * an unstyled UI Toolkit Button/TextField renders light grey on white, which looks broken
+ * on top of a dark game UI.
+ *
+ * Every var() carries a fallback: the console can be attached to a bare panel that never
+ * went through SusBootstrap, and in that case there is no token cascade to inherit from.
+ */
+
+.sus-console {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 40%;
+    flex-direction: column;
+    padding: 6px 8px 4px 8px;
+    background-color: var(--sus-bg-overlay, rgba(12, 12, 14, 0.94));
+    border-top-width: 1px;
+    border-top-color: var(--sus-border, rgba(255, 255, 255, 0.12));
+}
+
+.sus-console__toolbar {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    margin-bottom: 6px;
+}
+
+/* ─── Filter chips ─── */
+
+.sus-console__filter {
+    height: 22px;
+    margin: 0 4px 0 0;
+    padding: 0 10px 0 10px;
+    font-size: 11px;
+    color: var(--sus-text-secondary, rgba(255, 255, 255, 0.6));
+    background-color: var(--sus-bg-surface, rgb(26, 26, 28));
+    border-width: 1px;
+    border-color: var(--sus-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sus-radius-sm, 4px);
+}
+
+.sus-console__filter:hover {
+    color: var(--sus-text-primary, rgb(245, 245, 245));
+    border-color: var(--sus-border-hover, rgba(255, 255, 255, 0.24));
+}
+
+.sus-console__filter--active {
+    color: var(--sus-text-on-primary, rgb(255, 255, 255));
+    background-color: var(--sus-primary, rgb(0, 102, 255));
+    border-color: var(--sus-primary, rgb(0, 102, 255));
+}
+
+/* ─── Text fields ───
+ * The visible box is the inner input element, not the field itself. */
+
+.sus-console__field {
+    height: 22px;
+    margin-left: 8px;
+    font-size: 11px;
+}
+
+.sus-console__field .unity-base-text-field__input {
+    background-color: var(--sus-bg-page, rgb(10, 10, 11));
+    border-width: 1px;
+    border-color: var(--sus-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sus-radius-sm, 4px);
+    padding: 0 6px 0 6px;
+    color: var(--sus-text-primary, rgb(245, 245, 245));
+    --unity-selection-color: var(--sus-selected-overlay, rgba(0, 102, 255, 0.35));
+}
+
+.sus-console__field .unity-base-text-field__input:focus {
+    border-color: var(--sus-border-focus, rgb(0, 102, 255));
+}
+
+.sus-console__search {
+    flex-grow: 1;
+}
+
+.sus-console__command {
+    width: 240px;
+}
+
+.sus-console__close {
+    width: 22px;
+    height: 22px;
+    margin-left: 4px;
+    padding: 0;
+    font-size: 11px;
+    color: var(--sus-text-secondary, rgba(255, 255, 255, 0.6));
+    background-color: initial;
+    border-width: 1px;
+    border-color: var(--sus-border, rgba(255, 255, 255, 0.12));
+    border-radius: var(--sus-radius-sm, 4px);
+}
+
+.sus-console__close:hover {
+    color: var(--sus-text-primary, rgb(245, 245, 245));
+    border-color: var(--sus-border-hover, rgba(255, 255, 255, 0.24));
+}
+
+/* ─── Log list ─── */
+
+.sus-console__list {
+    flex-grow: 1;
+}
+
+/* The default UITK scroller is a light-grey widget with arrow buttons — on a dark
+ * overlay it reads as a piece of editor chrome, so it is reduced to a thin dragger. */
+
+.sus-console__list .unity-scroller--vertical {
+    width: 8px;
+    background-color: initial;
+    border-width: 0;
+}
+
+.sus-console__list .unity-scroller--vertical > .unity-scroller__low-button,
+.sus-console__list .unity-scroller--vertical > .unity-scroller__high-button {
+    display: none;
+}
+
+.sus-console__list .unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: initial;
+    border-width: 0;
+}
+
+.sus-console__list .unity-scroller--vertical .unity-base-slider__dragger {
+    width: 4px;
+    left: 2px;
+    background-color: var(--sus-border-hover, rgba(255, 255, 255, 0.24));
+    border-width: 0;
+    border-radius: var(--sus-radius-full, 999px);
+}
+
+.sus-console__list .unity-scroller--vertical .unity-base-slider__dragger:hover {
+    background-color: var(--sus-text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.sus-console__line {
+    font-size: 11px;
+    white-space: normal;
+    padding: 1px 2px 1px 2px;
+    color: var(--sus-text-secondary, rgba(255, 255, 255, 0.62));
+}
+
+.sus-console__line--warning {
+    color: var(--sus-warning, rgb(230, 190, 30));
+}
+
+.sus-console__line--error {
+    color: var(--sus-error, rgb(240, 80, 80));
+}
+
+.sus-console__status {
+    height: 16px;
+    font-size: 10px;
+    color: var(--sus-text-disabled, rgba(255, 255, 255, 0.38));
+    -unity-text-align: middle-right;
+}
