@@ -17,7 +17,7 @@
 6. [Responsive breakpoints](#6-responsive-breakpoints)
 7. [Bootstrap: how everything is put together](#7-bootstrap-how-everything-is-put-together)
 8. [File structure](#8-file-structure)
-9. [Task list](#9-task-list)
+9. [Historical checklist](#9-historical-checklist)
 10. [Appendix A: token summary table](#appendix-a-token-summary-table)
 11. [Appendix B: key rules and patterns](#appendix-b-key-rules-and-patterns-identified-during-the-process)
 
@@ -34,8 +34,8 @@
 ```
 The component writes: And receives:
   color: var(--sus-text-primary) → rgba(255,255,255,1) (in dark theme)
-  font-size: var(--sus-font-16) → 16px (from design tokens / breakpoints)
-  -unity-font: var(--main-font-family) → Montserrat Regular
+  font-size: var(--sus-font-size-body) → 14px (semantic size from _font.uss)
+  -unity-font: var(--sus-font-body) → Montserrat (family bridge)
 ```
 
 Tokens are resolved through a CSS cascade. Variables are defined in `:root` USS files that connect via direct ` root.styleSheets.Add()`.
@@ -102,81 +102,35 @@ sus-core/Runtime/Resources/SusRuntime/
 
 `SusBootstrap.Mount<T>()` automatically downloads ` Resources/SusRuntime/_font.uss` with every mount.
 
-### 2.2 What to do
+### 2.2 Semantic fonts (shipped)
 
+`_font.uss` defines:
 
-
-#### 2.2.1 Add missing styles from the previous scheme
-
-Now at `sus-core` 6 styles. Previously - 18 (9 styles + italic). Need to add:
-
-
-| File | Weight | Destination |
-| --------------------------- | ------ | ----------------- |
-| `Montserrat-Thin.ttf`       | 100 | Emphasis Headings |
-| `Montserrat-ExtraLight.ttf` | 200 | Small text |
-| `Montserrat-SemiBold.ttf`   | 600 | Buttons, navigation |
-| `Montserrat-ExtraBold.ttf`  | 800 | Hero titles |
-
-
-Italic versions for new styles - optional, add if the project uses italics in the UI.
-
-#### 2.2.2 Expand `_font.uss` - semantic variables
+- **Family slots** `--font-family-*` (Montserrat defaults). Optional project overrides use the fallback pattern documented in the `_font.uss` header (`var(…, url(...))`) — those override slots are **not** part of the published 61-token L3 inventory.
+- **Semantic sizes (L3)** — components use these (not raw `--base-font-N`, and not numeric px aliases under the `--sus-` prefix):
 
 ```css
-/* sus-core/Runtime/Resources/SusRuntime/_font.uss */
-:root {
-    /* ── Font Families ─────────────────────────────── */
-    --font-family-thin:       url("Fonts/Montserrat/Montserrat-Thin.ttf");
-    --font-family-extra-light: url("Fonts/Montserrat/Montserrat-ExtraLight.ttf");
-    --font-family-light:      url("Fonts/Montserrat/Montserrat-Light.ttf");
-    --font-family-regular:    url("Fonts/Montserrat/Montserrat-Regular.ttf");
-    --font-family-medium:     url("Fonts/Montserrat/Montserrat-Medium.ttf");
-    --font-family-semi-bold:  url("Fonts/Montserrat/Montserrat-SemiBold.ttf");
-    --font-family-bold:       url("Fonts/Montserrat/Montserrat-Bold.ttf");
-    --font-family-extra-bold: url("Fonts/Montserrat/Montserrat-ExtraBold.ttf");
-    --font-family-black:      url("Fonts/Montserrat/Montserrat-Black.ttf");
-    --font-family-italic:     url("Fonts/Montserrat/Montserrat-Italic.ttf");
-
-    /* ── Semantic font assignments ─────────────────── */
-    --main-font-family: var(--font-family-regular);
-    --font-heading:     var(--font-family-bold);
-    --font-body:        var(--font-family-regular);
-    --font-button:      var(--font-family-semi-bold);
-    --font-caption:     var(--font-family-light);
-    --font-mono: var(--font-family-regular);  /* replacement with monospace */
-
-    -unity-font: var(--main-font-family);
-}
-
-* {
-    -unity-font: var(--main-font-family);
-}
+--sus-font-size-caption   /* ← --base-font-size-xs (10px) */
+--sus-font-size-small     /* 12px */
+--sus-font-size-body      /* 14px */
+--sus-font-size-subtitle  /* 16px */
+--sus-font-size-heading3  /* 20px */
+--sus-font-size-heading2  /* 24px */
+--sus-font-size-heading1  /* 32px */
+--sus-font-size-hero      /* 48px */
 ```
 
+`design-tokens.uss` also exposes **family bridges** for `-unity-font`:
 
+`--sus-font-body` · `--sus-font-label` · `--sus-font-heading` · `--sus-font-italic`
 
-#### 2.2.3 Font sizes
+#### 2.2.1 Raw L1 font sizes (palette)
 
-Font sizes are already in `_palette.uss` (Layer 1 — see section 6):
+`_palette.uss` still has raw `--base-font-10` … `--base-font-32`. Treat them as **palette internals**. Components and buyer samples must use the eight `--sus-font-size-caption` … `--sus-font-size-hero` tokens above.
 
-```css
---base-font-10: 10px;
---base-font-12: 12px;
---base-font-14: 14px;
---base-font-16: 16px;
---base-font-18: 18px;
---base-font-20: 20px;
---base-font-24: 24px;
---base-font-28: 28px;
---base-font-32: 32px;
-```
+#### 2.2.2 User override
 
-
-
-#### 2.2.4 User Override
-
-As it is now: the user creates `Assets/Resources/SusRuntime/_font.uss` — ` Resources.Load` prefers the draft version. Everything works without code.
+Create `Assets/Resources/SusRuntime/_font.uss` — `Resources.Load` prefers the project copy. No code required. For open font-face gaps (Thin / ExtraLight / …), see the [internal plan](internal/plans/DESIGN_TOKENS_PLAN.md) — not a buyer checklist.
 
 ---
 
@@ -226,151 +180,160 @@ The file that comes with `sus-core` in ` Resources/`. Basic colors without seman
 
 ### 3.2 Layer 2 — Theme aliases (Dark/Light in `_theme.uss`)
 
+L2 defines `--thm-*` only (no invented `--thm-bg` / `--thm-fail` / `--thm-text-inverse`). Full list lives in the USS file; key groups below match as-is.
+
 **Dark theme (default):**
 
 ```css
-/* sus-core/Runtime/Resources/SusRuntime/_theme.uss — Layer 2 Dark */
+/* sus-core/Runtime/Resources/SusRuntime/_theme.uss — Layer 2 Dark (excerpt) */
 :root,
 .theme-dark {
     /* Surface */
-    --thm-bg-page:           var(--base-color-Grey04);
-    --thm-bg-surface:        var(--base-color-Grey08);
-    --thm-bg-surface-raised: var(--base-color-Grey12);
-    --thm-bg-surface-overlay:var(--base-color-Grey16);
+    --thm-bg-page:            var(--base-color-Grey04);
+    --thm-bg-surface:         var(--base-color-Grey08);
+    --thm-bg-surface-raised:  var(--base-color-Grey12);
+    --thm-bg-surface-overlay: var(--base-color-Grey16);
+    --thm-bg-surface-variant: var(--base-color-Grey18);
+    --thm-bg-disabled:        var(--base-color-Grey40);
 
     /* Text */
-    --thm-text-primary:      var(--base-color-Grey94);
-    --thm-text-secondary:    var(--base-color-Grey80);
-    --thm-text-disabled:     var(--base-color-Grey60);
-    --thm-text-on-primary:   var(--base-color-Grey98);
+    --thm-text-primary:       var(--base-color-Grey94);
+    --thm-text-secondary:     var(--base-color-Grey80);
+    --thm-text-disabled:      var(--base-color-Grey60);
+    --thm-text-on-primary:    var(--base-color-Grey98);
 
-    /* Borders */
-    --thm-border:            var(--base-color-Grey24);
-    --thm-border-hover:      var(--base-color-Grey40);
-    --thm-border-focus:      var(--base-color-Primary50);
+    /* Border */
+    --thm-border:             var(--base-color-Grey24);
+    --thm-border-hover:       var(--base-color-Grey40);
+    --thm-border-focus:       var(--base-color-Primary50);
 
-    /* Primary */
-    --thm-primary:           var(--base-color-Primary50);
-    --thm-primary-hover:     var(--base-color-Primary70);
-    --thm-primary-pressed:   var(--base-color-Primary30);
+    /* Brand / status */
+    --thm-primary:            var(--base-color-Primary50);
+    --thm-primary-hover:      var(--base-color-Primary70);
+    --thm-primary-pressed:    var(--base-color-Primary30);
+    --thm-secondary:          var(--base-color-Grey24);
+    --thm-secondary-hover:    var(--base-color-Grey30);
+    --thm-success:            var(--base-color-Success);
+    --thm-success-hover:      var(--base-color-SuccessHover);
+    --thm-warning:            var(--base-color-Warning);
+    --thm-warning-hover:      var(--base-color-WarningHover);
+    --thm-error:              var(--base-color-Error);
+    --thm-error-hover:        var(--base-color-ErrorHover);
+    --thm-info:               var(--base-color-Info50);
+    --thm-info-hover:         var(--base-color-Info70);
 
-    /* Semantic colors */
-    --thm-success:           var(--base-color-Success);
-    --thm-warning:           var(--base-color-Warning);
-    --thm-error:             var(--base-color-Error);
+    /* Scrim / overlays */
+    --thm-scrim:              var(--base-color-BlackT30);
+    --thm-hover-overlay:      var(--base-color-WhiteT5);
+    --thm-selected-overlay:   var(--base-color-WhiteT10);
+    --thm-disabled-overlay:   var(--base-color-WhiteT5);
 }
 ```
 
-**Light theme** (overrides light/dark):
+**Light theme** (`.theme-light` — invertibles flip grey steps; brand/status mostly same `--base-*`):
 
 ```css
-/* sus-core/Runtime/Resources/SusRuntime/_theme.uss — Layer 2 Light */
+/* sus-core/Runtime/Resources/SusRuntime/_theme.uss — Layer 2 Light (excerpt) */
 .theme-light {
-    --thm-bg-page:           var(--base-color-Grey98);
-    --thm-bg-surface:        rgb(255, 255, 255);
-    --thm-bg-surface-raised: var(--base-color-Grey94);
-    --thm-bg-surface-overlay:var(--base-color-Grey90);
+    --thm-bg-page:            var(--base-color-Grey96);
+    --thm-bg-surface:         var(--base-color-Grey92);
+    --thm-bg-surface-raised:  var(--base-color-Grey88);
+    --thm-bg-surface-overlay: var(--base-color-Grey84);
+    --thm-bg-surface-variant: var(--base-color-Grey81);
+    --thm-bg-disabled:        var(--base-color-Grey60);
 
-    --thm-text-primary:      var(--base-color-Grey04);
-    --thm-text-secondary:    var(--base-color-Grey30);
-    --thm-text-disabled:     var(--base-color-Grey60);
-    --thm-text-on-primary:   var(--base-color-Grey98);
+    --thm-text-primary:       var(--base-color-Grey06);
+    --thm-text-secondary:     var(--base-color-Grey20);
+    --thm-text-disabled:      var(--base-color-Grey40);
+    --thm-text-on-primary:    var(--base-color-Grey98);
 
-    --thm-border:            var(--base-color-Grey90);
-    --thm-border-hover:      var(--base-color-Grey60);
-    --thm-border-focus:      var(--base-color-Primary50);
+    --thm-border:             var(--base-color-Grey76);
+    --thm-border-hover:       var(--base-color-Grey60);
+    --thm-border-focus:       var(--base-color-Primary50);
 
-    --thm-primary:           var(--base-color-Primary50);
-    --thm-primary-hover:     var(--base-color-Primary70);
-    --thm-primary-pressed:   var(--base-color-Primary30);
-
-    --thm-success:           var(--base-color-Success);
-    --thm-warning:           var(--base-color-Warning);
-    --thm-error:             var(--base-color-Error);
+    --thm-secondary:          var(--base-color-Grey76);
+    --thm-secondary-hover:    var(--base-color-Grey70);
+    --thm-hover-overlay:      var(--base-color-BlackT10);
+    --thm-selected-overlay:   var(--base-color-BlackT18);
+    --thm-disabled-overlay:   var(--base-color-BlackT10);
+    --thm-scrim:              var(--base-color-BlackT30);
+    /* primary / success / warning / error / info — same --base-* as dark */
 }
 ```
 
+See `_theme.uss` for the complete block (including game-utility `--thm-rare` / `--thm-heal` / … — L2 only, not mirrored as `--sus-*`).
 
 
-### 3.3 Layer 3 — Semantic UI tokens (`design-tokens.uss`)
 
-The file that the components actually use:
+### 3.3 Layer 3 — Semantic UI tokens (`design-tokens.uss` + font sizes)
+
+Public L3 API: **61** `--sus-*` definitions — **53** in `design-tokens.uss` plus **8** semantic font-size tokens in `_font.uss`. Copy from these files; do not invent component-level color aliases (buttons, inputs, tooltips, scrollbars) — compose L3 instead.
 
 ```css
-/* sus-core/Runtime/Resources/SusRuntime/design-tokens.uss */
+/* sus-core/Runtime/Resources/SusRuntime/design-tokens.uss — Layer 3 (as-is) */
 :root {
-    /* ── Text ──────────────────────────────────────── */
-    --sus-text-primary:    var(--thm-text-primary);
-    --sus-text-secondary:  var(--thm-text-secondary);
-    --sus-text-disabled:   var(--thm-text-disabled);
-    --sus-text-inverse:    var(--thm-text-inverse);
-    --sus-text-link:       var(--thm-primary);
+    /* ── Surface ── */
+    --sus-bg-page:            var(--thm-bg-page);
+    --sus-bg-surface:         var(--thm-bg-surface);
+    --sus-bg-surface-raised:  var(--thm-bg-surface-raised);
+    --sus-bg-overlay:         var(--thm-bg-surface-overlay);
 
-    /* ── Backgrounds ───────────────────────────────── */
-    --sus-bg:              var(--thm-bg);
-    --sus-bg-elevated:     var(--thm-bg-elevated);
-    --sus-bg-overlay:      var(--thm-bg-overlay);
-    --sus-surface:         var(--thm-surface);
-    --sus-surface-hover:   var(--thm-surface-hover);
+    /* ── Text ── */
+    --sus-text-primary:       var(--thm-text-primary);
+    --sus-text-secondary:     var(--thm-text-secondary);
+    --sus-text-disabled:      var(--thm-text-disabled);
+    --sus-text-on-primary:    var(--thm-text-on-primary);
 
-    /* ── Borders ───────────────────────────────────── */
-    --sus-border:          var(--thm-border);
-    --sus-border-hover:    var(--thm-border-hover);
-    --sus-divider:         var(--thm-divider);
-    --sus-radius-sm:       4px;
-    --sus-radius-md:       8px;
-    --sus-radius-lg:       12px;
-    --sus-radius-xl:       16px;
-    --sus-radius-full:     20px;
+    /* ── Border ── */
+    --sus-border:             var(--thm-border);
+    --sus-border-hover:       var(--thm-border-hover);
+    --sus-border-focus:       var(--thm-border-focus);
+    --sus-divider:            var(--thm-border);
 
-    /* ── Status ────────────────────────────────────── */
-    --sus-success:         var(--thm-success);
-    --sus-fail:            var(--thm-fail);
-    --sus-warning:         var(--thm-warning);
-    --sus-info:            var(--thm-info);
+    /* ── Scrim ── */
+    --sus-scrim:              var(--thm-scrim);
 
-    /* ── Interactive ───────────────────────────────── */
-    --sus-btn-primary-bg:        var(--thm-primary);
-    --sus-btn-primary-bg-hover:  var(--thm-primary-hover);
-    --sus-btn-primary-text:      var(--thm-text-inverse);
-    --sus-btn-secondary-bg:      var(--thm-surface);
-    --sus-btn-secondary-bg-hover: var(--thm-surface-hover);
-    --sus-btn-secondary-text:    var(--thm-text-primary);
-    --sus-btn-ghost-bg:          transparent;
-    --sus-btn-ghost-bg-hover:    var(--thm-primary-muted, var(--base-color-primary-muted));
-    --sus-btn-disabled-bg:       var(--thm-surface);
-    --sus-btn-disabled-text:     var(--thm-text-disabled);
+    /* ── Surfaces ── */
+    --sus-bg-surface-variant: var(--thm-bg-surface-variant);
+    --sus-bg-disabled:        var(--thm-bg-disabled);
 
-    /* ── Inputs ────────────────────────────────────── */
-    --sus-input-bg:         var(--thm-surface);
-    --sus-input-border:     var(--thm-border);
-    --sus-input-border-focus: var(--thm-primary);
-    --sus-input-text:       var(--thm-text-primary);
-    --sus-input-placeholder: var(--thm-text-disabled);
+    /* ── Primary ── */
+    --sus-primary:            var(--thm-primary);
+    --sus-primary-hover:      var(--thm-primary-hover);
+    --sus-primary-pressed:    var(--thm-primary-pressed);
 
-    /* ── Overlays ──────────────────────────────────── */
-    --sus-overlay-backdrop: var(--thm-bg-overlay);
-    --sus-modal-bg:         var(--thm-bg-elevated);
-    --sus-tooltip-bg:       var(--thm-bg-elevated);
-    --sus-tooltip-text:     var(--thm-text-primary);
+    /* ── Secondary ── */
+    --sus-secondary:          var(--thm-secondary);
+    --sus-secondary-hover:    var(--thm-secondary-hover);
 
-    /* ── Scrollbar ─────────────────────────────────── */
-    --sus-scrollbar-track:  var(--thm-bg);
-    --sus-scrollbar-thumb:  var(--thm-border);
-    --sus-scrollbar-thumb-hover: var(--thm-border-hover);
+    /* ── Semantic colors ── */
+    --sus-success:            var(--thm-success);
+    --sus-success-hover:      var(--thm-success-hover);
+    --sus-warning:            var(--thm-warning);
+    --sus-warning-hover:      var(--thm-warning-hover);
+    --sus-error:              var(--thm-error);
+    --sus-error-hover:        var(--thm-error-hover);
+    --sus-info:               var(--thm-info);
+    --sus-info-hover:         var(--thm-info-hover);
 
-    /* ── Font sizes (semantic aliases) ─────────────── */
-    --sus-font-10:  var(--base-font-10);
-    --sus-font-12:  var(--base-font-12);
-    --sus-font-14:  var(--base-font-14);
-    --sus-font-16:  var(--base-font-16);
-    --sus-font-18:  var(--base-font-18);
-    --sus-font-20:  var(--base-font-20);
-    --sus-font-24:  var(--base-font-24);
-    --sus-font-28:  var(--base-font-28);
-    --sus-font-32:  var(--base-font-32);
+    /* ── Overlay accents (hover/selected/disabled states) ── */
+    --sus-hover-overlay:      var(--thm-hover-overlay);
+    --sus-selected-overlay:   var(--thm-selected-overlay);
+    --sus-disabled-overlay:   var(--thm-disabled-overlay);
 
-    /* ── Spacing ───────────────────────────────────── */
+    /* ── Opacity states ── */
+    --sus-opacity-hover:      0.04;
+    --sus-opacity-focus:      0.12;
+    --sus-opacity-selected:   0.08;
+    --sus-opacity-disabled:   0.38;
+
+    /* ── Font family bridges (-unity-font) ── */
+    --sus-font-body:         var(--base-font-body);
+    --sus-font-label:        var(--base-font-label);
+    --sus-font-heading:      var(--base-font-heading);
+    --sus-font-italic:       var(--base-font-italic);
+
+    /* ── Spacing ── */
     --sus-space-0:  0px;
     --sus-space-4:  var(--base-space-4);
     --sus-space-8:  var(--base-space-8);
@@ -380,20 +343,45 @@ The file that the components actually use:
     --sus-space-32: var(--base-space-32);
     --sus-space-48: var(--base-space-48);
     --sus-space-64: var(--base-space-64);
+
+    /* ── Radius ── */
+    --sus-radius-sm:   var(--base-radius-sm);
+    --sus-radius-md:   var(--base-radius-md);
+    --sus-radius-lg:   var(--base-radius-lg);
+    --sus-radius-xl:   var(--base-radius-xl);
+    --sus-radius-full: var(--base-radius-full);
 }
 ```
 
-**Layout usage of the space scale** (sibling gap ≥ `--sus-space-8`, row alignment, no clip, tokens-only) — see the layout guidance above.
+**Font sizes** (also L3; defined in `_font.uss`, not in `design-tokens.uss`):
+
+```css
+/* sus-core/Runtime/Resources/SusRuntime/_font.uss — semantic sizes */
+:root {
+    --sus-font-size-caption:  var(--base-font-size-xs);
+    --sus-font-size-small:    var(--base-font-size-sm);
+    --sus-font-size-body:     var(--base-font-size-md);
+    --sus-font-size-subtitle: var(--base-font-size-lg);
+    --sus-font-size-heading3: var(--base-font-size-xl);
+    --sus-font-size-heading2: var(--base-font-size-2xl);
+    --sus-font-size-heading1: var(--base-font-size-3xl);
+    --sus-font-size-hero:     var(--base-font-size-4xl);
+}
+```
+
+**Composition (not L3 tokens):** buttons/inputs/tooltips/scrollbars compose the tokens above — e.g. primary button `background-color: var(--sus-primary)`; label `color: var(--sus-text-on-primary)`; hover `var(--sus-primary-hover)`; dim modal backdrop `var(--sus-scrim)`; elevated panel surface `var(--sus-bg-overlay)` or `var(--sus-bg-surface-raised)`.
+
+**Layout usage of the space scale** (sibling gap ≥ `--sus-space-8`, row alignment, no clip, tokens-only) — see [LAYOUT_RULES.md](LAYOUT_RULES.md).
 
 
 
 ### 3.4 Use in components
 
 ```xml
-<!-- Card.sharq -->
-<​style scoped>
+<!-- Card.sharq — compose L3 tokens (no component-level color aliases) -->
+<style scoped>
 .card {
-    background-color: var(--sus-surface);
+    background-color: var(--sus-bg-surface);
     border-width: 1px;
     border-color: var(--sus-border);
     border-radius: var(--sus-radius-md);
@@ -401,16 +389,26 @@ The file that the components actually use:
     padding: var(--sus-space-16);
 }
 .card__title {
-    font-size: var(--sus-font-20);
-    -unity-font: var(--font-heading);
+    font-size: var(--sus-font-size-heading3);
+    -unity-font: var(--sus-font-heading);
     color: var(--sus-text-primary);
 }
 .card__body {
-    font-size: var(--sus-font-14);
+    font-size: var(--sus-font-size-body);
     color: var(--sus-text-secondary);
     margin-top: var(--sus-space-8);
 }
-</​style>
+.card__cta {
+    background-color: var(--sus-primary);
+    color: var(--sus-text-on-primary);
+}
+.card__cta:hover {
+    background-color: var(--sus-primary-hover);
+}
+.card__link {
+    color: var(--sus-primary); /* links: brand color, not a separate link token */
+}
+</style>
 ```
 
 ---
@@ -424,20 +422,29 @@ There is no `Icons/bootstrap/` tree anymore.
 
 | Set | Path | Size | Role |
 |-----|------|------|------|
-| **Core** | `Resources/SusRuntime/Icons/core/{regular,fill}/` | ~70 SVGs | Minimal built-in set so SUS works even if Phosphor is trimmed |
-| **Phosphor** | `Resources/SusRuntime/Icons/phosphor/{thin,light,regular,bold,fill,duotone}/` | **1512 names × 6 weights ≈ 9000 SVGs** | Full chrome icon library |
+| **Core** | `Resources/SusRuntime/Icons/core/{regular,fill}/` | ~127 SVGs | Built-in set, always present: everything the components and the downstream UI packages use by default |
+| **Phosphor** | `Samples~/PhosphorIcons/Resources/SusRuntime/Icons/phosphor/{thin,light,regular,bold,fill,duotone}/` | **1512 names × 6 weights ≈ 9000 SVGs** | Optional full library, imported as the `Phosphor Icon Set` sample |
 
 **Weights** (`SusIconWeight`): ` Thin`, ` Light`, ` Regular` (default), ` Bold`, ` Fill`, ` Duotone`.
 
-**Status:** ✅ runtime + editor auto-register Phosphor; downstream UI packages can use the same registry.
+**Status:** ✅ runtime + editor auto-register both providers; downstream UI packages use the same registry.
+
+The full set lives outside the package on purpose: a `Resources` folder is included in every player
+build and cannot be stripped, so 9000 SVGs would cost every consumer ~19 MB whether they use them or
+not. `PhosphorIconProvider` reads from any `Assets/**/Resources/SusRuntime/Icons/phosphor/` folder, so
+importing the sample — or copying just the few icons you need into your own `Resources` folder — both
+work. Without it, `SusIconRegistry` resolves through the core subset and returns `null` for the long
+tail instead of failing.
 
 ### 4.1 Layout on disk
 
 ```
 sus-core/Runtime/Resources/SusRuntime/Icons/
-├── core/
-│   ├── regular/     star.svg, gear.svg, …
-│   └── fill/        star-fill.svg, …          (weight folder + optional -fill suffix)
+└── core/
+    ├── regular/     star.svg, gear.svg, …
+    └── fill/        star-fill.svg, …          (weight folder + optional -fill suffix)
+
+sus-core/Samples~/PhosphorIcons/Resources/SusRuntime/Icons/    (optional sample)
 └── phosphor/
     ├── thin/
     ├── light/
@@ -471,7 +478,7 @@ SusIcon / SusIconRegistry.Load(alias, weight)
   → query ISusIconProvider list (first hit wins):
        1. Project providers (SusApp.UseIcons / RegisterProvider highest priority)
        2. CoreIconProvider          (Icons/core)
-       3. PhosphorIconProvider      (Icons/phosphor, auto via PhosphorIconBootstrap)
+       3. PhosphorIconProvider      (any Assets/**/Resources/…/Icons/phosphor, auto via PhosphorIconBootstrap)
 ```
 
 `PhosphorIconBootstrap` registers Phosphor at **SubsystemRegistration** / editor load with
@@ -644,8 +651,8 @@ Width is read from **`cascadeRoot.resolvedStyle.width`** on geometry changes (sa
 feed path as the removed `SusResolutionService`), with panel / Screen fallbacks
 only when the root is not laid out yet. See [06-responsive.md](./06-responsive.md).
 
-Downstream token sheets override `--sk-*` under those classes
-(heights, spacing, fonts). Components already consume `var(--sk-*)` — they pick up the
+Downstream UI package token sheets may override package-specific tokens under those classes
+(heights, spacing, fonts). Components that already consume those vars pick up the
 active breakpoint without per-component C#.
 
 PanelSettings for samples/wizard use **ConstantPixelSize** so breakpoint width matches
@@ -694,9 +701,9 @@ SusApp.Create(uiDocument)
 
 ```
 _palette.uss     — L1: --base-color-*, --base-space-*, --base-font-*, --base-radius-*
-_font.uss        — font families (--sus-font-family-* bridges) + -unity-font-definition
+_font.uss        — font families (--font-family-*) + optional family override slots + --sus-font-size-caption…hero
 _theme.uss       — L2: --thm-* for .theme-dark / .theme-light
-design-tokens.uss— L3: --sus-* semantic tokens
+design-tokens.uss— L3: --sus-* semantic tokens (colors, space, radius, font family bridges)
 _icon.uss        — .sus-icon-bg utility
 ```
 
@@ -754,8 +761,9 @@ sus-core/
 │   │   ├── _icon.uss             ← .sus-icon-bg                 ✅
 │   │   ├── Fonts/Montserrat/     ← 6 .ttf
 │   │   └── Icons/
-│   │       ├── core/{regular,fill}/
-│   │       └── phosphor/{thin,light,regular,bold,fill,duotone}/
+│   │       └── core/{regular,fill}/
+│   │           (full phosphor/{thin,light,regular,bold,fill,duotone}/
+│   │            ships as the optional Samples~/PhosphorIcons sample)
 │   ├── SusTheme.cs / Services/SusThemeService.cs
 │   ├── SusBreakpointService.cs
 │   ├── SusIconRegistry.cs + icon providers
@@ -786,107 +794,84 @@ Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
 
 
 
-## 9. Task list
+## 9. Historical checklist
 
+Phases B–F (palette/theme/L3 tokens, breakpoints, Phosphor icons, SusApp cascade, docs) are **done**. This buyer page is not a roadmap.
 
+Open font-face work (Thin / ExtraLight / SemiBold / ExtraBold and related `_font.uss` expansions) lives in the internal plan: [`internal/plans/DESIGN_TOKENS_PLAN.md`](internal/plans/DESIGN_TOKENS_PLAN.md) (`DT-FONT-FACES`, `DT-FONT-SEMANTIC`).
 
-### Phase A: Fonts
-
-
-| # | Problem | Files | Status |
-| --- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------ |
-| A1 | Add 4 missing Montserrat styles to `sus-core`: Thin, ExtraLight, SemiBold, ExtraBold                    | ` sus-core/Runtime/Resources/SusRuntime/Fonts/Montserrat/*.ttf` | ⬜      |
-| A2 | Expand `_font.uss` - semantic variables `--font-heading`, `--font-body`, `--font-button`, `--font-caption` | ` sus-core/.../SusRuntime/_font.uss`                            | ⬜      |
-
-
-
-
-### Phase B: Colors
-
-
-| # | Problem | Files | Status |
-| --- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- | -------- |
-| B1 | Create `_palette.uss` (L1) + `_theme.uss` (L2 Dark/Light) | `…/_palette.uss`, `…/_theme.uss` | ✅ |
-| B2 | Create `design-tokens.uss` — Layer 3: `--sus-*` tokens for components | ` sus-core/.../SusRuntime/design-tokens.uss`             | ✅ v1.0.19 |
-| B3 | Create `SusThemeService` - SetTheme with class `.theme-light`/`.theme-dark`                          | ` sus-core/Runtime/SusThemeService.cs`                     | ✅ v1.0.19 |
-
-
-
-
-### Phase C: Dimensions and breakpoints
-
-
-| # | Problem | Files | Status |
-| --- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------- |
-| C1 | Spacing, font-size, radius — in `_palette.uss` Layer 1 | ` sus-core/.../SusRuntime/_palette.uss` | ✅ |
-| C2 | Breakpoint `--sk-*` overrides (sole screen-size axis) | downstream token sheets | ✅ |
-| C3 | `SusBreakpointService` geometry auto-update | ` SusBreakpointService.cs`, ` SusComponent.cs` | ✅ |
-
-
-
-
-### Phase D: Icons
-
-
-| # | Problem | Files | Status |
-| --- | ----------------------------------------------------------------- | ------------------------------------------- | -------- |
-| D1 | Ship Phosphor (1512×6) + core subset under `Icons/phosphor`, ` Icons/core` | ` sus-core/.../SusRuntime/Icons/` | ✅ |
-| D2 | `SusIconRegistry` + ` SusIconWeight` + aliases + provider chain | ` SusIconRegistry.cs`, `*IconProvider.cs` | ✅ |
-| D3 | Downstream `SusIcon` component (phosphor/game/portrait) | optional component package | ✅ |
-| D4 | `_icon.uss` — global `.sus-icon-bg` | ` sus-core/.../SusRuntime/_icon.uss` | ✅ |
-| D5 | `tessellationMode: 1` on SVG metas | ` Icons/**/*.svg.meta` | ✅ |
-| D6 | `PhosphorIconBootstrap` auto-register | ` PhosphorIconBootstrap.cs` | ✅ |
-| D7 | Project overrides via `SusApp.UseIcons` / ` ResourcesFolderIconProvider` | Setup Project Customization/Icons | ✅ |
-
-
-
-
-### Phase E: Bootstrap
-
-
-| # | Problem | Files | Status |
-| --- | ------------------------------------------------------------------------- | ---------------------------------- | -------- |
-| E1  | `SusBootstrap` / ` SusApp` — full cascade + OverlayHost | ` SusBootstrap.cs`, ` SusApp.cs` | ✅ |
-| E2 | Cascade on container: `_palette` → `_font` → `_theme` → ` design-tokens` → `_icon` | ` LoadDesignTokenCascade` | ✅ |
-| E3 | Breakpoint class updates from geometry | ` SusComponent.cs` | ✅ |
-
-
-
-
-### Phase F: Documentation
-
-
-| # | Problem | Files | Status |
-| --- | -------------------------------------------------------------------------- | --------------------------------- | -------- |
-| F1  | `DESIGN_TOKENS.md` - current code, rules, structure | ` sus-core/Docs/DESIGN_TOKENS.md` | ✅ current |
-| F2 | ~~Update `ARCHITECTURE.md` — section Design Tokens~~ (the file has been deleted, everything is separated into separate docks) | — | ❌ removed |
-| F3 | Update `README.md` — SusApp quick start with cascade | ` sus-core/README.md` | ✅ |
-
-
----
+| Phase | Outcome | Status |
+| --- | --- | --- |
+| A — Fonts (shipped subset) | Montserrat 6 styles + semantic font-size tokens + family bridges | ✅ (open faces → internal plan) |
+| B — Colors | `_palette` / `_theme` / `design-tokens` + `SusThemeService` | ✅ |
+| C — Dimensions / breakpoints | spacing/radius L1; `SusBreakpointService` | ✅ |
+| D — Icons | Core subset + optional Phosphor sample + registry | ✅ |
+| E — Bootstrap | `SusApp` / `LoadTokenCascade` | ✅ |
+| F — Documentation | this page + package projection | ✅ |
 
 
 
 ## Appendix A: Token Summary Table
 
+Public L3 inventory (**61** `--sus-*`). Source: `design-tokens.uss` + `_font.uss` (font-size tokens).
 
-| Token | Destination | Layer |
-| ------------------------ | ------------------------ | -------- |
-| `--font-family-regular`  | Basic font | Font |
-| `--font-heading`         | Headings (Bold) | Font |
-| `--font-body`            | Body text (Regular) | Font |
-| `--sus-font-16`          | Text size 16px | Size |
-| `--sus-space-16`         | Margin 16px | Size |
-| `--sus-radius-md`        | Fillet 8px | Size |
-| `--sus-text-primary`     | Body text | Color L3 |
-| `--sus-text-secondary`   | Secondary text | Color L3 |
-| `--sus-bg`               | Page background | Color L3 |
-| `--sus-surface`          | Card/Panel Background | Color L3 |
-| `--sus-border`           | Borders | Color L3 |
-| `--sus-btn-primary-bg`   | Button - background | Color L3 |
-| `--sus-btn-primary-text` | Button - text | Color L3 |
-| `--sus-success`          | Color of success | Color L3 |
-| `--sus-fail`             | Error color | Color L3 |
+### Surfaces / text / border / scrim
+
+| Token | Role | Layer |
+| --- | --- | --- |
+| `--sus-bg-page` | Page background | Color L3 |
+| `--sus-bg-surface` | Card / panel | Color L3 |
+| `--sus-bg-surface-raised` | Elevated surface | Color L3 |
+| `--sus-bg-overlay` | Overlay surface (`--thm-bg-surface-overlay`) | Color L3 |
+| `--sus-bg-surface-variant` | Variant surface | Color L3 |
+| `--sus-bg-disabled` | Disabled fill | Color L3 |
+| `--sus-text-primary` | Body text | Color L3 |
+| `--sus-text-secondary` | Secondary text | Color L3 |
+| `--sus-text-disabled` | Disabled text | Color L3 |
+| `--sus-text-on-primary` | Text on filled primary | Color L3 |
+| `--sus-border` | Default border | Color L3 |
+| `--sus-border-hover` | Hover border | Color L3 |
+| `--sus-border-focus` | Focus ring | Color L3 |
+| `--sus-divider` | Divider | Color L3 |
+| `--sus-scrim` | Modal / overlay dim | Color L3 |
+
+### Brand / status / overlays / opacity
+
+| Token | Role | Layer |
+| --- | --- | --- |
+| `--sus-primary`, `--sus-primary-hover`, `--sus-primary-pressed` | Brand | Color L3 |
+| `--sus-secondary`, `--sus-secondary-hover` | Neutral accent | Color L3 |
+| `--sus-success`, `--sus-success-hover` | Success | Color L3 |
+| `--sus-warning`, `--sus-warning-hover` | Warning | Color L3 |
+| `--sus-error`, `--sus-error-hover` | Error | Color L3 |
+| `--sus-info`, `--sus-info-hover` | Info | Color L3 |
+| `--sus-hover-overlay` | Hover wash | Color L3 |
+| `--sus-selected-overlay` | Selected wash | Color L3 |
+| `--sus-disabled-overlay` | Disabled wash | Color L3 |
+| `--sus-opacity-hover`, `--sus-opacity-focus`, `--sus-opacity-selected`, `--sus-opacity-disabled` | Numeric opacities | Color L3 |
+
+### Fonts
+
+| Token | Role | Layer |
+| --- | --- | --- |
+| `--sus-font-body`, `--sus-font-label`, `--sus-font-heading`, `--sus-font-italic` | Family bridges (`-unity-font`) | Font L3 |
+| `--sus-font-size-caption` | 10px | Size L3 |
+| `--sus-font-size-small` | 12px | Size L3 |
+| `--sus-font-size-body` | 14px | Size L3 |
+| `--sus-font-size-subtitle` | 16px | Size L3 |
+| `--sus-font-size-heading3` | 20px | Size L3 |
+| `--sus-font-size-heading2` | 24px | Size L3 |
+| `--sus-font-size-heading1` | 32px | Size L3 |
+| `--sus-font-size-hero` | 48px | Size L3 |
+
+### Spacing / radius
+
+| Token | Role | Layer |
+| --- | --- | --- |
+| `--sus-space-0` … `--sus-space-64` (0,4,8,12,16,24,32,48,64) | Spacing scale | Size L3 |
+| `--sus-radius-sm` … `--sus-radius-full` (sm,md,lg,xl,full) | Corner radius | Size L3 |
+
+L1 helpers often used next to L3 (not counted in the 61): `--font-family-regular`, `--main-font-family`, `--base-space-*`, `--base-radius-*`.
 
 ---
 
