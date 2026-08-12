@@ -57,6 +57,30 @@ Click`~`— the console opens from the bottom (40% of the screen height), dark p
 Colored logs: gray (Log), yellow (Warning), red (Error/Exception/Assert).
 Autoscroll down for new messages; When manually scrolling up, it stops.
 
+### Styling
+
+The console has no inline C# styles: the whole overlay is described by
+`Runtime/Resources/SusRuntime/sus-console.uss`, which the service loads onto its own root
+on the first`Show()`. Colors come from design tokens (`--sus-bg-overlay`, `--sus-primary`,
+`--sus-warning`, `--sus-error`, …), so the console follows the active theme.
+
+To restyle it, override the classes in any sheet loaded after the console's own
+(project sheet on the panel, or`SusBootstrap.RegisterCascadeStyleSheet`):
+
+| Class | Element |
+|---|---|
+| `.sus-console`| Overlay panel (position, height, background) |
+| `.sus-console__toolbar`| Top row |
+| `.sus-console__filter`/`--active`| Filter chips All / Log / Warn / Err |
+| `.sus-console__field`+`__search`/`__command`| Text inputs |
+| `.sus-console__close`| ✕ button |
+| `.sus-console__list`| ScrollView with log lines |
+| `.sus-console__line`+`--warning`/`--error`| Log line |
+| `.sus-console__status`| Bottom status line (filter + entry count) |
+
+Every`var()`in the sheet carries a fallback, so the console still looks right on a bare
+panel that never went through`SusBootstrap`and has no token cascade.
+
 ### Registering commands
 
 ```csharp
