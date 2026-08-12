@@ -10,7 +10,7 @@
 |---|--------|----------|---------|:---:|
 | 1 | **ClickAudit** | `SusComponent` + ` ClickAuditService`| Every` ClickEvent`on registered elements | ✅ |
 | 2 | **BoundsAudit** | `SusComponent` constructor | 2 frames after mount | ✅ |
-| 3 | **CallbackAudit** | `SusComponent.cs` methods + 11`.sharq` | ` ClickEvent`handler guard conditions / timing | ⚠️`.sharq` | <!-- sus:ok локальный счётчик аудита -->
+| 3 | **CallbackAudit** | `SusComponent.cs` methods + 11`.sharq` | ` ClickEvent`handler guard conditions / timing | ⚠️`.sharq` | <!-- sus:ok local audit count -->
 | 4 | **OverlayAudit** | `OverlayHost.AddToOverlay()`| Adding an element to the overlay | ✅ |
 | 5 | **StateAudit** | `.sharq` (SusButton/Toggle/Dropdown/ListGroup/Modal) | ` WatchEffect`on controversial props | ⚠️`.sharq` |
 | 6 | **LifecycleAudit** | `SusComponent.OnDetachFromPanelHandler()`| Detach from panel | ✅ |
@@ -53,7 +53,7 @@
 [ClickAudit] Active: 'SusButton' blocked at center. Reason: Covered by 'SusTooltip'
 ```
 
-**Integration:** element is registered via`SetClickAuditDescription("Name")` V`Created()`. Already built into 11 downstream components <!-- sus:ok локальный счётчик аудита -->.
+**Integration:** element is registered via`SetClickAuditDescription("Name")` V`Created()`. Already built into 11 downstream components <!-- sus:ok local audit count -->.
 
 ---
 
@@ -80,7 +80,7 @@
 
 ## 3. CallbackAudit - whether OnClick worked
 
-**Files:**`sus-core/Runtime/SusComponent.cs`, 8 `.sharq` <!-- sus:ok локальный счётчик аудита -->
+**Files:**`sus-core/Runtime/SusComponent.cs`, 8 `.sharq` <!-- sus:ok local audit count -->
 
 **Problem:**`ClickEvent` is registered, the element is available, the click goes through - but the handler is NOT called. Reasons:
 - `Disabled.Value = true`→ handler exits early
