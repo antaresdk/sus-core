@@ -6,7 +6,8 @@ namespace Sharq.Core
     /// Auto-registers the <see cref="PhosphorIconProvider"/> with <see cref="SusIconRegistry"/>.
     /// Appended (NOT highest priority) so the minimal built-in
     /// <c>CoreIconProvider</c> and any project-registered providers keep precedence for
-    /// overlapping names, while Phosphor supplies the long tail (~9000 icons).
+    /// overlapping names, while Phosphor supplies the long tail (~9000 icons) for projects
+    /// that imported the optional <c>PhosphorIcons</c> sample.
     ///
     /// Runs both at runtime startup and on editor load, so icons resolve in play mode,
     /// edit-mode tooling and tests. Idempotent (RegisterProvider dedups by instance).
