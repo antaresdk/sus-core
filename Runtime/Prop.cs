@@ -66,6 +66,22 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Drops every subscriber (<see cref="Changed"/>, <see cref="propertyChanged"/> and
+        /// invalidation) without touching the value.
+        ///
+        /// Needed for Props kept in static fields: with Domain Reload disabled (Fast Enter
+        /// Play Mode) they outlive a Play Mode session, so handlers closing over elements of
+        /// an already-destroyed panel would keep firing. Call it from a
+        /// <c>[RuntimeInitializeOnLoadMethod(SubsystemRegistration)]</c> reset hook.
+        /// </summary>
+        public void ClearSubscribers()
+        {
+            Changed = null;
+            propertyChanged = null;
+            _invalidated = null;
+        }
+
+        /// <summary>
         /// Safe in-place mutation: runs mutate and automatically calls ForceNotify.
         /// <code>
         /// Rows.Mutate(list => list.Add(newRow));

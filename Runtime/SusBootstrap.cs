@@ -64,6 +64,25 @@ namespace Sharq.Core
                 s_extraCascadeSheets.Add(resourceName);
         }
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled these survive leaving Play Mode: a cascade root pointing
+        // at a destroyed panel, an EventSystem flag for a scene that no longer exists, and a
+        // consumer handler from the previous session.
+        //
+        // s_extraCascadeSheets is deliberately NOT cleared. Downstream packages register into it
+        // from their own SubsystemRegistration hooks and the order between hooks of the same
+        // load type is undefined, so clearing here could wipe a registration that already ran.
+        // It holds resource names rather than objects from the old session, and re-registration
+        // is idempotent, so keeping it costs nothing.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            s_eventSystemEnsured = false;
+            s_tokenCascadeRoot = null;
+            OnDuplicateMount = null;
+        }
+#endif
+
         /// <summary>Loads all registered extra cascade sheets (L4/L5) onto a container.</summary>
         private static void LoadExtraCascadeSheets(VisualElement container)
         {

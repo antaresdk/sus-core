@@ -150,6 +150,19 @@ namespace Sharq.Core
             el.AddToClassList(theme.CssClass);
         }
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled the singleton and the static Current prop survive
+        // leaving Play Mode, so Current would accumulate one set of handlers per session,
+        // each closing over elements of a destroyed panel.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            s_instance = null;
+            Current.ClearSubscribers();
+            Current.Value = SusTheme.Dark;
+        }
+#endif
+
         private static void ApplyThemeClassesToSubtree(VisualElement node, SusTheme theme)
         {
             if (node == null) return;

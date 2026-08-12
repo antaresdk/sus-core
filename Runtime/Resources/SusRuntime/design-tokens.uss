@@ -74,4 +74,24 @@
     --sus-font-label:        var(--base-font-label);
     --sus-font-heading:      var(--base-font-heading);
     --sus-font-italic:       var(--base-font-italic);
+
+    /* ── Spacing (L3 над --base-space-* из _palette.uss) ──
+       Не зависят от темы, но живут здесь, потому что DESIGN_TOKENS.md
+       объявляет space- и radius-шкалу публичным API этого файла. */
+    --sus-space-0:  0px;
+    --sus-space-4:  var(--base-space-4);
+    --sus-space-8:  var(--base-space-8);
+    --sus-space-12: var(--base-space-12);
+    --sus-space-16: var(--base-space-16);
+    --sus-space-24: var(--base-space-24);
+    --sus-space-32: var(--base-space-32);
+    --sus-space-48: var(--base-space-48);
+    --sus-space-64: var(--base-space-64);
+
+    /* ── Radius ── */
+    --sus-radius-sm:   var(--base-radius-sm);
+    --sus-radius-md:   var(--base-radius-md);
+    --sus-radius-lg:   var(--base-radius-lg);
+    --sus-radius-xl:   var(--base-radius-xl);
+    --sus-radius-full: var(--base-radius-full);
 }

@@ -201,6 +201,13 @@ namespace Sharq.Core
                     : null);
             if (string.IsNullOrEmpty(assetPath)) return null;
 
+            // An icon name this collection simply doesn't have must not cost a full
+            // AssetDatabase.Refresh or an import error in the console — bail out before
+            // touching the importer. AssetPathExists covers package-cache virtual paths,
+            // File.Exists covers a file on disk that the database hasn't picked up yet.
+            if (!UnityEditor.AssetDatabase.AssetPathExists(assetPath) && !System.IO.File.Exists(assetPath))
+                return null;
+
             var img = UnityEditor.AssetDatabase.LoadAssetAtPath<VectorImage>(assetPath);
             if (img != null) return img;
 

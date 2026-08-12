@@ -24,7 +24,7 @@
 }
 
 .showcase-title {
-    font-size: var(--sus-font-heading);
+    font-size: var(--sus-font-size-heading2);
     color: var(--sus-text-primary);
 }
 
@@ -41,7 +41,7 @@
     background-color: var(--sus-secondary);
     color: var(--sus-text-primary);
     border-radius: var(--sus-radius-full);
-    font-size: var(--sus-font-small);
+    font-size: var(--sus-font-size-small);
     -unity-text-align: middle-center;
 }
 
@@ -52,8 +52,8 @@
     padding-right: var(--sus-space-16);
     background-color: var(--sus-primary);
     color: var(--sus-text-on-primary);
-    border-radius: var(--sus-button-radius);
-    font-size: var(--sus-font-body);
+    border-radius: var(--sus-radius-md);
+    font-size: var(--sus-font-size-body);
     -unity-text-align: middle-center;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .showcase-section__title {
-    font-size: var(--sus-font-subtitle);
+    font-size: var(--sus-font-size-subtitle);
     color: var(--sus-text-secondary);
     margin-bottom: var(--sus-space-8);
 }
@@ -95,8 +95,12 @@
 }
 
 .swatch__label {
-    font-size: var(--sus-font-caption);
+    font-size: var(--sus-font-size-caption);
     color: var(--sus-text-on-primary);
+    /* Во всю ширину свотча + центрирование: без stretch лейбл получает ширину по
+       измеренному тексту, и самые широкие подписи переносятся по букве. */
+    align-self: stretch;
+    -unity-text-align: middle-center;
 }
 
 .swatch--primary { background-color: var(--sus-primary); }
@@ -111,12 +115,16 @@
     margin-bottom: var(--sus-space-4);
 }
 
-.type-caption { font-size: var(--sus-font-caption); }
-.type-small { font-size: var(--sus-font-small); }
-.type-body { font-size: var(--sus-font-body); }
-.type-subtitle { font-size: var(--sus-font-subtitle); }
-.type-heading { font-size: var(--sus-font-heading); }
-.type-hero { font-size: var(--sus-font-hero); }
+/* Размеры живут в _font.uss как --sus-font-size-*; токены --sus-font-body/heading
+   из design-tokens.uss — это шрифты (font-definition), в font-size их подставлять нельзя. */
+.type-caption { font-size: var(--sus-font-size-caption); }
+.type-small { font-size: var(--sus-font-size-small); }
+.type-body { font-size: var(--sus-font-size-body); }
+.type-subtitle { font-size: var(--sus-font-size-subtitle); }
+.type-heading3 { font-size: var(--sus-font-size-heading3); }
+.type-heading2 { font-size: var(--sus-font-size-heading2); }
+.type-heading1 { font-size: var(--sus-font-size-heading1); }
+.type-hero { font-size: var(--sus-font-size-hero); }
 
 /* ── Icons (Icons) ──────────────────────────────────────── */
 .icon-row {
@@ -130,12 +138,8 @@
     height: 28px;
     margin-right: var(--sus-space-12);
     margin-bottom: var(--sus-space-8);
-    /* tint: use --sus-text-primary directly —
-       the --sk-color-text-primary → var(--sus-text-primary) chain
-       does not resolve in Unity USS due to cross-sheet var(). */
-}
-
-.demo-icon .sus-icon__image {
+    /* Тинт — на самом элементе SusIcon: фон-картинка лежит на нём,
+       дочернего элемента у иконки нет. */
     -unity-background-image-tint-color: var(--sus-text-primary);
 }
 
@@ -152,7 +156,7 @@
    On narrow screens shrink the title and hide the badge. Demonstrates
    that USS rules keyed by breakpoint class override the base rules. */
 .breakpoint-sm .showcase-title {
-    font-size: var(--sus-font-title);
+    font-size: var(--sus-font-size-subtitle);
 }
 
 .breakpoint-sm .showcase-header {

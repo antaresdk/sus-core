@@ -2,9 +2,6 @@
 
 ## [Unreleased]
 
-### Changed
-- Breaking: rename core icon primitive `SusIcon` → `SusIconElement` (frees short name for downstream UI packages). `SusIconRegistry` / `SusIconWeight` / `ISusIconProvider` unchanged.
-
 All notable changes to this package are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -13,21 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.10] - 2026-08-12
 
 ### Added
+- `Prop<T>.ClearSubscribers()` for Domain Reload–off / static Prop hygiene.
 - `SusLog` / `SusLogLevel` gated logger + `SusApp.UseLogLevel` (default Warn; `SUS_VERBOSE_LOGS` / `sus.config.json` `logLevel`).
 - Spacing and radius design tokens (`--sus-space-0…64`, `--sus-radius-sm…full`) in `design-tokens.uss`.
   They are documented in the theming guide but were never defined, so `padding: var(--sus-space-16)`
   silently resolved to `0` and `border-radius: var(--sus-radius-md)` to sharp corners.
 
 ### Changed
+- Breaking: rename core icon primitive `SusIcon` → `SusIconElement` (frees short name for downstream UI packages). `SusIconRegistry` / `SusIconWeight` / `ISusIconProvider` unchanged.
+- Optional package `namespace` in `sharq.gen.json` for generated `.g.cs` (downstream packages opt in).
 - Runtime diagnostics and *Audit call-sites emit via `SusLog.Verbose` (buyer default stays quiet).
 
 ### Fixed
+- Editor Domain Reload off: reset statics on SusBootstrap / SusBreakpointService / SusThemeService so Play Mode does not leak handlers.
 - SusBootstrap sample (theme showcase): every `font-size` referenced a token that does not exist
   (`--sus-font-hero`) or is a font asset rather than a size (`--sus-font-heading`), so the whole
   type scale rendered at the UI Toolkit default. Now uses `--sus-font-size-*` and shows the real
   eight-step scale with honest labels (hero is 48px, not 32px).
 - SusBootstrap sample: icon tint never followed the theme — the rule targeted a `sus-icon__image`
-  child that `SusIcon` does not create. The tint now sits on the icon element itself, which also
+  child that `SusIconElement` does not create. The tint now sits on the icon element itself, which also
   removes the hard-coded near-white/near-black C# fallback from a tokens-only sample.
 
 ## [1.0.9] - 2026-08-12
