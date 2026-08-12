@@ -85,7 +85,7 @@ Add to `Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.8"
+    "com.sharq-it.sus.core": "https://github.com/antaresdk/sus-core.git#v1.0.9"
   }
 }
 ```
@@ -258,7 +258,7 @@ Open-core (free) packages from public GitHub:
 ```json
 {
   "dependencies": {
-    "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.8",
+    "com.sharq-it.sus.core":   "https://github.com/antaresdk/sus-core.git#v1.0.9",
     "com.sharq-it.sus.router": "https://github.com/antaresdk/sus-router.git#v1.0.6"
   }
 }
