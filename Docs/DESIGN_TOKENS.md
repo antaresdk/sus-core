@@ -472,7 +472,7 @@ Two constructors:
 ### 4.2 How icon lookup works
 
 ```
-SusIconElement / SusIconRegistry.Load(alias, weight)
+SusIcon / SusIconRegistry.Load(alias, weight)
   → resolve semantic aliases (e.g. "settings" → "gear")
   → optional name suffix "-fill" / "-bold" / … overrides weight
   → query ISusIconProvider list (first hit wins):
@@ -491,8 +491,8 @@ SusIconElement / SusIconRegistry.Load(alias, weight)
 public enum SusIconWeight { Thin, Light, Regular, Bold, Fill, Duotone }
 
 // Core primitive (also used under the hood)
-var icon = new SusIconElement("gear");                      // Regular
-var star = new SusIconElement("star", SusIconWeight.Fill);
+var icon = new SusIcon("gear");                      // Regular
+var star = new SusIcon("star", SusIconWeight.Fill);
 icon.Name.Value = "x";                               // reactive
 
 VectorImage img = SusIconRegistry.Load("star", SusIconWeight.Fill);
@@ -767,7 +767,7 @@ sus-core/
 │   ├── SusTheme.cs / Services/SusThemeService.cs
 │   ├── SusBreakpointService.cs
 │   ├── SusIconRegistry.cs + icon providers
-│   ├── SusIconElement.cs
+│   ├── SusIcon.cs
 │   ├── SusApp.cs
 │   └── SusBootstrap.cs
 ```
