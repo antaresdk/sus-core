@@ -50,7 +50,8 @@ namespace Sharq.Core.Editor
                 foreach (var src in d.AbsSourceDirs)
                 {
                     var r = SharqBatchCompiler.CompileDirectory(
-                        src, d.AbsGeneratedDir, d.AbsResourcesDir, log: false);
+                        src, d.AbsGeneratedDir, d.AbsResourcesDir, log: false,
+                        classNamespace: d.@namespace, extraUsings: d.usings);
                     total.Compiled += r.Compiled;
                     total.Failed += r.Failed;
                 }

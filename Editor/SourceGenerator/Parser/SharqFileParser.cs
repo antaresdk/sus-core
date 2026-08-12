@@ -19,6 +19,12 @@ namespace Sharq.Core.Editor
         public List<string> Usings = new();       // extracted from $using directives
         public List<string> Validators = new();   // "Validate_Health(int value) => value >= 0;" stubs
         public string BaseClass;                  // from $extends; null → SusComponent
+        /// <summary>
+        /// Optional C# namespace for the generated partial class.
+        /// Set from package <c>sharq.gen.json</c> <c>namespace</c> (or future per-file override).
+        /// Empty / null → emit into the global namespace (legacy).
+        /// </summary>
+        public string Namespace;
     }
 
     /// <summary>

@@ -42,8 +42,13 @@ namespace Sharq.Core.Editor
         /// <paramref name="generatedDir"/> (<c>.g.cs</c> + USS) and mirrors the USS
         /// into <paramref name="resourcesDir"/> for runtime <c>Resources.Load</c>.
         /// </summary>
+        /// <param name="classNamespace">
+        /// Optional C# namespace for generated types (from package descriptor).
+        /// Empty / null → global namespace.
+        /// </param>
         public static Result CompileDirectory(
-            string sourceDir, string generatedDir, string resourcesDir, bool log = true)
+            string sourceDir, string generatedDir, string resourcesDir, bool log = true,
+            string classNamespace = null, string[] extraUsings = null)
         {
             var result = new Result();
 
@@ -65,7 +70,8 @@ namespace Sharq.Core.Editor
                 if (full.StartsWith(genFull, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                if (CompileFile(file, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log))
+                if (CompileFile(file, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log,
+                        classNamespace, extraUsings))
                     result.Compiled++;
                 else
                     result.Failed++;
@@ -84,9 +90,11 @@ namespace Sharq.Core.Editor
         /// Returns <c>true</c> on success, <c>false</c> if skipped/failed.
         /// </summary>
         public static bool CompileFile(
-            string sharqPath, string generatedDir, string resourcesDir, bool log = true)
+            string sharqPath, string generatedDir, string resourcesDir, bool log = true,
+            string classNamespace = null, string[] extraUsings = null)
         {
-            return CompileFile(sharqPath, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log);
+            return CompileFile(sharqPath, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log,
+                classNamespace, extraUsings);
         }
 
         /// <summary>
@@ -98,7 +106,9 @@ namespace Sharq.Core.Editor
             string resourcesDir,
             SharqBatchMode mode,
             string cacheDir,
-            bool log = true)
+            bool log = true,
+            string classNamespace = null,
+            string[] extraUsings = null)
         {
             var fullPath = Path.GetFullPath(sharqPath);
             if (!File.Exists(fullPath))
@@ -109,6 +119,18 @@ namespace Sharq.Core.Editor
 
             var content = File.ReadAllText(fullPath);
             var model = SharqFileParser.Parse(content, fullPath);
+            if (!string.IsNullOrEmpty(classNamespace))
+                model.Namespace = classNamespace;
+            if (extraUsings != null)
+            {
+                foreach (var u in extraUsings)
+                {
+                    if (string.IsNullOrWhiteSpace(u)) continue;
+                    var trimmed = u.Trim();
+                    if (!model.Usings.Contains(trimmed))
+                        model.Usings.Add(trimmed);
+                }
+            }
 
             if (string.IsNullOrEmpty(model.TemplateXml))
             {
