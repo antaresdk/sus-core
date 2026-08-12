@@ -261,7 +261,9 @@ namespace Sharq.Core.Editor
                             d.AbsResourcesDir,
                             SharqBatchCompiler.SharqBatchMode.HotReloadSafe,
                             d.AbsGeneratedDir,
-                            log: true);
+                            log: true,
+                            classNamespace: d.@namespace,
+                            extraUsings: d.usings);
                     }
                 }
 

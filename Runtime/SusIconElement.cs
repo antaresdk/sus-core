@@ -11,12 +11,12 @@ namespace Sharq.Core
     ///
     /// Usage:
     /// <code>
-    /// var icon = new SusIcon("gear");                     // regular by default
-    /// var star = new SusIcon("star", SusIconWeight.Fill);
+    /// var icon = new SusIconElement("gear");                     // regular by default
+    /// var star = new SusIconElement("star", SusIconWeight.Fill);
     /// icon.Name.Value = "x";                               // reactive swap
     /// </code>
     /// </summary>
-    public class SusIcon : VisualElement
+    public class SusIconElement : VisualElement
     {
         /// <summary>Icon alias (see <see cref="SusIconRegistry"/>). Reactive.</summary>
         public Prop<string> Name { get; }
@@ -24,7 +24,7 @@ namespace Sharq.Core
         /// <summary>Phosphor weight variant. Reactive.</summary>
         public Prop<SusIconWeight> Weight { get; }
 
-        public SusIcon(string name = null, SusIconWeight weight = SusIconWeight.Regular)
+        public SusIconElement(string name = null, SusIconWeight weight = SusIconWeight.Regular)
         {
             AddToClassList("sus-icon-bg");
 

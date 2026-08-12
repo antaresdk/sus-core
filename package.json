@@ -1,9 +1,10 @@
 {
   "name": "com.sharq-it.sus.core",
   "version": "1.0.10",
-  "displayName": "SusCore",
-  "description": "Vue.js-like reactive UI framework for Unity UI Toolkit: .sharq compiler (AssetPostprocessor), reactivity (Prop<T>, Computed<T>, ReactiveEffect), directives (v-if, v-show, v-for with typed item access, slot, @event), component composition (SetChildProp/BindChildProp — case-insensitive, Prop<T>-safe mutation), SusBootstrap, SusBreakpointService, SusThemeService, SusIconRegistry, OverlayHost.",
-  "unity": "6000.0",
+  "displayName": "Sharq UI System Core",
+  "description": "Vue-inspired reactive UI framework for Unity UI Toolkit. Write a component as a single .sharq file (template + script + style) and the Editor-time compiler generates a plain C# UxmlElement class plus scoped USS. Includes reactivity (Prop<T>, Computed<T>, Watch, WatchEffect, EffectScope), template directives (v-if / v-else / v-show / v-for / slot / @event), component composition with provide/inject, design tokens with Dark/Light themes, responsive breakpoints, an overlay/portal host, world-space UI, a runtime console and devtools overlay, plus Editor tooling: Setup wizard, runtime tree inspector and theme editor under Window/SUS. Requires Unity 6.3 (6000.3) or newer for native SVG icon import.",
+  "unity": "6000.3",
+  "unityRelease": "17f1",
   "license": "MIT",
   "author": {
     "name": "Sharq IT",
@@ -31,18 +32,23 @@
   "samples": [
     {
       "displayName": "Comp Example",
-      "description": "Component composition: SetChildProp and BindChildProp — literal and reactive props between components, mutating .Value without replacing Prop<T>.",
+      "description": "Component composition: SetChildProp and BindChildProp - literal and reactive props between components, mutating .Value without replacing Prop<T>.",
       "path": "Samples~/Comp"
     },
     {
       "displayName": "SusBootstrap Example",
-      "description": "Showcase of the full design-token system: themes (Dark/Light via T key), colors, fonts, sizes, reactive breakpoints, and SusIcon icons — all via var(--sus-*). Includes a ready ThemeShowcase.unity scene.",
+      "description": "Showcase of the full design-token system: themes (Dark/Light via T key), colors, fonts, sizes, reactive breakpoints, and SusIconElement icons - all via var(--sus-*). Includes a ready ThemeShowcase.unity scene.",
       "path": "Samples~/SusBootstrap"
     },
     {
       "displayName": "SusKeepAlive Example",
       "description": "SusKeepAlive example: element wrapper with hide/show toggle via display:none (DOM is preserved).",
       "path": "Samples~/SusKeepAlive"
+    },
+    {
+      "displayName": "Phosphor Icon Set",
+      "description": "Optional full Phosphor icon set: 1,512 icons x 6 weights (MIT). The package itself ships a 127-icon subset that covers everything the components use by default; import this sample only if you need the long tail. It adds ~19 MB of SVG assets under a Resources folder, so they are included in every player build.",
+      "path": "Samples~/PhosphorIcons"
     }
   ]
 }

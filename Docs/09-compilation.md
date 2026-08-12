@@ -77,9 +77,17 @@ The package declares WHAT to generate in the descriptor**`sharq.gen.json`** (nex
   "sources":   ["Components"],
   "generated": "Runtime/Generated",
   "resources": "Runtime/Resources/SusRuntime",
-  "watch": true
+  "watch": true,
+  "namespace": "MyCompany.UI"
 }
 ```
+
+Optional **`namespace`**: dotted C# identifier wrapped around every generated `.g.cs`
+type for that package. Empty / omitted → global namespace (legacy). Downstream UI
+packages should set this to their package root namespace so short type names do not
+collide across packages.
+
+Optional **`usings`**: string array of extra C# namespaces emitted as `using` directives in every generated `.g.cs` (when composing types from another UI package).
 
 Infrastructure in`sus-core/Editor/Packaging/`:
 

@@ -59,7 +59,7 @@ namespace Sharq.Core.Editor
         public string GenerateCode(SharqFileModel model)
         {
             if (model?.TemplateXml == null)
-                return GenerateEmpty(model?.ClassName ?? "Unknown", model?.BaseClass);
+                return GenerateEmpty(model?.ClassName ?? "Unknown", model?.BaseClass, model?.Namespace);
 
             var root = TemplateParser.Parse(model.TemplateXml, model.ClassName);
             var sb = new StringBuilder();
@@ -101,12 +101,12 @@ namespace Sharq.Core.Editor
             sb.AppendLine("using Sharq.Core;");
             if (hasCreateProp)
                 sb.AppendLine("using Unity.Properties;");
-            foreach (var ns in model.Usings)
+            foreach (var useNs in model.Usings)
             {
-                if (ns != "UnityEngine" && ns != "Sharq.Core"
-                    && ns != "System" && ns != "System.Collections.Generic"
-                    && ns != "Unity.Properties" && ns != "UnityEngine.UIElements")
-                    sb.AppendLine($"using {ns};");
+                if (useNs != "UnityEngine" && useNs != "Sharq.Core"
+                    && useNs != "System" && useNs != "System.Collections.Generic"
+                    && useNs != "Unity.Properties" && useNs != "UnityEngine.UIElements")
+                    sb.AppendLine($"using {useNs};");
             }
             if (model.Usings.Contains("UnityEngine"))
                 sb.AppendLine("using UnityEngine;");
@@ -115,17 +115,26 @@ namespace Sharq.Core.Editor
             // Generated code has no nullable annotations (fields are assigned in Build(),
             // not the ctor) — disable nullable analysis to avoid CS8618/CS86xx noise.
             sb.AppendLine("#nullable disable");
+            var classNs = model.Namespace?.Trim();
+            var hasNs = !string.IsNullOrEmpty(classNs);
+            if (hasNs)
+            {
+                sb.AppendLine($"namespace {classNs}");
+                sb.AppendLine("{");
+            }
             // Base class: $extends directive, default SusComponent. The base MUST derive
             // from SusComponent so the whole hierarchy stays uniform (C2 two-tier model).
             var baseClass = string.IsNullOrEmpty(model.BaseClass) ? "SusComponent" : model.BaseClass;
-            sb.AppendLine($"[UxmlElement]");
-            sb.AppendLine($"public partial class {model.ClassName} : {baseClass}");
-            sb.AppendLine("{");
+            var indent = hasNs ? "    " : "";
+            sb.AppendLine($"{indent}[UxmlElement]");
+            sb.AppendLine($"{indent}public partial class {model.ClassName} : {baseClass}");
+            sb.AppendLine($"{indent}{{");
 
             // ─── Script body (injected directly) ─────────────────────
+            var memberIndent = indent + "    ";
             if (!string.IsNullOrEmpty(model.ScriptBody))
             {
-                sb.AppendLine("    // ─── From <script> ───");
+                sb.AppendLine($"{memberIndent}// ─── From <script> ───");
                 var scriptLines = model.ScriptBody.Split('\n');
                 var prevWasCreateProp = false;
                 foreach (var line in scriptLines)
@@ -152,7 +161,7 @@ namespace Sharq.Core.Editor
                     {
                         // Emit a bare [CreateProperty]; the default:/validate: DSL params
                         // are compiler directives, not valid C# attribute arguments.
-                        sb.AppendLine("    [CreateProperty]");
+                        sb.AppendLine($"{memberIndent}[CreateProperty]");
                         prevWasCreateProp = true;
                         createPropDefault = null;
 
@@ -217,29 +226,30 @@ namespace Sharq.Core.Editor
                             // Prepend `new` when the companion hides an inherited VisualElement
                             // member (e.g. Visible → visible hides VisualElement.visible, CS0108).
                             var newKw = ReservedVisualElementMembers.Contains(camelName) ? "new " : "";
-                            sb.AppendLine($"    [UxmlAttribute(\"{fieldName}\")]");
-                            sb.AppendLine($"    public {newKw}{elemType} {camelName} {{ get => {fieldName}.Value; set => {fieldName}.Value = value; }}");
-                            sb.AppendLine($"    public Prop<{elemType}> {fieldName} = new({initVal});");
+                            sb.AppendLine($"{memberIndent}[UxmlAttribute(\"{fieldName}\")]");
+                            sb.AppendLine($"{memberIndent}public {newKw}{elemType} {camelName} {{ get => {fieldName}.Value; set => {fieldName}.Value = value; }}");
+                            sb.AppendLine($"{memberIndent}public Prop<{elemType}> {fieldName} = new({initVal});");
 
                             continue;
                         }
                     }
 
-                    sb.AppendLine($"    {trimmed}");
+                    sb.AppendLine($"{memberIndent}{trimmed}");
                 }
                 sb.AppendLine();
             }
 
             // ─── Build() ─────────────────────────────────────────────
-            sb.AppendLine("    protected override void Build()");
-            sb.AppendLine("    {");
-            sb.AppendLine("        LoadCompanionStyleSheets();");
+            var bodyIndent = memberIndent + "    ";
+            sb.AppendLine($"{memberIndent}protected override void Build()");
+            sb.AppendLine($"{memberIndent}{{");
+            sb.AppendLine($"{bodyIndent}LoadCompanionStyleSheets();");
             sb.AppendLine();
             // Apply scoped CSS
             if (model.IsStyleScoped)
             {
                 var hash = GenerateScopedHash(model.ClassName);
-                sb.AppendLine($"        ApplyScopedAttribute(\"{hash}\");");
+                sb.AppendLine($"{bodyIndent}ApplyScopedAttribute(\"{hash}\");");
             }
 
             // Root class
@@ -247,7 +257,7 @@ namespace Sharq.Core.Editor
             {
                 var classes = rootClass.Split(' ').Where(c => !string.IsNullOrEmpty(c));
                 foreach (var cls in classes)
-                    sb.AppendLine($"        AddToClassList(\"{cls}\");");
+                    sb.AppendLine($"{bodyIndent}AddToClassList(\"{cls}\");");
             }
 
             // Root :class binding (same logic as GenerateCommonAttributes)
@@ -261,7 +271,7 @@ namespace Sharq.Core.Editor
                         var pairs = ParseClassObjectSyntax(val);
                         foreach (var (cls, cond) in pairs)
                         {
-                            sb.AppendLine($"        BindClass(this, \"{cls}\", () => {TranslateExpr(cond)});");
+                            sb.AppendLine($"{bodyIndent}BindClass(this, \"{cls}\", () => {TranslateExpr(cond)});");
                         }
                     }
                 }
@@ -272,34 +282,53 @@ namespace Sharq.Core.Editor
             {
                 var styleClass = RegisterStaticStyle(model.ClassName, rootStyle);
                 if (styleClass != null)
-                    sb.AppendLine($"        this.AddToClassList(\"{styleClass}\");");
+                    sb.AppendLine($"{bodyIndent}this.AddToClassList(\"{styleClass}\");");
             }
 
             // Generate children (handles v-if/v-else-if/v-else chains)
             if (root.Children.Count > 0)
             {
-                GenerateChildren(sb, root.Children, "        ", "this", model);
+                GenerateChildren(sb, root.Children, bodyIndent, "this", model);
             }
 
-            sb.AppendLine("    }");
+            sb.AppendLine($"{memberIndent}}}");
             sb.AppendLine();
 
-            // ─── Close class ─────────────────────────────────────────
-            sb.AppendLine("}");
+            // ─── Close class (+ optional namespace) ───────────────────
+            sb.AppendLine($"{indent}}}");
+            if (hasNs)
+                sb.AppendLine("}");
 
             return sb.ToString();
         }
 
-        private static string GenerateEmpty(string className, string baseClass = null)
+        private static string GenerateEmpty(string className, string baseClass = null, string classNamespace = null)
         {
             var b = string.IsNullOrEmpty(baseClass) ? "SusComponent" : baseClass;
-            return $@"[UxmlElement]
+            var ns = classNamespace?.Trim();
+            if (string.IsNullOrEmpty(ns))
+            {
+                return $@"[UxmlElement]
 public partial class {className} : {b}
 {{
     protected override void Build()
     {{
         LoadCompanionStyleSheets();
         // Empty component (no template)
+    }}
+}}";
+            }
+
+            return $@"namespace {ns}
+{{
+    [UxmlElement]
+    public partial class {className} : {b}
+    {{
+        protected override void Build()
+        {{
+            LoadCompanionStyleSheets();
+            // Empty component (no template)
+        }}
     }}
 }}";
         }

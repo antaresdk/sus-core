@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
@@ -18,7 +17,7 @@ using Sharq.Core;
 /// - SusThemeService.SetTheme → theme as a class on root (T key to toggle).
 /// - All colors/sizes/fonts come ONLY via var(--sus-*) in ThemeShowcase.uss.
 /// - SusBreakpointService — reactive badge with the current breakpoint.
-/// - SusIcon — icons from the registry, recolored for the theme via tint token.
+/// - SusIconElement — icons from the registry, recolored for the theme via tint token.
 ///
 /// Keys: T — Dark — Light.
 /// </summary>
@@ -109,7 +108,6 @@ public class SusBootstrapExample : MonoBehaviour
     private class ThemeShowcaseScreen : SusComponent
     {
         private Label _bpBadge;
-        private readonly List<VisualElement> _iconImages = new();
 
         protected override void Build()
         {
@@ -121,26 +119,7 @@ public class SusBootstrapExample : MonoBehaviour
             BuildTypography();
             BuildIcons();
 
-            // Primary tint — USS var() across stylesheets does NOT re-resolve
-            // for -unity-background-image-tint-color in Unity UITK.
-            // C# fallback: reactively set tint based on theme.
-            ApplyIconTints();
-            Watch(SusThemeService.Current, (_, __) => ApplyIconTints());
-
             RegisterCallback<AttachToPanelEvent>(_ => WireBreakpoint());
-        }
-
-        private void ApplyIconTints()
-        {
-            var isDark = SusThemeService.Current.Value == SusTheme.Dark;
-            var tint = new StyleColor(new Color(
-                isDark ? 0.94f : 0.06f,
-                isDark ? 0.94f : 0.06f,
-                isDark ? 0.94f : 0.06f));
-            foreach (var img in _iconImages)
-            {
-                if (img != null) img.style.unityBackgroundImageTintColor = tint;
-            }
         }
 
         private void BuildHeader()
@@ -188,9 +167,12 @@ public class SusBootstrapExample : MonoBehaviour
         {
             var section = Section("Typography — var(--sus-font-*)");
 
-            AddType(section, "Hero 32", "type-hero");
-            AddType(section, "Heading 24", "type-heading");
-            AddType(section, "Subtitle 18", "type-subtitle");
+            // Подписи = фактические значения --sus-font-size-* (_font.uss → base-font-size).
+            AddType(section, "Hero 48", "type-hero");
+            AddType(section, "Heading1 32", "type-heading1");
+            AddType(section, "Heading2 24", "type-heading2");
+            AddType(section, "Heading3 20", "type-heading3");
+            AddType(section, "Subtitle 16", "type-subtitle");
             AddType(section, "Body 14", "type-body");
             AddType(section, "Small 12", "type-small");
             AddType(section, "Caption 10", "type-caption");
@@ -200,7 +182,7 @@ public class SusBootstrapExample : MonoBehaviour
 
         private void BuildIcons()
         {
-            var section = Section("Icons — SusIcon + tint token");
+            var section = Section("Icons — SusIconElement + tint token");
             var row = new VisualElement();
             row.AddToClassList("icon-row");
 
@@ -247,18 +229,11 @@ public class SusBootstrapExample : MonoBehaviour
             section.Add(l);
         }
 
-        private SusIcon MakeIcon(string alias, string extraClass)
+        private SusIconElement MakeIcon(string alias, string extraClass)
         {
-            var icon = new SusIcon(alias);
+            var icon = new SusIconElement(alias);
             icon.AddToClassList("demo-icon");
             if (extraClass != null) icon.AddToClassList(extraClass);
-
-            // Store image ref for C# tint updates — USS var() across
-            // stylesheets does NOT re-resolve for -unity-background-image-tint-color.
-            var img = icon.Q<VisualElement>(className: "sus-icon__image");
-            if (img != null)
-                _iconImages.Add(img);
-
             return icon;
         }
 
