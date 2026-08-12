@@ -655,7 +655,7 @@ public Prop<string> Title = new(""Welcome to SUS"");
 "- **AppFonts.asset** — assign fonts to Inspector; applied to the root and\n" +
 "  overlays via `-unity-font-definition`.\n" +
 "- **Icons** - put `.svg` in `Icons/Resources/SusRuntime/Icons/app/regular/`\n" +
-"  (or `bold/`, `fill/`, ...). Usage: `new SusIcon { Name = { Value = \"app-logo\" } }`\n" +
+"  (or `bold/`, `fill/`, ...). Usage: `new SusIconElement { Name = { Value = \"app-logo\" } }`\n" +
 "  or `Icon=\"app-logo\"` in Sharq components. Your icons overlap the built-in ones.\n" +
 "- **Your own components** - `.sharq` files anywhere under the UI root are compiled\n" +
 "  automatically. Optional UI libraries are separate products at https://sus-ui.dev.\n";
