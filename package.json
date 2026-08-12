@@ -31,12 +31,12 @@
   "samples": [
     {
       "displayName": "Comp Example",
-      "description": "Component composition: SetChildProp and BindChildProp РІР‚вЂќ literal and reactive props between components, mutating .Value without replacing Prop<T>.",
+      "description": "Component composition: SetChildProp and BindChildProp — literal and reactive props between components, mutating .Value without replacing Prop<T>.",
       "path": "Samples~/Comp"
     },
     {
       "displayName": "SusBootstrap Example",
-      "description": "Showcase of the full design-token system: themes (Dark/Light via T key), colors, fonts, sizes, reactive breakpoints, and SusIcon icons РІР‚вЂќ all via var(--sus-*). Includes a ready ThemeShowcase.unity scene.",
+      "description": "Showcase of the full design-token system: themes (Dark/Light via T key), colors, fonts, sizes, reactive breakpoints, and SusIcon icons — all via var(--sus-*). Includes a ready ThemeShowcase.unity scene.",
       "path": "Samples~/SusBootstrap"
     },
     {

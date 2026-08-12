@@ -64,7 +64,7 @@ public class AppEntry : MonoBehaviour
 
 ## Related documents
 
-- [sus-router](https://github.com/antaresdk/sus-router) — navigation and modals (MIT, open-core companion) <!-- sus:ok ссылка на репо, без версии -->
+- [sus-router](https://github.com/antaresdk/sus-router) — navigation and modals (MIT, open-core companion) <!-- sus:ok repo link, no version -->
 - [Integration from scratch](./00-integration.md) - installation and first screen
 - [Design tokens](./DESIGN_TOKENS.md) - stub → eng theming canon
 - [OverlayHost and portals](./07-overlayhost.md) - overlays: tooltips, popups, modals

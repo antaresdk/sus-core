@@ -1,67 +1,67 @@
 # 18 — MCP / Agent probe (Phase 0)
 
-> Статус: Phase 0 (Foundation API). Даёт AI-агенту структурный доступ к живому UI как
-> JSON — без парсинга Console. MCP-обёртка (регистрация tools) — отдельная фаза,
-> см. `planning/SUS_MCP_PLAN.md`.
+> Status: Phase 0 (Foundation API). Gives an AI agent structured access to the live UI as
+> JSON — without parsing the Console. The MCP wrapper (tool registration) is a separate phase;
+> see `planning/SUS_MCP_PLAN.md`.
 
-## Что это
+## What it is
 
-`SusUiProbe` — тонкий C#-фасад поверх существующей диагностики. Возвращает JSON-строки
-и **по умолчанию не пишет в Console** (агент парсит возвращаемое значение, а не логи).
-Компилируется только под `UNITY_EDITOR || DEVELOPMENT_BUILD` — в релизный плеер не попадает.
+`SusUiProbe` is a thin C# façade over existing diagnostics. It returns JSON strings
+and **does not write to the Console by default** (the agent parses the return value, not logs).
+It compiles only under `UNITY_EDITOR || DEVELOPMENT_BUILD` — it does not ship in a release player.
 
 ## API
 
 Runtime — `Sharq.Core.Diagnostics.SusUiProbe`:
 
-| Метод | Возвращает |
+| Method | Returns |
 |---|---|
-| `GetTreeJson(VisualElement root, int maxDepth = 10, bool emitToConsole = false)` | плоский JSON-массив узлов: `depth,type,name,classes,sus,children,w,h,x,y,text?,hidden?,invisible?,pickable?` |
-| `GetPropsJson(SusComponent component, bool emitToConsole = false)` | `{ type, name?, visualState?, <propName>: value, … }` для всех публичных `Prop<T>` |
-| `GetPropsJson(VisualElement root, string nameOrType, bool emitToConsole = false)` | то же, найдя компонент по `#name` или имени типа; `{ "error":"not found" }`, если не найден |
+| `GetTreeJson(VisualElement root, int maxDepth = 10, bool emitToConsole = false)` | flat JSON array of nodes: `depth,type,name,classes,sus,children,w,h,x,y,text?,hidden?,invisible?,pickable?` |
+| `GetPropsJson(SusComponent component, bool emitToConsole = false)` | `{ type, name?, visualState?, <propName>: value, … }` for all public `Prop<T>` |
+| `GetPropsJson(VisualElement root, string nameOrType, bool emitToConsole = false)` | same, after finding the component by `#name` or type name; `{ "error":"not found" }` if missing |
 | `GetHealthJson(VisualElement root, bool emitToConsole = false)` | `{ totalElements, susComponents, totalChildren, maxDepth, anomalies:[] }` |
 
 Editor — `Sharq.Core.Editor.Diagnostics.SusUiProbeEditor`:
 
-| Метод | Возвращает |
+| Method | Returns |
 |---|---|
-| `ValidateSetupJson()` | `{ ok:bool, issues:[ { severity, category, message, fix? } ] }` (обёртка над `SusSetupValidator`, без Console/диалога) |
+| `ValidateSetupJson()` | `{ ok:bool, issues:[ { severity, category, message, fix? } ] }` (wrapper over `SusSetupValidator`, no Console/dialog) |
 
-## Пример
+## Example
 
 ```csharp
 using Sharq.Core.Diagnostics;
 
-var root = susApp.ScreenHost;               // или UIDocument.rootVisualElement
+var root = susApp.ScreenHost;               // or UIDocument.rootVisualElement
 string tree   = SusUiProbe.GetTreeJson(root);
 string health = SusUiProbe.GetHealthJson(root);
 string props  = SusUiProbe.GetPropsJson(root, "HomeScreen");
-// в редакторе:
+// in the editor:
 string setup  = Sharq.Core.Editor.Diagnostics.SusUiProbeEditor.ValidateSetupJson();
 ```
 
-Через Unity MCP (`execute_code`) агент получает дерево UI одним вызовом, без `read_console`
-и без фильтра по `[LA]`/`[FP]`.
+Via Unity MCP (`execute_code`) the agent gets the UI tree in one call, without `read_console`
+and without filtering on `[LA]`/`[FP]`.
 
-## Связь с существующим
+## Relation to existing diagnostics
 
-- `ScreenAudit` (Runtime/Diagnostics) — human-facing dump в Console (остаётся для ручной отладки).
-- `SusDiagnostics` (в downstream-библиотеках) — JSON-дампы для панели диагностики; `SusUiProbe` повторяет
-  их логику в core (core не зависит от kit), чтобы фасад жил в бесплатном пакете.
-- `SusSetupValidator` (Editor) — источник для `ValidateSetupJson`.
+- `ScreenAudit` (Runtime/Diagnostics) — human-facing Console dump (kept for manual debugging).
+- `SusDiagnostics` (in downstream UI packages) — JSON dumps for the diagnostics panel; `SusUiProbe`
+  repeats that logic in core (core does not depend on downstream UI packages) so the façade lives in the free package.
+- `SusSetupValidator` (Editor) — source for `ValidateSetupJson`.
 
-## Дальше (следующие фазы, из SUS_MCP_PLAN)
+## Next (later phases from SUS_MCP_PLAN)
 
-- Phase 1: ✅ РЕАЛИЗОВАНО (dev-only, `sus-dev/Assets/SusMcp/`). Инструменты `sus_ui_tree` /
-  `sus_ui_props` / `sus_ui_health` / `sus_setup_validate` авто-регистрируются в CoplayDev
-  MCPForUnity через `[McpForUnityTool(..., Group="ui")]` + `HandleCommand(JObject)`, оборачивают
-  `SusUiProbe`. Ссылка на Coplay — только в sus-dev asmdef, core остаётся без зависимости.
-- Phase 2: act-инструменты (`router.push`, `ui.set_prop`, `ui.click`, `sharq.regen`).
+- Phase 1: ✅ DONE (dev-only, `sus-dev/Assets/SusMcp/`). Tools `sus_ui_tree` /
+  `sus_ui_props` / `sus_ui_health` / `sus_setup_validate` auto-register with CoplayDev
+  MCPForUnity via `[McpForUnityTool(..., Group="ui")]` + `HandleCommand(JObject)`, wrapping
+  `SusUiProbe`. The Coplay reference is only in the sus-dev asmdef; core stays dependency-free.
+- Phase 2: act tools (`router.push`, `ui.set_prop`, `ui.click`, `sharq.regen`).
 - Phase 3: Docs MCP + Storybook.
 
 ## DoD Phase 0
 
-- [x] Фасад `SusUiProbe` без Console по умолчанию (`emitToConsole=false`).
-- [x] EditMode-smoke: `SusUiProbeTests` — probe возвращает парсируемый JSON.
-- [x] Phase 1: SUS MCP-инструменты в sus-dev (`Sus.Mcp.Editor` asmdef).
-- [ ] Прогнать в Unity: подтвердить компиляцию probe+tools и зелёные тесты (нужен редактор).
+- [x] `SusUiProbe` façade with Console off by default (`emitToConsole=false`).
+- [x] EditMode smoke: `SusUiProbeTests` — probe returns parseable JSON.
+- [x] Phase 1: SUS MCP tools in sus-dev (`Sus.Mcp.Editor` asmdef).
+- [ ] Run in Unity: confirm probe+tools compile and tests are green (needs Editor).

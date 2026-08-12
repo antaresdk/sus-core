@@ -322,7 +322,7 @@ Running the wizard again does not erase edited files (only missing ones are crea
 
 `Window → SUS → Validate Setup` checks:
 
-- Unity version (≥6000.0) <!-- sus:ok min-версия задокументирована в package.json -->
+- Unity version (≥6000.0) <!-- sus:ok min version documented in package.json -->
 - UI Toolkit
 - `sus.config.json` and paths
 - Availability of `.sharq` and `.g.cs`
