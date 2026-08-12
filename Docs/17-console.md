@@ -26,15 +26,15 @@ var console = new SusConsoleService
     ToggleKey = KeyCode.BackQuote, // ~
     MaxEntries = 500,
 };
-console.Attach(); // subscription to log + hotkey driver
-SusConsoleService.Instance = console; // for access from any code
+console.Attach(); // subscribes to the log, spawns the hotkey driver, sets Instance
 #endif
 ```
 
-`Attach()`does three things:
+`Attach()`does four things:
 1. Subscribes to`Application.logMessageReceivedThreaded`.
 2. Creates (or finds)`SusConsoleDriver`for survey`ToggleKey`V`Update`.
 3. Registers built-in commands (`clear`, `help`, `filter`).
+4. Publishes the instance as`SusConsoleService.Instance`(the setter is private - do not assign it).
 
 `Detach()`unsubscribes from the log and hides the UI.
 
