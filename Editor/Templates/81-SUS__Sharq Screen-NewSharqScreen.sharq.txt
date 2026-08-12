@@ -15,7 +15,6 @@
 
 <script>
 using Sharq.Core;
-using Sharq.Router;
 
 protected override void Mounted()
 {
@@ -24,7 +23,8 @@ protected override void Mounted()
 
 void GoBack()
 {
-    Router.Value?.Navigate("/");
+    // Hook up your navigation here. With the SUS Router package installed
+    // (add `using Sharq.Router;` above):  Router.Value?.Navigate("/");
 }
 </script>
 
@@ -42,14 +42,14 @@ void GoBack()
     align-items: center;
     padding: 16px;
     border-bottom-width: 1px;
-    border-bottom-color: var(--sk-color-border, rgba(255, 255, 255, 0.12));
+    border-bottom-color: var(--sus-border, rgba(255, 255, 255, 0.12));
 }
 .#SCRIPTNAME_LOWER#-screen__back-btn {
     margin-right: 16px;
 }
 .#SCRIPTNAME_LOWER#-screen__title {
     font-size: 22px;
-    color: var(--sk-color-text-primary, white);
+    color: var(--sus-text-primary, white);
 }
 .#SCRIPTNAME_LOWER#-screen__content {
     display: flex;

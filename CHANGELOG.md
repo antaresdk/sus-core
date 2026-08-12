@@ -7,6 +7,30 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-08-12
+
+### Fixed
+- `Assets → Create → SUS → Sharq Screen` produced a file that did not compile in a project with
+  only this package installed: the template's script section referenced `Sharq.Router`, which
+  lives in a separate package. The navigation call is now a commented example, so the created
+  component compiles as-is and still shows how to wire a router when one is installed.
+- The Screen and Modal templates styled themselves with token names this package does not define,
+  so every colour silently fell back to a hardcoded literal. They now use the `--sus-*` tokens
+  from `design-tokens.uss`.
+- Generated code lost its artifacts permanently when `Generated/` was missing — a fresh clone of a
+  project that does not commit that folder, or a "delete it and let it regenerate" cleanup. Both
+  the content hash and the section cache reported "nothing changed", so nothing was written back
+  and the project stayed uncompilable until a `.sharq` file was edited by hand. A missing artifact
+  now counts as a change.
+- The header of a generated file recorded the absolute path of the machine that ran the generator,
+  so teams committing `Generated/` got a one-line diff per teammate. The path is now project
+  relative.
+
+### Removed
+- Three unused template files (`HomeScreen.sharq.txt`, `SettingsScreen.sharq.txt`, `MyApp.cs.txt`)
+  that shipped in `Editor/Templates/` but were referenced by nothing — leftovers of the setup flow
+  that now lives in `Editor/Setup/Starter~`, and stale copies of it.
+
 ## [1.0.12] - 2026-08-12
 
 ### Fixed

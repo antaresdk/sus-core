@@ -102,9 +102,14 @@ namespace Sharq.Core.Editor
 
             var sharqContent = File.ReadAllText(fullPath);
 
-            // Content hash check: skip regeneration if unchanged
+            // Content hash check: skip regeneration if unchanged AND the code is still on disk.
+            // Without the existence check a project cloned without Generated/ (or one where the
+            // folder was deleted to "regenerate") stays uncompilable: the caches report
+            // "nothing changed" and no artifact is ever written back.
             var hash = ComputeHash(sharqContent);
-            if (IsHashMatch(assetPath, hash))
+            var expectedCodePath = Path.Combine(
+                GeneratedDir, $"{Path.GetFileNameWithoutExtension(assetPath)}.g.cs");
+            if (IsHashMatch(assetPath, hash) && File.Exists(expectedCodePath))
             {
                 if (SusConfig.Instance.LogGeneratedFiles)
                     UnityEngine.Debug.Log($"[Sharq] Skipped {Path.GetFileName(assetPath)} — content unchanged");
@@ -136,10 +141,10 @@ namespace Sharq.Core.Editor
             // Generate all artifacts once (shared pipeline); write incrementally below.
             var artifacts = SharqCompilePipeline.Generate(model);
 
-            // Only regenerate .g.cs if template or script changed
-            if (changed.TemplateChanged || changed.ScriptChanged)
+            // Only regenerate .g.cs if template or script changed — or if it is missing.
+            var outputPath = Path.Combine(GeneratedDir, $"{model.ClassName}.g.cs");
+            if (changed.TemplateChanged || changed.ScriptChanged || !File.Exists(outputPath))
             {
-                var outputPath = Path.Combine(GeneratedDir, $"{model.ClassName}.g.cs");
                 File.WriteAllText(outputPath, artifacts.Code, Encoding.UTF8);
                 if (SusConfig.Instance.LogGeneratedFiles)
                     UnityEngine.Debug.Log($"[Sharq] Generated {model.ClassName}.g.cs");
@@ -151,23 +156,20 @@ namespace Sharq.Core.Editor
                     UnityEngine.Debug.Log($"[Sharq] Generated {model.ClassName}_static.g.uss ({artifacts.StaticRuleCount} rules)");
             }
 
-            // Only regenerate .uss if style changed (hot reload)
-            if (changed.StyleChanged)
+            // Only regenerate .uss if style changed (hot reload) — or if a sheet is missing.
+            var scopedUssPath = Path.Combine(GeneratedDir, $"{model.ClassName}_scoped.g.uss");
+            var globalUssPath = Path.Combine(GeneratedDir, $"{model.ClassName}.g.uss");
+            if (artifacts.ScopedUss != null && (changed.StyleChanged || !File.Exists(scopedUssPath)))
             {
-                if (artifacts.ScopedUss != null)
-                {
-                    var ussPath = Path.Combine(GeneratedDir, $"{model.ClassName}_scoped.g.uss");
-                    File.WriteAllText(ussPath, artifacts.ScopedUss, Encoding.UTF8);
-                    if (SusConfig.Instance.LogGeneratedFiles)
-                        UnityEngine.Debug.Log($"[Sharq] USS hot-reloaded: {model.ClassName}_scoped.g.uss");
-                }
-                if (artifacts.GlobalUss != null)
-                {
-                    var globalUssPath = Path.Combine(GeneratedDir, $"{model.ClassName}.g.uss");
-                    File.WriteAllText(globalUssPath, artifacts.GlobalUss, Encoding.UTF8);
-                    if (SusConfig.Instance.LogGeneratedFiles)
-                        UnityEngine.Debug.Log($"[Sharq] USS hot-reloaded: {model.ClassName}.g.uss");
-                }
+                File.WriteAllText(scopedUssPath, artifacts.ScopedUss, Encoding.UTF8);
+                if (SusConfig.Instance.LogGeneratedFiles)
+                    UnityEngine.Debug.Log($"[Sharq] USS hot-reloaded: {model.ClassName}_scoped.g.uss");
+            }
+            if (artifacts.GlobalUss != null && (changed.StyleChanged || !File.Exists(globalUssPath)))
+            {
+                File.WriteAllText(globalUssPath, artifacts.GlobalUss, Encoding.UTF8);
+                if (SusConfig.Instance.LogGeneratedFiles)
+                    UnityEngine.Debug.Log($"[Sharq] USS hot-reloaded: {model.ClassName}.g.uss");
             }
 
             // Store section hashes for next diff
