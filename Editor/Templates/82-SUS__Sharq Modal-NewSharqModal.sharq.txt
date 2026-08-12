@@ -70,8 +70,8 @@ protected override void Created()
 }
 .#SCRIPTNAME_LOWER#-modal__card {
     position: relative;
-    background-color: var(--sk-color-surface, rgb(31, 31, 31));
-    color: var(--sk-color-text-primary, white);
+    background-color: var(--sus-bg-surface, rgb(31, 31, 31));
+    color: var(--sus-text-primary, white);
     border-radius: 12px;
     overflow: hidden;
     flex-direction: column;
@@ -89,7 +89,7 @@ protected override void Created()
     background-color: transparent;
     border-width: 0;
     font-size: 18px;
-    color: var(--sk-color-text-secondary, rgba(255, 255, 255, 0.6));
+    color: var(--sus-text-secondary, rgba(255, 255, 255, 0.6));
     cursor: link;
 }
 .#SCRIPTNAME_LOWER#-modal__body {

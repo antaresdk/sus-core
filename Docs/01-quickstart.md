@@ -164,7 +164,7 @@ instead:
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.12
+https://github.com/antaresdk/sus-core.git#v1.0.13
 ```
 <!-- /sus:gen -->
 

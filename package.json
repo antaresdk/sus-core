@@ -1,6 +1,6 @@
 {
   "name": "com.sharq-it.sus.core",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "displayName": "Sharq UI System Core",
   "description": "Vue-inspired reactive UI framework for Unity UI Toolkit. Write a component as a single .sharq file (template + script + style) and the Editor-time compiler generates a plain C# UxmlElement class plus scoped USS. Includes reactivity (Prop<T>, Computed<T>, Watch, WatchEffect, EffectScope), template directives (v-if / v-else / v-show / v-for / slot / @event), component composition with provide/inject, design tokens with Dark/Light themes, responsive breakpoints, an overlay/portal host, world-space UI, a runtime console and devtools overlay, plus Editor tooling: Setup wizard, runtime tree inspector and theme editor under Window/SUS. Requires Unity 6.3 (6000.3) or newer for native SVG icon import.",
   "unity": "6000.3",
