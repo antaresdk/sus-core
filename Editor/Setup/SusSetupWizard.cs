@@ -609,10 +609,9 @@ public Prop<string> Title = new(""Welcome to SUS"");
     /* --thm-primary-hover:   rgb(125, 103, 190); */
     /* --thm-primary-pressed: rgb(86, 61, 140);  */
 
-    /* ── Sizes & shape (L4 downstream tokens) — same override scheme as colors ── */
-    /* --sk-radius-md:     8px;    corners of buttons/cards/inputs */
-    /* --sk-font-body:     15px;   base text size of downstream UI components */
-    /* --sk-button-radius: 20px;   pill ≈ half default button height, overrides --sk-radius-md */
+    /* ── Sizes & shape — L3 core or registered L4 (same override scheme as colors) ── */
+    /* --sus-font-size-body: 15px;   base text size */
+    /* Registered L4 may expose radius/body tokens — override those after cascade load. */
 }
 
 /* Per-theme overrides — win only while the theme class is active: */

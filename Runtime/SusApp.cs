@@ -157,11 +157,11 @@ namespace Sharq.Core
         /// <summary>
         /// Layers brand/custom stylesheets on the root AFTER the token cascade (core L1–L3 +
         /// registered L4/L5), so they form the TOP override layer and can redefine
-        /// <c>--base-*/--thm-*/--sus-*/--sk-*</c>. Only the variables they declare are
-        /// overridden — the rest keeps cascading from the layers below (e.g. bump
-        /// <c>--sk-font-body</c> without touching spacing/shape). Applied to the root AND
-        /// the OverlayHost, so overrides reach popups/tooltips/modals too. Paths are full
-        /// Resources paths (e.g. "SusRuntime/demo-tokens").
+        /// <c>--base-*/--thm-*/--sus-*</c> and registered L4 custom properties. Only the
+        /// variables they declare are overridden — the rest keeps cascading from the layers
+        /// below (e.g. bump <c>--sus-font-size-body</c> without touching spacing/shape).
+        /// Applied to the root AND the OverlayHost, so overrides reach popups/tooltips/modals
+        /// too. Paths are full Resources paths (e.g. "SusRuntime/demo-tokens").
         /// </summary>
         public SusApp UseCustomStyles(params string[] resourcePaths)
         {

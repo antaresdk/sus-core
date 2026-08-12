@@ -5,8 +5,8 @@
    so --base-color-* are available).
 
    Grey94 = rgb(240,240,240) — dark-theme default for text.
-   A downstream base stylesheet may override with theme-sensitive
-   --sk-* tokens (text color + font family).
+   A downstream / registered cascade stylesheet may override with
+   theme-sensitive tokens (text color + font family).
 
    USS priority: element.styleSheets > panel.themeStyleSheet,
    so a container-level base sheet wins over _reset.uss (panel TSS).

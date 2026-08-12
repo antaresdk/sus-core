@@ -6,7 +6,7 @@
 
    Contains: colors, spacing, radius, font sizes.
    Does NOT contain: --thm-* (L2, theme-dependent), --sus-* (L3),
-   --sk-* (L4), component styles (L5).
+   registered L4 (downstream token sheet), component styles (L5).
    ═══════════════════════════════════════════════════════════ */
 
 :root {
@@ -150,7 +150,7 @@
     /* Type aliases — all resolve through --base-font-primary.
        Override individually if a type needs a different weight:
        --base-font-body: var(--font-family-regular);
-       Components use --sk-font-family-body/label/heading/italic, NOT raw fonts. */
+       Prefer L3 --sus-font-* (or registered L4 family tokens), not raw fonts. */
     --base-font-body:       var(--base-font-primary);
     --base-font-label:      var(--base-font-primary);
     --base-font-heading:    var(--base-font-primary);
