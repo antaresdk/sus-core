@@ -305,6 +305,23 @@ namespace Sharq.Core.Diagnostics
             return false;
         }
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled the singleton survives leaving Play Mode: _installed stays
+        // true so Install() would skip re-subscribing to the new panel's visualTree (silently
+        // disabling click auditing on the second Play session), and the registry would still hold
+        // VisualElements from the destroyed panel.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            var instance = Instance;
+            instance._registry.Clear();
+            instance._transparentOverlays.Clear();
+            instance._ignoredElements.Clear();
+            instance._installed = false;
+            instance._suspended = false;
+        }
+#endif
+
         // ─── Report ───────────────────────────────────────────────────────────
 
         public void DumpReport()

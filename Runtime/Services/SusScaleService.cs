@@ -26,6 +26,22 @@ namespace Sharq.Core
 
         private SusScaleService() { }
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled the singleton and the static Props survive leaving Play
+        // Mode: Current would keep the zoom level from the previous session instead of resetting
+        // to 1.0 (a fresh root always renders unscaled), and all three Props would accumulate
+        // Watch() handlers closing over elements of a destroyed panel.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            s_instance = null;
+            Current.ClearSubscribers();
+            Current.Value = 1f;
+            Min.ClearSubscribers();
+            Max.ClearSubscribers();
+        }
+#endif
+
         /// <summary>
         /// Applies a uniform scale transform to the root element.
         /// Scale is clamped to [Min, Max]. Idempotent.
