@@ -130,7 +130,7 @@ sus-core/Runtime/Resources/SusRuntime/
 
 #### 2.2.2 User override
 
-Create `Assets/Resources/SusRuntime/_font.uss` — `Resources.Load` prefers the project copy. No code required. For open font-face gaps (Thin / ExtraLight / …), see the workspace internal plan `docs-canon/theming/internal/plans/DESIGN_TOKENS_PLAN.md` (not a buyer checklist; not shipped in package `Docs/`).
+Create `Assets/Resources/SusRuntime/_font.uss` — `Resources.Load` prefers the project copy. No code required. Open font-face gaps (Thin / ExtraLight / …) are tracked on the internal roadmap and are not part of this package.
 
 ---
 
@@ -371,7 +371,7 @@ Public L3 API: **61** `--sus-*` definitions — **53** in `design-tokens.uss` pl
 
 **Composition (not L3 tokens):** buttons/inputs/tooltips/scrollbars compose the tokens above — e.g. primary button `background-color: var(--sus-primary)`; label `color: var(--sus-text-on-primary)`; hover `var(--sus-primary-hover)`; dim modal backdrop `var(--sus-scrim)`; elevated panel surface `var(--sus-bg-overlay)` or `var(--sus-bg-surface-raised)`.
 
-**Layout usage of the space scale** (sibling gap ≥ `--sus-space-8`, row alignment, no clip, tokens-only — agent checklist L1–L5): workspace canon `docs-canon/theming/LAYOUT_RULES.md` (internal agents; not shipped in package `Docs/`).
+**Layout usage of the space scale:** keep sibling gaps at `--sus-space-8` or larger, keep rows aligned, avoid clipped content, and use tokens only (no raw pixel values).
 
 
 
@@ -798,7 +798,7 @@ Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
 
 Phases B–F (palette/theme/L3 tokens, breakpoints, Phosphor icons, SusApp cascade, docs) are **done**. This buyer page is not a roadmap.
 
-Open font-face work (Thin / ExtraLight / SemiBold / ExtraBold and related `_font.uss` expansions) lives in the workspace internal plan `docs-canon/theming/internal/plans/DESIGN_TOKENS_PLAN.md` (`DT-FONT-FACES`, `DT-FONT-SEMANTIC`; not shipped in package `Docs/`).
+Open font-face work (Thin / ExtraLight / SemiBold / ExtraBold and related `_font.uss` expansions) is tracked on the internal roadmap and is not part of this package.
 
 | Phase | Outcome | Status |
 | --- | --- | --- |
