@@ -24,6 +24,14 @@ namespace Sharq.Core.Diagnostics
 
         private static bool _hotkeyInstalled;
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled this survives leaving Play Mode: InstallHotkey/InstallIfNeeded
+        // would see _hotkeyInstalled == true and skip re-registering Ctrl+Shift+~ on the new root,
+        // silently disabling the audit hotkey on the second Play session.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => _hotkeyInstalled = false;
+#endif
+
         /// <summary>
         /// Writes each line of sb as a separate Debug.Log with a tag prefix.
         /// Unity Debug.Log(multiline) = one entry → MCP sees only the first line.

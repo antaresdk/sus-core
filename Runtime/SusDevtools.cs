@@ -68,6 +68,20 @@ namespace Sharq.Core
         /// </summary>
         public static bool IsVisible => _panel?.style.display == DisplayStyle.Flex;
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled these survive leaving Play Mode: _panel/_root/_selectedElement
+        // would point at VisualElements from the destroyed previous panel, and Attach() would see
+        // _panel != null and skip re-registering the F12 toggle on the new root.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _root = null;
+            _panel = null;
+            _propsScroll = null;
+            _selectedElement = null;
+        }
+#endif
+
         // ════════════════════════════════════════════════════════════════
         //  Panel construction
         // ════════════════════════════════════════════════════════════════

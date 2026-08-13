@@ -41,6 +41,19 @@ namespace Sharq.Core
 
         private SusDensityService() { }
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled the singleton and Current survive leaving Play Mode: the
+        // density picked in the previous session would leak into the next instead of resetting to
+        // Default, and Current would accumulate Watch() handlers closing over destroyed elements.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            s_instance = null;
+            Current.ClearSubscribers();
+            Current.Value = SusDensity.Default;
+        }
+#endif
+
         /// <summary>
         /// Applies density CSS classes to the root and updates the reactive prop.
         /// Call once at startup; idempotent.

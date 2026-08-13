@@ -179,6 +179,20 @@ namespace Sharq.Core
 
         private static readonly List<WorldBinding> _standaloneBindings = new();
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled these survive leaving Play Mode: Default would point at an
+        // instance whose OverlayHost/MarkerLayer belong to a destroyed panel, _cameraFallback at a
+        // destroyed Camera, and standalone bindings at Transforms/VisualElements from the previous
+        // scene.
+        [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            Default = null;
+            _cameraFallback = null;
+            _standaloneBindings.Clear();
+        }
+#endif
+
         /// <summary>
         /// Dedicated screen-space host for the variant-B flat-marker fallback — a
         /// <see cref="WorldMarkerLayer"/> inserted UNDER the screens (see
