@@ -1,8 +1,8 @@
 # 18 — MCP / Agent probe (Phase 0)
 
 > Status: Phase 0 (Foundation API). Gives an AI agent structured access to the live UI as
-> JSON — without parsing the Console. The MCP wrapper (tool registration) is a separate phase;
-> see `planning/SUS_MCP_PLAN.md`.
+> JSON — without parsing the Console. The MCP wrapper (tool registration) is a separate,
+> development-only phase and is not part of this package.
 
 ## What it is
 
@@ -50,12 +50,13 @@ and without filtering on `[LA]`/`[FP]`.
   repeats that logic in core (core does not depend on downstream UI packages) so the façade lives in the free package.
 - `SusSetupValidator` (Editor) — source for `ValidateSetupJson`.
 
-## Next (later phases from SUS_MCP_PLAN)
+## Next (later phases)
 
-- Phase 1: ✅ DONE (dev-only, `sus-dev/Assets/SusMcp/`). Tools `sus_ui_tree` /
+- Phase 1: ✅ DONE (development-only, outside this package). Tools `sus_ui_tree` /
   `sus_ui_props` / `sus_ui_health` / `sus_setup_validate` auto-register with CoplayDev
   MCPForUnity via `[McpForUnityTool(..., Group="ui")]` + `HandleCommand(JObject)`, wrapping
-  `SusUiProbe`. The Coplay reference is only in the sus-dev asmdef; core stays dependency-free.
+  `SusUiProbe`. The Coplay reference lives only in that development-only editor assembly;
+  core stays dependency-free.
 - Phase 2: act tools (`router.push`, `ui.set_prop`, `ui.click`, `sharq.regen`).
 - Phase 3: Docs MCP + Storybook.
 
@@ -63,5 +64,5 @@ and without filtering on `[LA]`/`[FP]`.
 
 - [x] `SusUiProbe` façade with Console off by default (`emitToConsole=false`).
 - [x] EditMode smoke: `SusUiProbeTests` — probe returns parseable JSON.
-- [x] Phase 1: SUS MCP tools in sus-dev (`Sus.Mcp.Editor` asmdef).
+- [x] Phase 1: SUS MCP tools in a development-only editor assembly (outside this package).
 - [ ] Run in Unity: confirm probe+tools compile and tests are green (needs Editor).
