@@ -42,6 +42,9 @@ namespace Sharq.Core
             public VisualElement OriginalParent;
             public object Owner;                  // non-null = grouped floating (e.g. a menu)
             public List<FloatingState> Children;  // linked floatings that track this parent
+            public bool MatchAnchorWidth;         // popup API (Select/Dropdown) — clone anchor width every resync
+            public EventCallback<GeometryChangedEvent> AnchorGeometryCb;  // T-407: anchor moved/resized → resync
+            public EventCallback<GeometryChangedEvent> PanelGeometryCb;   // T-407: panel resized → resync
         }
 
         private static readonly List<FloatingState> _floatings = new();
@@ -82,7 +85,7 @@ namespace Sharq.Core
         public static OverlayEntry ShowFloating(VisualElement overlay, VisualElement anchor,
             OverlayCategory category, Action onClose = null,
             bool closeOthers = true, VisualElement originalParent = null,
-            object owner = null)
+            object owner = null, bool matchAnchorWidth = false)
         {
             if (overlay == null || anchor == null) return null;
 
@@ -104,7 +107,8 @@ namespace Sharq.Core
                 Entry = entry,
                 OnClose = onClose,
                 OriginalParent = originalParent,
-                Owner = owner
+                Owner = owner,
+                MatchAnchorWidth = matchAnchorWidth,
             };
 
             // Scroll tracking — keep the delegate refs so we can unsubscribe exactly.
@@ -118,6 +122,25 @@ namespace Sharq.Core
             }
 
             anchor.RegisterCallback<DetachFromPanelEvent>(OnFloatingAnchorDetached);
+
+            // T-407: the very first Show() call happens synchronously (often before UI Toolkit
+            // has resolved a layout pass on a just-mounted anchor/popup — worldBound/resolvedStyle
+            // are stale or zero at that instant). GeometryChangedEvent fires whenever the anchor's
+            // OWN resolved rect changes — including the first real layout pass and every later
+            // reflow (e.g. Storybook panel resize) — so re-syncing width+position there (instead
+            // of once at Show-time) keeps the popup glued to its trigger for the component's
+            // entire open lifetime, not just its first frame.
+            state.AnchorGeometryCb = _ => RepositionSingle(state);
+            anchor.RegisterCallback<GeometryChangedEvent>(state.AnchorGeometryCb);
+
+            // Panel-level reflow (breakpoint/density/window resize) can move the anchor without
+            // necessarily firing its OWN GeometryChangedEvent first (parent reflow settles before
+            // the anchor's leaf rect is touched in some layouts) — track the root too, belt&braces.
+            if (host.panel?.visualTree != null)
+            {
+                state.PanelGeometryCb = _ => RepositionSingle(state);
+                host.panel.visualTree.RegisterCallback<GeometryChangedEvent>(state.PanelGeometryCb);
+            }
 
             _floatings.Add(state);
             EnsurePointerDown(host);
@@ -148,7 +171,16 @@ namespace Sharq.Core
                 host?.RemoveFromOverlay(s.Entry);
 
                 if (s.Anchor != null)
+                {
                     s.Anchor.UnregisterCallback<DetachFromPanelEvent>(OnFloatingAnchorDetached);
+                    if (s.AnchorGeometryCb != null)
+                        s.Anchor.UnregisterCallback<GeometryChangedEvent>(s.AnchorGeometryCb);
+                }
+                if (s.PanelGeometryCb != null)
+                {
+                    var root = host?.panel?.visualTree ?? s.Overlay.panel?.visualTree;
+                    root?.UnregisterCallback<GeometryChangedEvent>(s.PanelGeometryCb);
+                }
 
                 if (s.TrackedScroll != null)
                 {
@@ -238,6 +270,16 @@ namespace Sharq.Core
         private static void RepositionSingle(FloatingState state)
         {
             if (state.Overlay == null || state.Anchor == null) return;
+
+            // Popup API (Select/Dropdown): re-clone the anchor width on every resync, not just
+            // at Show()-time — a GeometryChangedEvent means the anchor's rect (and therefore its
+            // width) may have just changed (T-407: panel resize left the popup at a stale width).
+            if (state.MatchAnchorWidth)
+            {
+                var w = state.Anchor.resolvedStyle.width;
+                if (w > 0f) state.Overlay.style.width = w;
+            }
+
             RepositionFloating(state.Overlay, state.Anchor);
 
             if (state.Children != null)
@@ -324,10 +366,13 @@ namespace Sharq.Core
             // originalParent: null — do not reparent back to the field on Hide.
             // Reparenting caused SusScrollView (inside popup) to Attach/Detach on every
             // open/close and tripped RemountLoopAudit during rapid toggles.
+            // matchAnchorWidth: true — Select/Dropdown popups must track the trigger's width
+            // for the whole open lifetime (T-407), not just the first Show() call.
             ShowFloating(popup, anchor, OverlayCategory.Dropdown,
                 onClose: onClose,
                 closeOthers: true,
-                originalParent: null);
+                originalParent: null,
+                matchAnchorWidth: true);
         }
 
         public static void Hide(VisualElement popup, VisualElement originalParent)
@@ -360,8 +405,9 @@ namespace Sharq.Core
 
             floating.style.position = Position.Absolute;
 
-            float top = anchor.worldBound.yMax;
-            float left = anchor.worldBound.x;
+            var anchorWorld = anchor.worldBound;
+            float top = anchorWorld.yMax;
+            float left = anchorWorld.x;
 
             var panel = floating.panel ?? anchor.panel;
             if (panel != null)
@@ -371,7 +417,15 @@ namespace Sharq.Core
                 var fw = floating.resolvedStyle.width > 0 ? floating.resolvedStyle.width : 200f;
                 var fh = floating.resolvedStyle.height > 0 ? floating.resolvedStyle.height : 48f;
 
-                if (top + fh > ph) top = ph - fh - 8f;
+                // T-407: flip ABOVE the anchor only when there's genuinely no room below AND
+                // there IS room above — never just clamp downward (that used to slide the popup
+                // up over the anchor/header without actually flipping past it, T-407 case
+                // kit-dropdown.png: popup ended up overlapping the Storybook header).
+                if (top + fh > ph)
+                {
+                    var aboveTop = anchorWorld.y - fh;
+                    top = aboveTop >= 0f ? aboveTop : Mathf.Max(8f, ph - fh - 8f);
+                }
                 if (left + fw > pw) left = pw - fw - 8f;
                 if (left < 0) left = 8f;
                 if (top < 0) top = 8f;
