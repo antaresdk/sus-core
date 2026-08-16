@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Portal popups resync width/position on `GeometryChangedEvent`, not only at `Show()`.
 - Fast Enter Play Mode: dev/diagnostic statics are reset on Enter Play Mode.
 - Samples: dangling `PanelSettings` reference in Comp/ThemeShowcase/SusKeepAlive.
+- Sharq source generator: a `[CreateProperty(default: "…")]` string default lost its quotes and
+  overrode the author's field initializer, and a field with a trailing `// comment` after `;`
+  skipped its `[UxmlAttribute]` companion. String literals are re-emitted verbatim, the author's
+  initializer wins, trailing comments are preserved (regenerate `.g.cs` in dependent packages).
 
 ### Changed
 - Docs: internal workspace paths removed from buyer-facing docs; translation artifacts fixed;
