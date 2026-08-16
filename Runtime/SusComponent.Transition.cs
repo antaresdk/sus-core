@@ -82,6 +82,17 @@ namespace Sharq.Core
                 leaveJob = el.schedule.Execute(() =>
                 {
                     ClearPhaseClasses();
+                    // T-492: guard against a re-Enter() racing this delayed removal. Pause() above
+                    // cancels the PREVIOUS job when Leave() is called again, but it does not protect
+                    // against THIS job's own timer having already fired (UITK scheduler dispatch is
+                    // in-flight) by the moment a later Enter() re-adds `el` — that Enter() cannot
+                    // un-schedule a callback that is already executing/queued this tick, so the stale
+                    // removal still runs and silently undoes the just-completed re-open (observed
+                    // live: SusExpansionPanels close→reopen within ~200ms, e.g. SusUxDriver
+                    // 01-closed→03-open-general). `lastShown` is the single source of truth for the
+                    // CURRENT desired state — only remove if we are still actually meant to be hidden.
+                    if (lastShown != false)
+                        return;
                     if (el.parent != null)
                     {
                         rememberedParent = el.parent;

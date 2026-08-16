@@ -56,6 +56,13 @@ namespace Sharq.Core
         protected bool IsRelocatingToOverlay { get; private set; }
 
         /// <summary>
+        /// Tells <see cref="SusComponent.OnDetachFromPanelHandler"/> to skip
+        /// <c>DisposeAllBindings()</c> while relocating — see <see cref="SusComponent.IsRelocating"/>
+        /// for the full rationale (T-493).
+        /// </summary>
+        protected override bool IsRelocating => IsRelocatingToOverlay;
+
+        /// <summary>
         /// Teleports THIS element into its pinned overlay layer, remembering the original
         /// parent for restore. Returns false if no OverlayHost was found (caller may fall
         /// back to inline display).
