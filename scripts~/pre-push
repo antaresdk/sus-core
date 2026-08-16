@@ -1,0 +1,97 @@
+#!/bin/sh
+# sus-pre-push v1 — package push gate: docs consistency (package scope) + HARD version bump.
+#
+# Canonical instance lives in the umbrella tooling folder; the versioned copy inside each package
+# is `<pkg>/scripts~/pre-push` and is BYTE-IDENTICAL to it. Install/compare from the umbrella:
+#   node tools/docs-tool/index.mjs ...   (see the umbrella docs; `hooks --install` writes both)
+#
+# Wording note: this file is tracked in the PUBLIC packages, so it stays inside the public
+# vocabulary (see rule R25) and calls the neutral shim `tools/docs-tool` — the shim exists exactly
+# for this, and the umbrella entry point must not be named here.
+#
+# No machine paths on purpose: the umbrella is derived from the repo root (packages sit next to
+# it). The former wrapper baked an absolute `C:\...` path in, so the gate survived a folder move
+# on exactly one machine and silently did nothing anywhere else.
+set -e
+
+TOP="$(git rev-parse --show-toplevel)"
+UMBRELLA="$(cd "$TOP/.." && pwd)"
+PKG="$(basename "$TOP")"
+
+# ── 1. docs gate for THIS package ────────────────────────────────────────────────────────
+# `verify --scope <pkg>` judges FILES OF THIS PACKAGE: an unrelated wave in the umbrella does not
+# block the push, and is not silenced either — it is printed as a count with its own route.
+# No umbrella next to the package (standalone clone) — the step is skipped, loudly.
+DOCS_TOOL="$UMBRELLA/tools/docs-tool/index.mjs"
+if [ -f "$DOCS_TOOL" ]; then
+    if ! node "$DOCS_TOOL" verify --scope "$PKG"; then
+        echo "[pre-push] docs verify failed for $PKG - fix findings inside the package and retry" >&2
+        echo "[pre-push] umbrella-wide findings are NOT this gate: run 'npm run docs:loop' there" >&2
+        exit 1
+    fi
+else
+    echo "[pre-push] docs gate skipped (no umbrella tooling next to $PKG)" >&2
+fi
+
+# ── 2. HARD version bump ─────────────────────────────────────────────────────────────────
+# Any source change (.cs except *.g.cs, .sharq, .asmdef) must raise package.json STRICTLY above
+# the remote version. The baseline comes from the refs git feeds the hook on stdin, so the check
+# does not depend on what the remote is called (origin / gitea / anything else).
+version_gt() {
+    a="$1"; b="$2"
+    [ "$a" != "$b" ] || return 1
+    top=$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n1)
+    [ "$top" = "$a" ]
+}
+
+# git feeds the ref list on stdin ONCE - read it whole, otherwise a chained `.local` hook would
+# get an empty stream and stay silent instead of checking anything.
+REFS="$(cat)"
+
+# The pipe spawns a subshell, so `exit 1` inside `while` would only kill that subshell: without
+# the trailing `|| exit 1` a rejected version would turn into a green push.
+printf '%s\n' "$REFS" | while read local_ref local_sha remote_ref remote_sha; do
+    [ -n "$local_sha" ] || continue
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    changed=$(git diff --name-only "$remote_sha..$local_sha" -- '*.cs' '*.sharq' '*.asmdef' \
+        | grep -v '\.g\.cs$' || true)
+    if [ -z "$changed" ]; then
+        continue
+    fi
+
+    old_version=$(git show "$remote_sha:package.json" | grep '"version"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+    new_version=$(git show "$local_sha:package.json"  | grep '"version"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+
+    if ! version_gt "$new_version" "$old_version"; then
+        echo ""
+        echo "=========================================="
+        echo "  PUSH REJECTED: version not bumped"
+        echo "=========================================="
+        echo ""
+        echo "Source changed, but package.json version is not strictly greater."
+        echo "  remote: $old_version"
+        echo "  local:  $new_version"
+        echo ""
+        echo "Changed:"
+        echo "$changed" | sed 's/^/  /'
+        echo ""
+        echo "Fix:"
+        echo "  Edit package.json: bump version (ex: $old_version -> next patch/minor)"
+        echo "  git add package.json && git commit -m 'release: bump'"
+        echo "  git push"
+        echo ""
+        exit 1
+    fi
+
+    echo "[pre-push] Version check OK: $old_version -> $new_version"
+done || exit 1
+
+# A pre-existing repo hook (not ours) is kept and called in a chain, like pre-commit/commit-msg.
+PREV="$(dirname "$0")/pre-push.local"
+if [ -f "$PREV" ]; then
+    printf '%s\n' "$REFS" | sh "$PREV" "$@" || exit $?   # sh, not the exec bit: file modes are unreliable on Windows
+fi
+exit 0
