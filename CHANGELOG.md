@@ -7,6 +7,31 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.16] - 2026-08-16
+
+### Added
+- **SUS Set Doctor v2**: reads every per-module `sus-module.json` and per-set `sus-set.<set>.json`
+  under `Assets/` and attributes each path to its owner. "Delete" is advised only for a path that
+  belongs to a module which is present but no longer lists it (`Residual`); everything else is
+  reported without a destructive hint (`Unattributed`, `ModuleManifestMissing`, `IncompleteSet`,
+  `Relocated`). Installing the Kit set on top of the Complete set no longer suggests removing the
+  Game module.
+- `SusClassicSampleLocator` (Editor): resolves a module's sample folder under a classic
+  (`.unitypackage`) install from its `sus-module.json`, so the Kit/Game *Setup* menus work for a
+  classic purchaser instead of asking to install a package they never had.
+
+### Fixed
+- `BindTransitionVisibility`: the "no animation on initial mount" latch is now gated on the first
+  real layout pass instead of the first reactive run, so a component whose prop is set right after
+  construction (before `Add()`) no longer plays a real Enter animation on its first paint
+  (expansion panels captured at `opacity: 0`).
+- Sample asmdefs are `autoReferenced: false` — a purchaser's `Assembly-CSharp` no longer
+  implicitly references sample code.
+
+### Changed
+- Package push gate (`scripts~/pre-push`): docs check runs always and first; version bump is
+  hard-required on source changes.
+
 ## [1.0.15] - 2026-08-13
 
 ### Added
