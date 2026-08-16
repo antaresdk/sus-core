@@ -6,9 +6,9 @@ Every `.sharq` file is a **Vue-like SFC** with three sections:
 
 | Section | Role |
 |---------|------|
-| `<template>` | UXML markup with directives (` v-if`, `:text`, `@click`, …) |
-| `<script>` | C# fields, methods, ` Prop<T>`, lifecycle |
-| `<style>` | USS styles for this component (optionally ` scoped`) |
+| `<template>` | UXML markup with directives (`v-if`, `:text`, `@click`, …) |
+| `<script>` | C# fields, methods, `Prop<T>`, lifecycle |
+| `<style>` | USS styles for this component (optionally `scoped`) |
 
 ```
 <template> … </template>
@@ -140,10 +140,10 @@ Details: [CSS Scoping](./05-css-scoping.md).
 
 | Do | Don’t |
 |----|--------|
-| USS in `<style>` + ` AddToClassList` / `:class` | ` element.style.width = 12f`for static layout |
+| USS in `<style>` + `AddToClassList` / `:class` | `element.style.width = 12f` for static layout |
 | Modifier classes (`.card--open`) | Copying the same tokens into C# |
 
-Use C# `style.*` only for runtime geometry (`resolvedStyle`, ` GeometryChangedEvent`) or one-off hosts outside the component.
+Use C# `style.*` only for runtime geometry (`resolvedStyle`, `GeometryChangedEvent`) or one-off hosts outside the component.
 
 ### Inline `style="…"` attribute
 
@@ -190,7 +190,7 @@ Element is **added/removed** from the hierarchy (`BindVisibility`).
 
 ### `v-show` — hide via display
 
-Element stays in the DOM; toggles `DisplayStyle.Flex` / ` None`.
+Element stays in the DOM; toggles `DisplayStyle.Flex` / `None`.
 
 ```xml
 <ui:Label v-show="IsActive" :text="Status" />
@@ -225,7 +225,7 @@ Element stays in the DOM; toggles `DisplayStyle.Flex` / ` None`.
 <ui:Button @click="OnButtonClick" text="Click me" />
 ```
 
-Supported: `click`, ` mouseenter`, ` mouseleave`, ` change`.
+Supported: `click`, `mouseenter`, `mouseleave`, `change`.
 
 ### `:class` — reactive classes
 

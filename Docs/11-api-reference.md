@@ -33,11 +33,11 @@ public sealed class SusApp
 }
 ```
 
-### Finalize order (`Run` / ` Mount`)
+### Finalize order (`Run` / `Mount`)
 
-1. Icons (`UseIcons` → ` SusIconRegistry.RegisterProvider`)
-2. Token cascade (`LoadTokenCascade`: `_palette` → `_font` → `_theme` → ` design-tokens` → `_icon` → extras + OverlayHost)
-3. World-space panel (`EnsureWorldSpacePanel`, if playing and ` UseWorldSpace`)
+1. Icons (`UseIcons` → `SusIconRegistry.RegisterProvider`)
+2. Token cascade (`LoadTokenCascade`: `_palette` → `_font` → `_theme` → `design-tokens` → `_icon` → extras + OverlayHost)
+3. World-space panel (`EnsureWorldSpacePanel`, if playing and `UseWorldSpace`)
 4. Fonts (`UseFonts`)
 5. Custom styles (`UseCustomStyles` on root + OverlayHost)
 6. Configure callbacks
@@ -116,11 +116,11 @@ OnDetachFromPanel:
   BeforeUnmounted() → _updateItem.Pause() → DisposeAllBindings() → Unmounted()
 ```
 
-> `Updated()` runs **only** when attached to the panel (`OnAttachToPanelHandler`). From constructor/deferred call ` ScheduleReactiveUpdates`removed — before attachment ` schedule`may not tick.
+> `Updated()` runs **only** when attached to the panel (`OnAttachToPanelHandler`). From constructor/deferred call `ScheduleReactiveUpdates` removed — before attachment `schedule` may not tick.
 
 ## Bind helpers (reactive)
 
-All bindings work through `ReactiveEffect` — auto-subscription to ` Prop<T>` / ` Computed<T>`and updating when any source changes. Each helper returns a ` WatchHandle` (tracked for dispose on detach).
+All bindings work through `ReactiveEffect` — auto-subscription to `Prop<T>` / `Computed<T>` and updating when any source changes. Each helper returns a `WatchHandle` (tracked for dispose on detach).
 
 ```csharp
 // v-if: add/remove from DOM (reactive)
@@ -216,10 +216,10 @@ public static class SusBootstrap
 
 | Old (v1) | New (v2) |
 |---|---|
-| `sus` (UPM ` com.sus.sfc`) | ` com.sharq-it.sus.core` |
-| `sharq-ui-system` (SusCompiler.exe, LibSassHost) | ` SharqFileImporter` (AssetPostprocessor) |
-| `ElementBase` — reflective | ` SusComponent : VisualElement` |
-| `compiled ui/` — a mixture of manual and auto | ` generated/` — auto only, `.gitignored` |
+| `sus` (UPM `com.sus.sfc`) | `com.sharq-it.sus.core` |
+| `sharq-ui-system` (SusCompiler.exe, LibSassHost) | `SharqFileImporter` (AssetPostprocessor) |
+| `ElementBase` — reflective | `SusComponent : VisualElement` |
+| `compiled ui/` — a mixture of manual and auto | `generated/` — auto only, `.gitignored` |
 
 ## Place in the ecosystem
 

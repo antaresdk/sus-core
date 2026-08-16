@@ -5,6 +5,13 @@
 > Source of truth for themes, fonts and icons in SUS (StyleSheet cascade + Resources).
 > **Principle:** everything is done through a CSS cascade and `var()` — the component does not know specific values, only semantic tokens.
 
+<table>
+<tr>
+<td><img src="../Documentation~/images/design-tokens-dark.png" width="320" alt="Design tokens dark theme"><br><sub>Colors, typography and icons — Dark</sub></td>
+<td><img src="../Documentation~/images/design-tokens-light.png" width="320" alt="Design tokens light theme"><br><sub>Same tokens — Light</sub></td>
+</tr>
+</table>
+
 ---
 
 ## Content
@@ -38,7 +45,7 @@ The component writes: And receives:
   -unity-font: var(--sus-font-body) → Montserrat (family bridge)
 ```
 
-Tokens are resolved through a CSS cascade. Variables are defined in `:root` USS files that connect via direct ` root.styleSheets.Add()`.
+Tokens are resolved through a CSS cascade. Variables are defined in `:root` USS files that connect via direct `root.styleSheets.Add()`.
 
 ### 1.2 Three layers of tokens
 
@@ -56,10 +63,10 @@ LAYER 3 — Semantic UI tokens
   _icon.uss                         — .sus-icon-bg utility class
 ```
 
-**Load order** (container cascade via `SusBootstrap.LoadTokenCascade` / ` SusApp`):
-`_palette` → `_font` → `_theme` → ` design-tokens` → `_icon` → registered extras (L4/L5) → OverlayHost.
+**Load order** (container cascade via `SusBootstrap.LoadTokenCascade` / `SusApp`):
+`_palette` → `_font` → `_theme` → `design-tokens` → `_icon` → registered extras (L4/L5) → OverlayHost.
 
-Panel-level TSS (`SusDefault.tss` / ` ApplyDefaultTSS`) also includes `_palette`, `_font`, and
+Panel-level TSS (`SusDefault.tss` / `ApplyDefaultTSS`) also includes `_palette`, `_font`, and
 optional `_global` — `_global` is **not** part of the container cascade.
 
 Theme is switched by adding/removing `.theme-dark` / `.theme-light` on the cascade root
@@ -100,7 +107,7 @@ sus-core/Runtime/Resources/SusRuntime/
 
 `_font.uss` defines `:root { -unity-font: url("Fonts/Montserrat/Montserrat-Regular.ttf"); }` and CSS variables `--font-family-regular`, `--font-family-medium`, `--font-family-bold`, `--font-family-black`, `--font-family-italic`, `--font-family-light`.
 
-`SusBootstrap.Mount<T>()` automatically downloads ` Resources/SusRuntime/_font.uss` with every mount.
+`SusBootstrap.Mount<T>()` automatically downloads `Resources/SusRuntime/_font.uss` with every mount.
 
 ### 2.2 Semantic fonts (shipped)
 
@@ -142,7 +149,7 @@ Create `Assets/Resources/SusRuntime/_font.uss` — `Resources.Load` prefers the 
 
 ### 3.1 Layer 1 — Raw values (in `_palette.uss`)
 
-The file that comes with `sus-core` in ` Resources/`. Basic colors without semantics:
+The file that comes with `sus-core` in `Resources/`. Basic colors without semantics:
 
 ```css
 /* sus-core/Runtime/Resources/SusRuntime/_palette.uss — Layer 1 */
@@ -425,7 +432,7 @@ There is no `Icons/bootstrap/` tree anymore.
 | **Core** | `Resources/SusRuntime/Icons/core/{regular,fill}/` | ~127 SVGs | Built-in set, always present: everything the components and the downstream UI packages use by default |
 | **Phosphor** | `Samples~/PhosphorIcons/Resources/SusRuntime/Icons/phosphor/{thin,light,regular,bold,fill,duotone}/` | **1512 names × 6 weights ≈ 9000 SVGs** | Optional full library, imported as the `Phosphor Icon Set` sample |
 
-**Weights** (`SusIconWeight`): ` Thin`, ` Light`, ` Regular` (default), ` Bold`, ` Fill`, ` Duotone`.
+**Weights** (`SusIconWeight`): `Thin`, `Light`, `Regular` (default), `Bold`, `Fill`, `Duotone`.
 
 **Status:** ✅ runtime + editor auto-register both providers; downstream UI packages use the same registry.
 
@@ -528,7 +535,7 @@ Without `tessellationMode: 1`, curves look pixelated.
 
 ### 4.5 Auxiliary USS
 
-**`_icon.uss`** — global class for plain ` VisualElement` / core ` SusIcon` (`.sus-icon-bg`):
+**`_icon.uss`** — global class for plain `VisualElement` / core `SusIcon` (`.sus-icon-bg`):
 
 ```css
 .sus-icon-bg {
@@ -540,15 +547,15 @@ Without `tessellationMode: 1`, curves look pixelated.
 }
 ```
 
-Loaded with the token cascade (`SusBootstrap` / ` SusApp`).
+Loaded with the token cascade (`SusBootstrap` / `SusApp`).
 
 ### 4.6 USS vs C# for icons
 
 | What | Where | Why |
 |-----|-----|--------|
-| `background-size/position/repeat`, ` flex-shrink` | USS (`.sus-icon-bg` / companion) | Static |
+| `background-size/position/repeat`, `flex-shrink` | USS (`.sus-icon-bg` / companion) | Static |
 | Default tint | USS | Theme can override |
-| `backgroundImage` | C# via ` SusIconRegistry.Load` | Runtime asset |
+| `backgroundImage` | C# via `SusIconRegistry.Load` | Runtime asset |
 | Size / weight / name | Props / C# | Dynamic |
 
 ### 4.7 Custom / project icons
@@ -557,8 +564,8 @@ Do **not** drop files into a fictional `Icons/bootstrap/custom/`. Prefer:
 
 1. **`ResourcesFolderIconProvider`** pointing at your collection under  
    `Resources/SusRuntime/Icons/{yourCollection}/{weight}/`, then  
-   `SusApp.UseIcons(...)` or ` SusIconRegistry.RegisterProvider(...)`.
-2. Or **`SusIconSetAsset`** + ` SusApp.UseIcons(iconSet)`.
+   `SusApp.UseIcons(...)` or `SusIconRegistry.RegisterProvider(...)`.
+2. Or **`SusIconSetAsset`** + `SusApp.UseIcons(iconSet)`.
 3. Semantic aliases: `SusIconRegistry.AddAlias("my-settings", "gear")`.
 
 Setup Project scaffolding uses `Customization/Icons/.../app/` + `ResourcesFolderIconProvider("app")` (the project-local overload) as the project override layer.
@@ -573,9 +580,9 @@ Setup Project scaffolding uses `Customization/Icons/.../app/` + `ResourcesFolder
 
 ### 5.1 How it works in the previous scheme
 
-- `UIResolutionThemes` — ScriptableObject with an array of 6 ` StyleTheme` (Dark/Light/CustomLight × High/Low)
-- `panel.themeStyleSheet` = ` ThemeStyleSheet` (`.tss`), which through `@import` pulls the USS chain
-- `PollScreenWidth()` in ` Update` — switches High/Low when crossing 1600px
+- `UIResolutionThemes` — ScriptableObject with an array of 6 `StyleTheme` (Dark/Light/CustomLight × High/Low)
+- `panel.themeStyleSheet` = `ThemeStyleSheet` (`.tss`), which through `@import` pulls the USS chain
+- `PollScreenWidth()` in `Update` — switches High/Low when crossing 1600px
 - `SetStyleTheme()` — switches Dark/Light/CustomLight
 
 
@@ -583,13 +590,13 @@ Setup Project scaffolding uses `Customization/Icons/.../app/` + `ResourcesFolder
 ### 5.2 SUS — current API
 
 **No `ThemeStyleSheet` for theme switching** — USS sheets are added to the container via
-`LoadTokenCascade` / ` SusApp`. Theme variants are CSS classes on the cascade root.
+`LoadTokenCascade` / `SusApp`. Theme variants are CSS classes on the cascade root.
 
 **Layer files:**
 - `_palette.uss` — L1 `--base-*` (raw values)
 - `_theme.uss` — L2 `--thm-*` for `.theme-dark` / `.theme-light`
 
-**Runtime API** (`SusTheme` is a ` readonly struct`; service is a singleton):
+**Runtime API** (`SusTheme` is a `readonly struct`; service is a singleton):
 
 ```csharp
 // sus-core/Runtime/SusTheme.cs + Runtime/Services/SusThemeService.cs
@@ -607,7 +614,7 @@ namespace Sharq.Core
     public class SusThemeService
     {
         public static SusThemeService Instance { get; }
-        public static Prop<​SusTheme> Current { get; }
+        public static Prop<SusTheme> Current { get; }
 
         // Applies .theme-{name} on the cascade root + OverlayHost
         public void SetTheme(VisualElement root, SusTheme theme);
@@ -634,8 +641,8 @@ CSS switching through a class on the root — already in `_theme.uss` (see 3.2).
 `SusApp.Create(...).UseTheme(...).Mount/Run` applies the theme **last** so OverlayHost
 receives the theme class. Prefer that path over manual `styleSheets.Add`.
 
-`SusBootstrap.Mount<T>()` / ` LoadTokenCascade` load the full cascade
-(`_palette` → `_font` → `_theme` → ` design-tokens` → `_icon` → extras + OverlayHost).
+`SusBootstrap.Mount<T>()` / `LoadTokenCascade` load the full cascade
+(`_palette` → `_font` → `_theme` → `design-tokens` → `_icon` → extras + OverlayHost).
 
 ---
 
@@ -788,7 +795,16 @@ Assets/Resources/SusRuntime/
     └── {yourCollection}/{regular|fill|…}/  ← via ResourcesFolderIconProvider
 ```
 
-Or use `SusApp.UseIcons(...)` / ` SusIconSetAsset` — see §4.7.
+Or use `SusApp.UseIcons(...)` / `SusIconSetAsset` — see §4.7.
+
+### 8.3 SUS Theme Editor (Editor tool)
+
+An Editor window for editing `_palette.uss` visually instead of hand-typing `rgb()` values:
+color swatches per token (`--base-color-*`), a preview strip with a live contrast ratio,
+and a generator for hover/pressed variants from a source color. Saves back to the project's
+`_palette.uss` override.
+
+<img src="../Documentation~/images/core-theme-editor.png" width="480" alt="SUS Theme Editor window with color token swatches, a live preview strip, and a hover/pressed variant generator">
 
 ---
 
@@ -917,35 +933,35 @@ el.style.alignItems = Align.Center;
 el.style.color = new StyleColor(Color.white);
 ```
 
-### B.2 Sharq bare `<​style>` — how selectors work
+### B.2 Sharq bare `<style>` — how selectors work
 
 ```
 Source (.sharq) Compiled (.uss) Does root match?
 ─────────────────────────────────────────────────────────────────────
-<​style> .sus-icon { ✅ YES
+<style> .sus-icon { ✅ YES
     flex-shrink: 0;            flex-shrink: 0;
-</​style>                   }
+</style>                   }
 
-<​style> .sus-icon .sus-icon { ❌ NO
+<style> .sus-icon .sus-icon { ❌ NO
 .sus-icon { flex-shrink: 0;            (.sus-icon inside .sus-icon)
     flex-shrink: 0;        }
 }
-</​style>
+</style>
 
-<​style> .sus-icon .child { ✅ YES (if child is inside)
+<style> .sus-icon .child { ✅ YES (if child is inside)
 .child {                        ...                    }
     ...
 }
-</​style>
+</style>
 ```
 
-**Rule:** if you need to style the ROOT of a component, write the properties directly in `<​style>` without selector. If you need to style child elements, use their classes (without the component prefix).
+**Rule:** if you need to style the ROOT of a component, write the properties directly in `<style>` without selector. If you need to style child elements, use their classes (without the component prefix).
 
 In special cases (self-target, container-target - see rule `sharq-css-scoping.mdc`) — move the rule to companion `.uss` as unscoped.
 
 ### B.3 `backgroundImage` re-assert pattern
 
-UI Toolkit Known Issue: `VectorImage` Sometimes it doesn't render on the first frame. Proven pattern (from old ` SizedIcon`):
+UI Toolkit Known Issue: `VectorImage` Sometimes it doesn't render on the first frame. Proven pattern (from old `SizedIcon`):
 
 ```csharp
 el.style.backgroundImage = new StyleBackground(vec);
@@ -962,7 +978,7 @@ el.schedule.Execute(() =>
 }).ExecuteLater(16);  // next frame
 ```
 
-Reinstalling `backgroundImage` three times: immediately, after 0 frames, after ~1 frame. This ensures that ` VectorImage` will not be “lost” when the tree is rebuilt.
+Reinstalling `backgroundImage` three times: immediately, after 0 frames, after ~1 frame. This ensures that `VectorImage` will not be “lost” when the tree is rebuilt.
 
 ### B.4 SVG Import: tessellationMode
 
@@ -995,7 +1011,7 @@ root.styleSheets.Add(designTokensSheet);
 
 ### B.6 Versioning sus-core
 
-For any change to `.cs` in ` sus-core`:
+For any change to `.cs` in `sus-core`:
 1. Increment the version in `sus-core/package.json` (patch version)
 2. Commit with version tag
 3. Push → cache in Unity Package Manager
