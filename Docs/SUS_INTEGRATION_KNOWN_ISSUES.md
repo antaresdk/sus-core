@@ -199,9 +199,9 @@ And also `warning CS8669` For `.g.cs`.
 
 **Symptom:** `error CS1061: 'List<UnitData>' does not contain a definition for 'Select'/'Sum'/'Max'`
 
-**Reason:** B `.sharq`-files used LINQ methods (`.Select`, `.Sum`, `.Max`, `.ToList`), But `System.Linq` was not explicitly imported via `$using`. The generator does not add it automatically.
+**Reason:** The `.sharq` files used LINQ methods (`.Select`, `.Sum`, `.Max`, `.ToList`), but `System.Linq` was not explicitly imported via `$using`. The generator does not add it automatically.
 
-**Working solution:** added `$using System.Linq;` V `<script>` everyone `.sharq`, using LINQ.
+**Working solution:** added `$using System.Linq;` inside the `<script>` block of every `.sharq` file that uses LINQ.
 
 ---
 
@@ -232,9 +232,9 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 
 **Symptom:** `CS0246: The type or namespace name 'X' could not be found`
 
-**Reason:** B `<script>`-sections `.sharq` cannot be used `using Namespace;` - only supported `$using Namespace;`. The generator processes `$using` and adds on the day off `.g.cs`.
+**Reason:** Inside `<script>` sections of `.sharq` files, `using Namespace;` cannot be used — only `$using Namespace;` is supported. The generator processes `$using` and adds it to the generated `.g.cs`.
 
-**Solution:** replace everything `using X;` on `$using X;` V `<script>`.
+**Solution:** replace every `using X;` with `$using X;` inside `<script>`.
 
 ---
 
@@ -297,14 +297,14 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 
 ## Recommendations for new consumer projects
 
-1. **Always** `#nullable enable` V `.cs` And `.asmdef` project
-2. **Always** `$using System.Linq;` V `.sharq` where is `.Select/.Sum/.Max/.ToList`
+1. **Always** enable `#nullable enable` in `.cs` files and the project's `.asmdef`
+2. **Always** add `$using System.Linq;` in `.sharq` files where `.Select/.Sum/.Max/.ToList` is used
 3. Router is accessible through its bootstrapper (`YourBootstrapper.Instance.Router`)
 4. `SusRouterModal.Dismiss()` do not call - use `Router.ModalService.Close()`
 5. `SusRouteRecord.Config` - only through the constructor
 6. `SusBreakpointService.Attach(root)` - static method, not singleton
 7. `SusBootstrap.ApplyDefaultTSS(UIDocument)` - Not `VisualElement`
-8. `@click` V `.sharq` — prefer reference methods, avoid inline lambdas
+8. `@click` in `.sharq` — prefer reference methods, avoid inline lambdas
 9. Warnings from generated UI package folders - expected, not design errors
 10. **Don't** create scenes manually - use Editor script `Tools → SusDemo → Create DemoScene`
 11. **After changing the signatures of base classes** (access modifiers, new virtual methods) - delete `Library/Bee/` And `Library/ScriptAssemblies/` to force a complete recompilation
