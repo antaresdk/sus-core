@@ -95,7 +95,34 @@ namespace Sharq.Core
             {
                 bool show = getter();
                 if (lastShown == show) return;
+                bool isFirstRun = lastShown == null;
                 lastShown = show;
+
+                if (isFirstRun)
+                {
+                    // No enter/leave animation on initial mount (Vue <Transition> default:
+                    // an element that starts v-if=false was never shown, so there is nothing
+                    // to animate OUT of). Without this, the generator's Add-then-bind emission
+                    // order (element is already parented when this effect first runs) made a
+                    // closed-by-default panel play a 200ms+ Leave() — fully opaque
+                    // (.sus-transition-leave-from = opacity:1) until the delayed removal
+                    // fired — so collapsed content was fully visible/readable at mount, and a
+                    // fast screenshot (or a click landing mid-leave) raced the pending removal
+                    // job. Reflect the starting state synchronously instead (T-415, 2026-08-13
+                    // — SusExpansionPanel body visible while collapsed / expand looked inert).
+                    ClearPhaseClasses();
+                    if (show)
+                    {
+                        if (el.parent == null && rememberedParent != null)
+                            rememberedParent.Add(el);
+                    }
+                    else if (el.parent != null)
+                    {
+                        rememberedParent = el.parent;
+                        el.RemoveFromHierarchy();
+                    }
+                    return;
+                }
 
                 if (show) Enter();
                 else Leave();
