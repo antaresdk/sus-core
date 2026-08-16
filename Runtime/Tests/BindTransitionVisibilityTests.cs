@@ -62,6 +62,50 @@ namespace Sharq.Core.Runtime.Tests
             Assert.IsTrue(comp.Contains(comp.Content));
         }
 
+        /// <summary>
+        /// T-541 (2026-08-13): the common Sharq authoring pattern is
+        /// <c>new Component(); comp.Prop.Value = x; parent.Add(comp);</c> — Build() (and
+        /// therefore BindTransitionVisibility's FIRST effect run) always executes during
+        /// the constructor, while <c>panel == null</c>, using the Prop's DEFAULT value —
+        /// consuming the "isFirstRun, no animation" latch before the caller's real value
+        /// is ever applied. The caller's subsequent Prop write (still pre-attach) is
+        /// queued and only flushed once attached — by which point isFirstRun is already
+        /// false, so the true initial reveal played a real Enter() (opacity:0 at capture
+        /// time — SusExpansionPanel/SusExpansionPanels showed the header but not the body
+        /// in showcase-6 ShotAll frames). This must behave exactly like
+        /// StartsVisible_NoEnterAnimation_PresentSynchronously above, regardless of
+        /// whether the true value was set before Build() (impossible) or between Build()
+        /// and Add() (the realistic case).
+        /// </summary>
+        private class PropSetBeforeAddComp : SusComponent
+        {
+            public Prop<bool> Visible { get; } = new(false);
+            public VisualElement Content { get; } = new VisualElement { name = "content" };
+
+            protected override void Build()
+            {
+                Add(Content);
+                BindTransitionVisibility(Content, () => Visible.Value, "fade");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator PropSetBeforeAdd_StartsVisible_NoEnterAnimation_PresentSynchronously()
+        {
+            var comp = new PropSetBeforeAddComp();
+            comp.Visible.Value = true; // set BEFORE Add(), like a story setting Open=true
+            Root.Add(comp);
+
+            yield return WaitFrame();
+
+            Assert.IsTrue(comp.Contains(comp.Content),
+                "content must be present after the attach flush applies the pre-set true value");
+            Assert.IsFalse(comp.Content.ClassListContains(SusTransition.EnterFrom),
+                "no enter-from (opacity:0) flash — the user never saw the false state to transition from");
+            Assert.IsFalse(comp.Content.ClassListContains(SusTransition.EnterActive),
+                "no in-progress enter animation on a value that was never visibly false");
+        }
+
         [UnityTest]
         public IEnumerator ToggleAfterMount_StillAnimatesNormally()
         {
