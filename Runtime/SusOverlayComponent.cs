@@ -36,6 +36,26 @@ namespace Sharq.Core
         protected bool IsMountedInOverlay => _selfEntry != null;
 
         /// <summary>
+        /// True while <see cref="MountSelfInOverlay"/>/<see cref="UnmountSelfFromOverlay"/> is
+        /// in the middle of reparenting this element to/from its overlay host. UI Toolkit
+        /// fires a real <c>DetachFromPanelEvent</c> (and therefore this component's own
+        /// <c>Unmounted()</c>) as a side effect of the internal <c>RemoveFromHierarchy()</c>
+        /// call that any reparent requires — subclasses (SusModal, ...) whose
+        /// <c>Unmounted()</c> override runs real "closing" logic (e.g. <c>CloseOverlay()</c>)
+        /// MUST check this flag first and return early when it's true. Otherwise the
+        /// detach-for-relocation is misread as a genuine user-facing close: the very first
+        /// <c>MountSelfInOverlay</c> call (element still parented inline) detaches from the
+        /// inline parent to move into the host, which re-triggers the "closing" path
+        /// mid-relocation and undoes the open before it ever finishes — reproduced
+        /// empirically as silent display:None / no reparent, or the UI Toolkit "already
+        /// being modified" error depending on internal timing (T-407 case 8, qa-4 2026-08-16).
+        /// No amount of deferring the CALLER's open (schedule delay, GeometryChangedEvent)
+        /// fixes this — the reentrancy happens one level down, inside AddToOverlay's own
+        /// RemoveFromHierarchy(), regardless of when MountSelfInOverlay itself runs.
+        /// </summary>
+        protected bool IsRelocatingToOverlay { get; private set; }
+
+        /// <summary>
         /// Teleports THIS element into its pinned overlay layer, remembering the original
         /// parent for restore. Returns false if no OverlayHost was found (caller may fall
         /// back to inline display).
@@ -64,7 +84,15 @@ namespace Sharq.Core
 
             // Apply theme + tokens BEFORE reparenting so var() resolves in the overlay.
             SusThemeService.ApplyThemeClasses(this);
-            _selfEntry = _selfHost.AddToOverlay(this, Layer, dismissOnClickOutside, onDismiss);
+            IsRelocatingToOverlay = true;
+            try
+            {
+                _selfEntry = _selfHost.AddToOverlay(this, Layer, dismissOnClickOutside, onDismiss);
+            }
+            finally
+            {
+                IsRelocatingToOverlay = false;
+            }
             return true;
         }
 
@@ -73,8 +101,17 @@ namespace Sharq.Core
         {
             if (_selfEntry != null && _selfHost != null)
             {
-                _selfHost.RemoveFromOverlay(_selfEntry);
+                var entry = _selfEntry;
                 _selfEntry = null;
+                IsRelocatingToOverlay = true;
+                try
+                {
+                    _selfHost.RemoveFromOverlay(entry);
+                }
+                finally
+                {
+                    IsRelocatingToOverlay = false;
+                }
                 if (_selfOriginalParent != null)
                 {
                     _selfOriginalParent.Add(this);

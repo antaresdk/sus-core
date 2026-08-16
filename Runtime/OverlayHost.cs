@@ -263,7 +263,19 @@ namespace Sharq.Core
                 {
                     var entry = _stack[i];
                     _stack.RemoveAt(i);
-                    element.RemoveFromHierarchy();
+                    // T-407: `element` may already be mid-detach when we get here — e.g. an
+                    // external caller (test teardown force-removing a still-mounted
+                    // self-teleporting component; or any other code) called
+                    // element.RemoveFromHierarchy()/reparented it directly instead of going
+                    // through the component's own Close() API. That external detach's own
+                    // DetachFromPanelEvent dispatch can re-enter here (via Unmounted() →
+                    // CloseOverlay() → UnmountSelfFromOverlay()) BEFORE the outer call has
+                    // finished — calling RemoveFromHierarchy() a second time on the SAME
+                    // element while UI Toolkit is still processing its first detach trips
+                    // "Modifying the parent of a VisualElement while it's already being
+                    // modified". Only detach if `element` is actually still parented to US.
+                    if (element.parent == this)
+                        element.RemoveFromHierarchy();
                     entry.OnDismiss?.Invoke();
                     UninstallClickGuard();
                     return;
