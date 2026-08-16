@@ -50,8 +50,19 @@ exit `$?
 # ─── pre-commit: auto-generate .meta for new files ───
 Install-Hook "pre-commit" "pre-commit.ps1"
 
-# ─── pre-push: enforce version bump on source changes ───
-Install-Hook "pre-push" "pre-push.ps1"
+# ─── pre-push: docs gate + HARD version bump (T-567) ───
+# Copied AS-IS, not wrapped: scripts~/pre-push is the versioned copy of the shared canonical hook
+# kept in the umbrella tooling folder, identical in all four packages. The former
+# PowerShell wrapper baked an ABSOLUTE path into .git/hooks, so the gate survived a folder move
+# on exactly one machine and nowhere else.
+$prePushSrc = Join-Path $scriptDir "pre-push"
+$prePushDst = Join-Path $hooksDir "pre-push"
+if (-not (Test-Path $prePushSrc)) {
+    Write-Host "ERROR: scripts~/pre-push not found" -ForegroundColor Red
+    exit 1
+}
+$text = [System.IO.File]::ReadAllText($prePushSrc) -replace "`r`n", "`n" -replace "`r", "`n"
+[System.IO.File]::WriteAllText($prePushDst, $text, (New-Object System.Text.UTF8Encoding $false))
 
 # ─── optional message hooks (strip Cursor co-author noise) ───
 if (Test-Path (Join-Path $scriptDir "prepare-commit-msg.ps1")) {
@@ -64,6 +75,6 @@ if (Test-Path (Join-Path $scriptDir "commit-msg.ps1")) {
 Write-Host ""
 Write-Host "Git hooks installed:" -ForegroundColor Green
 Write-Host "  pre-commit  →  scripts~/pre-commit.ps1  (auto-generate .meta)" -ForegroundColor Green
-Write-Host "  pre-push    →  scripts~/pre-push.ps1    (strict version bump)" -ForegroundColor Green
+Write-Host "  pre-push    →  scripts~/pre-push        (docs gate + strict version bump)" -ForegroundColor Green
 Write-Host ""
 Write-Host "To uninstall: rm .git/hooks/pre-commit .git/hooks/pre-push .git/hooks/prepare-commit-msg .git/hooks/commit-msg" -ForegroundColor DarkGray
