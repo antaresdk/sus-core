@@ -7,6 +7,35 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.15] - 2026-08-13
+
+### Added
+- **SUS Set Doctor** (Editor, `Window/SUS/Set Doctor` + auto-run on load/import): detects the three
+  states that silently break a classic (`.unitypackage`) install — a UPM package and the same
+  module under `Assets/` at once, residual files left over from an older set version, and a
+  version mismatch between modules — and prints what to delete/re-import.
+- Classic-layout starter assets and `sharq.gen.json` discovery for modules installed under
+  `Assets/` (not only under `Packages/`).
+- Project-local Phosphor icon subset provider + sample README (icon-subset sample).
+- `SusUiProbe` marks truncated single-line text nodes; dev console filter chips have stable names
+  for UX targeting.
+
+### Fixed
+- `OverlayHost.ClearAll` / `ClearCategory` no longer corrupt the UIR render tree when a close
+  re-enters the host.
+- Bindings and schedules survive a relocation-only detach (portal / self-teleporting elements),
+  so overlay components no longer close themselves while opening.
+- `v-if` / `transition` elements: a hidden-at-mount element re-appears at its authored sibling
+  index instead of jumping to last child; the first evaluation snaps to the start state instead
+  of playing a leave animation.
+- Portal popups resync width/position on `GeometryChangedEvent`, not only at `Show()`.
+- Fast Enter Play Mode: dev/diagnostic statics are reset on Enter Play Mode.
+- Samples: dangling `PanelSettings` reference in Comp/ThemeShowcase/SusKeepAlive.
+
+### Changed
+- Docs: internal workspace paths removed from buyer-facing docs; translation artifacts fixed;
+  screenshots added.
+
 ## [1.0.14] - 2026-08-12
 
 ### Changed
