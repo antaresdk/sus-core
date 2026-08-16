@@ -121,8 +121,30 @@ namespace Sharq.Core
                 }
                 if (_selfOriginalParent != null)
                 {
-                    _selfOriginalParent.Add(this);
+                    // T-499: this branch also runs when the HOST initiated the removal
+                    // (OverlayHost.RemoveFromOverlay/ClearAll called directly, not through
+                    // this component's own Close()/Model=false path) — that path never sets
+                    // IsRelocatingToOverlay before detaching, so the DetachFromPanelEvent
+                    // this element's own RemoveFromHierarchy() fires reaches this method
+                    // REENTRANT, synchronously, from inside UIR's own render-tree traversal
+                    // (RepaintPanels -> ProcessChanges -> ... -> Unmounted() -> here). Adding
+                    // this element back to its original parent SYNCHRONOUSLY in that window
+                    // mutates the visual tree while UIR is still walking it and corrupts its
+                    // internal bookkeeping (UpdateLocalFlipsWinding NullRef + repeated
+                    // RepaintPanels assertion failures — reproduced live via ClearAll() on a
+                    // still-open SusModal, T-499). Defer exactly like the "stale DOM" branch
+                    // below already does for the identical underlying reason (T-251) — safe
+                    // because the next real frame is guaranteed to be outside any active
+                    // traversal. A plain Close() click (IsRelocatingToOverlay never involved,
+                    // no reentrancy) is delayed by one frame too, which every existing test
+                    // already tolerates (asserts run after `yield return WaitFrame()`).
+                    var restore = _selfOriginalParent;
                     _selfOriginalParent = null;
+                    restore.schedule.Execute(() =>
+                    {
+                        if (parent != restore)
+                            restore.Add(this);
+                    }).ExecuteLater(0);
                 }
             }
             else if (parent is OverlayHost && _selfOriginalParent != null)

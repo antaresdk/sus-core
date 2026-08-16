@@ -289,30 +289,40 @@ namespace Sharq.Core
             RemoveFromOverlay(entry.Element);
         }
 
+        /// <summary>
+        /// Removes every overlay in <paramref name="category"/>, one at a time, through the
+        /// same <see cref="RemoveFromOverlay(OverlayEntry)"/> path a single dismiss uses.
+        /// T-499: the previous implementation detached the DOM node directly
+        /// (<c>entry.Element.RemoveFromHierarchy()</c>) and only cleared <c>_stack</c> at the
+        /// very end of the whole sweep. A self-teleporting overlay's own
+        /// <c>Unmounted()</c> → <c>CloseFromOverlay()</c> → <c>UnmountSelfFromOverlay()</c>
+        /// fires synchronously as a side effect of that <c>RemoveFromHierarchy()</c> call (the
+        /// same reentrancy <see cref="RemoveFromOverlay(VisualElement)"/> is already guarded
+        /// against for a single removal, T-407) — but because its stack entry hadn't been
+        /// removed yet mid-sweep, the reentrant call found and detached/dismissed the SAME
+        /// entry a second time while UI Toolkit was still processing the first detach,
+        /// tripping UIR's "already being modified" assertions and corrupting the render tree
+        /// for the rest of the run (not just the offending element). Snapshotting first and
+        /// removing each entry from <c>_stack</c> BEFORE touching its DOM node (which is what
+        /// <see cref="RemoveFromOverlay(VisualElement)"/> already does) makes a reentrant call
+        /// during any one removal find nothing to double-remove — it silently no-ops.
+        /// </summary>
         public void ClearCategory(OverlayCategory category)
         {
-            for (int i = _stack.Count - 1; i >= 0; i--)
-            {
-                if (_stack[i].Category == category)
-                {
-                    var entry = _stack[i];
-                    _stack.RemoveAt(i);
-                    entry.Element.RemoveFromHierarchy();
-                    entry.OnDismiss?.Invoke();
-                }
-            }
+            var snapshot = _stack.Where(e => e.Category == category).ToList();
+            foreach (var entry in snapshot)
+                RemoveFromOverlay(entry);
             UninstallClickGuard();
         }
 
+        /// <summary>Removes every overlay, regardless of category. See <see cref="ClearCategory"/>
+        /// for why this routes through <see cref="RemoveFromOverlay(OverlayEntry)"/> one entry
+        /// at a time instead of a hand-rolled detach loop (T-499).</summary>
         public void ClearAll()
         {
-            for (int i = _stack.Count - 1; i >= 0; i--)
-            {
-                var entry = _stack[i];
-                entry.Element.RemoveFromHierarchy();
-                entry.OnDismiss?.Invoke();
-            }
-            _stack.Clear();
+            var snapshot = new List<OverlayEntry>(_stack);
+            foreach (var entry in snapshot)
+                RemoveFromOverlay(entry);
             UninstallClickGuard();
         }
 
