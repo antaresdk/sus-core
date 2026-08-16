@@ -7,22 +7,22 @@ Revealed during creation of a separate Unity consumer demo (sus-core + sus-route
 ## 1. Namespace: `Sharq.Router` vs `Sharq.Core`
 
 > ✅ **CORRECTED (refactor P1.4, 07/09/2026):** router classes moved to
-> `namespace Sharq.Router`. The previous instruction “everything is in ` Sharq.Core`" is no longer true.
+> `namespace Sharq.Router`. The previous instruction “everything is in `Sharq.Core`" is no longer true.
 
 **Current status:**
 
-- **`Sharq.Router`** — ` SusRouter`, ` SusScreen`, ` SusRouterModal`/` SusModal`, ` SusRouteRecord`,
-  `SusRouteConfig`, ` SusRouteBuilder`, ` SusRouteView`, router services, ` SusAppRouterExtensions`.
-- **`Sharq.Core`** — ` SusBootstrap`, ` SusBreakpointService`, ` SusApp`, ` SusComponent`, ` Prop`,
+- **`Sharq.Router`** — `SusRouter`, `SusScreen`, `SusRouterModal`/`SusModal`, `SusRouteRecord`,
+  `SusRouteConfig`, `SusRouteBuilder`, `SusRouteView`, router services, `SusAppRouterExtensions`.
+- **`Sharq.Core`** — `SusBootstrap`, `SusBreakpointService`, `SusApp`, `SusComponent`, `Prop`,
   `OverlayHost`, topic/density/scale-services, tokens.
 
 **Solution for a consumer project:** connect **both** namespace where both core and
-router: `using Sharq.Core;` + ` using Sharq.Router;`. Screens (` SusScreen`) and router-API - from
-`Sharq.Router`; bootstrap/` SusApp`/components - from ` Sharq.Core`.
+router: `using Sharq.Core;` + `using Sharq.Router;`. Screens (`SusScreen`) and router-API - from
+`Sharq.Router`; bootstrap/`SusApp`/components - from `Sharq.Core`.
 
 ---
 
-## 2. `SusBreakpointService` - no property ` Instance`
+## 2. `SusBreakpointService` - no property `Instance`
 
 **Symptom:** `error CS0117: 'SusBreakpointService' does not contain a definition for 'Instance'`
 
@@ -40,7 +40,7 @@ Singleton properties `Instance` No.
 
 ---
 
-## 3. `SusBootstrap.ApplyDefaultTSS` accepts `UIDocument`, Not ` VisualElement`
+## 3. `SusBootstrap.ApplyDefaultTSS` accepts `UIDocument`, Not `VisualElement`
 
 **Symptom:** `error CS1503: Argument 1: cannot convert from 'VisualElement' to 'UIDocument'`
 
@@ -50,9 +50,9 @@ Singleton properties `Instance` No.
 public static void ApplyDefaultTSS(UIDocument uiDocument)
 ```
 
-Accepts `UIDocument`, loads ` SusDefault.tss`from Resources and assigns as ` panelSettings.themeStyleSheet`.
+Accepts `UIDocument`, loads `SusDefault.tss` from Resources and assigns as `panelSettings.themeStyleSheet`.
 
-**Solution:** transfer `UIDocument`, not ` rootVisualElement`:
+**Solution:** transfer `UIDocument`, not `rootVisualElement`:
 
 ```csharp
 // ❌ SusBootstrap.ApplyDefaultTSS(rootVisualElement);
@@ -89,7 +89,7 @@ After creation `record.Config = ...` doesn't work.
 
 **Symptom:** `error CS0122: 'SusRouterModal.Dismiss()' is inaccessible due to its protection level`
 
-**Cause:** `Dismiss()` declared as `protected`, and the generated `*Content` inherited from `SusComponent`, not from ` SusRouterModal`.
+**Cause:** `Dismiss()` declared as `protected`, and the generated `*Content` inherited from `SusComponent`, not from `SusRouterModal`.
 
 **Solution:** use the router's public API to close the modal:
 
@@ -104,7 +104,7 @@ After creation `record.Config = ...` doesn't work.
 
 **Symptom:** `error CS0103: The name '__wrap' does not exist in the current context`
 
-**Cause:** `BuildMethodGenerator.cs` created `var __wrap = new VisualElement();` only when `node.Children.Count > 1`. But ` GenerateForTemplate`always writes with sub-children `__wrap.Add()` - even when there is only one child element, but there are nested elements inside it.
+**Cause:** `BuildMethodGenerator.cs` created `var __wrap = new VisualElement();` only when `node.Children.Count > 1`. But `GenerateForTemplate` always writes with sub-children `__wrap.Add()` - even when there is only one child element, but there are nested elements inside it.
 
 **Where:** `BuildMethodGenerator.cs`, line ~579 (before fix).
 
@@ -128,9 +128,9 @@ After creation `record.Config = ...` doesn't work.
 
 **Symptom:** `error CS0411: The type arguments for method 'SusComponent.BindListFor<T>' cannot be inferred`
 
-**Reason:** Generator `InferItemType` couldn't extract element type from `Prop<List<SquadRow>> Squads` — matched only ` List<T> Name`, but not ` Prop<List<T>> Name`.
+**Reason:** Generator `InferItemType` couldn't extract element type from `Prop<List<SquadRow>> Squads` — matched only `List<T> Name`, but not `Prop<List<T>> Name`.
 
-**Where:** `BuildMethodGenerator.cs`, method ` InferItemType`.
+**Where:** `BuildMethodGenerator.cs`, method `InferItemType`.
 
 **Fixed:** added regex match for `Prop<(List|IList|IEnumerable|ObservableList)<T>>`:
 
@@ -145,7 +145,7 @@ pattern = $@"Prop<(?:List|IList|IEnumerable|ObservableList)<([^>]+)>>\s+{Regex.E
 
 **Symptom:** `error CS0117: 'SusComponent' does not contain a definition for 'BindListFor'`
 
-**Reason:** The generator generated a call `BindListFor<T>(...)`, but the method was not implemented at runtime ` SusComponent.cs`.
+**Reason:** The generator generated a call `BindListFor<T>(...)`, but the method was not implemented at runtime `SusComponent.cs`.
 
 **Where:** `SusComponent.cs`.
 
@@ -167,11 +167,11 @@ protected void BindListFor(VisualElement container, object source,
 
 **Symptom:** `error CS1061: 'SusButton' does not contain a definition for 'text'`
 
-**Reason:** The generator wrote `__el.text = "..."` for any element with attribute `text`, including custom components (SusButton). But SusButton doesn't have a property `.text` - the text is transmitted via ` SetChildProp`.
+**Reason:** The generator wrote `__el.text = "..."` for any element with attribute `text`, including custom components (SusButton). But SusButton doesn't have a property `.text` - the text is transmitted via `SetChildProp`.
 
 **Where:** `BuildMethodGenerator.cs`, line ~808.
 
-**Fixed:** split into built-in (`Label`, ` Button`) → `.text =` and custom → `SetChildProp`:
+**Fixed:** split into built-in (`Label`, `Button`) → `.text =` and custom → `SetChildProp`:
 
 ```csharp
 if (!IsCustomComponent(typeName) && ...)
@@ -199,7 +199,7 @@ And also `warning CS8669` For `.g.cs`.
 
 **Symptom:** `error CS1061: 'List<UnitData>' does not contain a definition for 'Select'/'Sum'/'Max'`
 
-**Reason:** B `.sharq`-files used LINQ methods (`.Select`, `.Sum`, `.Max`, `.ToList`), But ` System.Linq`was not explicitly imported via `$using`. The generator does not add it automatically.
+**Reason:** B `.sharq`-files used LINQ methods (`.Select`, `.Sum`, `.Max`, `.ToList`), But `System.Linq` was not explicitly imported via `$using`. The generator does not add it automatically.
 
 **Working solution:** added `$using System.Linq;` V `<script>` everyone `.sharq`, using LINQ.
 
@@ -238,9 +238,9 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 
 ---
 
-## 14. `Router.Push()` / ` Router.Back()`from the Content component
+## 14. `Router.Push()` / `Router.Back()` from the Content component
 
-**Problem:** `SusComponent` (base class of content components) does not have a property ` Router`. The router is only accessible through ` SusScreen`/` SusRouterModal` (wrappers).
+**Problem:** `SusComponent` (base class of content components) does not have a property `Router`. The router is only accessible through `SusScreen`/`SusRouterModal` (wrappers).
 
 **Solution:** access via bootstrapper singleton:
 
@@ -255,12 +255,12 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 
 **Symptom:** `error CS1061: 'SusButton' does not contain a definition for 'text'`
 
-**Cause:** `SusButton` does not inherit `text` from `VisualElement`/` Label` - it has its own internal structure with `_label`.
+**Cause:** `SusButton` does not inherit `text` from `VisualElement`/`Label` - it has its own internal structure with `_label`.
 
 **Transmission channels:**
 - Via generator: `SetChildProp(__el, "text", "...")` - works
 - Through `.sharq` `<sus:SusButton text="Back" />` - works through a generator
-- Via C# directly: `button.text = "..."` - **doesn't work**, only ` SetChildProp`
+- Via C# directly: `button.text = "..."` - **doesn't work**, only `SetChildProp`
 
 ---
 
@@ -270,22 +270,22 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 
 | File | What's fixed |
 |---|---|
-| `Runtime/SusComponent.cs` | Added ` BindListFor<T>` + non-generic ` BindListFor` |
-| `Runtime/OverlayHost.cs` | Full implementation: ` AddToOverlay`, ` RemoveFromOverlay`, ` Stack`, ` Count`, ` InstallFocusTrap`, ` ValidateIsLastChild`, ` DumpStack` |
-| `Editor/SourceGenerator/Generator/BuildMethodGenerator.cs` | `__wrap` always being created; `InferItemType` For `Prop<List<T>>`; ` text`on custom components → ` SetChildProp`; `#nullable enable` in the generated files; `ResolvePropExpr` For `.Value` unwrapping |
+| `Runtime/SusComponent.cs` | Added `BindListFor<T>` + non-generic `BindListFor` |
+| `Runtime/OverlayHost.cs` | Full implementation: `AddToOverlay`, `RemoveFromOverlay`, `Stack`, `Count`, `InstallFocusTrap`, `ValidateIsLastChild`, `DumpStack` |
+| `Editor/SourceGenerator/Generator/BuildMethodGenerator.cs` | `__wrap` always being created; `InferItemType` For `Prop<List<T>>`; `text` on custom components → `SetChildProp`; `#nullable enable` in the generated files; `ResolvePropExpr` For `.Value` unwrapping |
 
 ### sus-router (8 files)
 
 | File | What's fixed |
 |---|---|
-| `Runtime/SusScreen.cs` | Created by: lifecycle ` BeforeEnter`/` Entered`/` BeforeRouteUpdate`/` BeforeLeave`/` Left`, ` GetProp<T>`/` GetProp`, ` RegisterChildView`, ` ChildView`/` ChildViews` |
-| `Runtime/SusModal.cs` | Created by: lifecycle ` Shown`/` BeforeDismiss`/` Dismissed`, ` Dismiss()` |
-| `Runtime/SusModalService.cs` | Created by: modal stack, ` Show`/` Close`/` CloseAll` |
+| `Runtime/SusScreen.cs` | Created by: lifecycle `BeforeEnter`/`Entered`/`BeforeRouteUpdate`/`BeforeLeave`/`Left`, `GetProp<T>`/`GetProp`, `RegisterChildView`, `ChildView`/`ChildViews` |
+| `Runtime/SusModal.cs` | Created by: lifecycle `Shown`/`BeforeDismiss`/`Dismissed`, `Dismiss()` |
+| `Runtime/SusModalService.cs` | Created by: modal stack, `Show`/`Close`/`CloseAll` |
 | `Runtime/SusTransitionService.cs` | Created by: Transition Animation Stub |
-| `Runtime/SusOverlayServices.cs` | Created by: aggregation ` Host`/` ModalService`/` TransitionService` |
-| `Runtime/SusRouter.cs` | ` FindCommonPrefixDepth`internal→public; ` SetRouteView`internal→public; ` Init()`fix ` OverlayServices.Host`; ` BeforeEnter`/` BeforeLeave`return ` bool`instead of ` void` |
-| `Runtime/StandardScreens/*.cs` (5 files) | Access modifiers override → ` public`; `HostScreen*` — ` new`workaround for bug CS0507 |
-| `Runtime/Tests/*.cs` + ` Editor/Tests/*.cs` (3 files) | Access modifiers override → ` public`
+| `Runtime/SusOverlayServices.cs` | Created by: aggregation `Host`/`ModalService`/`TransitionService` |
+| `Runtime/SusRouter.cs` | `FindCommonPrefixDepth` internal→public; `SetRouteView` internal→public; `Init()` fix `OverlayServices.Host`; `BeforeEnter`/`BeforeLeave` return `bool` instead of `void` |
+| `Runtime/StandardScreens/*.cs` (5 files) | Access modifiers override → `public`; `HostScreen*` — `new` workaround for bug CS0507 |
+| `Runtime/Tests/*.cs` + `Editor/Tests/*.cs` (3 files) | Access modifiers override → `public`
 
 ### sus-core/Tools~ (no changes required)
 
@@ -303,26 +303,26 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 4. `SusRouterModal.Dismiss()` do not call - use `Router.ModalService.Close()`
 5. `SusRouteRecord.Config` - only through the constructor
 6. `SusBreakpointService.Attach(root)` - static method, not singleton
-7. `SusBootstrap.ApplyDefaultTSS(UIDocument)` - Not ` VisualElement`
+7. `SusBootstrap.ApplyDefaultTSS(UIDocument)` - Not `VisualElement`
 8. `@click` V `.sharq` — prefer reference methods, avoid inline lambdas
 9. Warnings from generated UI package folders - expected, not design errors
 10. **Don't** create scenes manually - use Editor script `Tools → SusDemo → Create DemoScene`
 11. **After changing the signatures of base classes** (access modifiers, new virtual methods) - delete `Library/Bee/` And `Library/ScriptAssemblies/` to force a complete recompilation
-12. **SusScreen Lifecycle methods** - all `public virtual`; override → ` public override`; if CS0507 does not go away - bypass via ` public new` (with loss of polymorphism)
+12. **SusScreen Lifecycle methods** - all `public virtual`; override → `public override`; if CS0507 does not go away - bypass via `public new` (with loss of polymorphism)
 
 ---
 
-## 16. `SusComponent` / ` SusScreen`have ` protected`constructor
+## 16. `SusComponent` / `SusScreen` have `protected` constructor
 
-**Symptom:** `TargetInvocationException` — ` Activator.CreateInstance`crashes when the router creates a screen.
+**Symptom:** `TargetInvocationException` — `Activator.CreateInstance` crashes when the router creates a screen.
 
-**Cause:** `SusComponent` (base class) has ` protected SusComponent()`. The router creates screens through ` Activator.CreateInstance(type)`, which is required by the public constructor.
+**Cause:** `SusComponent` (base class) has `protected SusComponent()`. The router creates screens through `Activator.CreateInstance(type)`, which is required by the public constructor.
 
-**Where:** `SusRouter.cs` — ` NavigateCore` (line 864, 898).
+**Where:** `SusRouter.cs` — `NavigateCore` (line 864, 898).
 
 **Fixed:**
 
-1. **sus-router:** `Activator.CreateInstance(type)` → ` Activator.CreateInstance(type, nonPublic: true)` (2 places)
+1. **sus-router:** `Activator.CreateInstance(type)` → `Activator.CreateInstance(type, nonPublic: true)` (2 places)
 2. **consumer-project:** all `*Screen` classes must have a public constructor:
 
 ```csharp
@@ -339,7 +339,7 @@ public class SplashScreen : SusScreen
 
 **Symptom:** `ArgumentException: Object of type 'Sharq.Core.Prop`1[System.Int32]' cannot be converted to type 'System.Single'.`
 
-**Reason:** Generator for `:value="Progress"` (Where ` Progress` — ` Prop<int>`) generates:
+**Reason:** Generator for `:value="Progress"` (Where `Progress` — `Prop<int>`) generates:
 
 ```csharp
 BindChildProp(__el, "value", () => Progress);  // ← returns Prop<int>, not int
@@ -347,7 +347,7 @@ BindChildProp(__el, "value", () => Progress);  // ← returns Prop<int>, not int
 
 A `SusProgressLinear.value` awaits `float`.
 
-**Corrected:** in `SusComponent.SetChildProp` added auto-unwrapping `Prop<T>` → ` T.Value`at the entrance:
+**Corrected:** in `SusComponent.SetChildProp` added auto-unwrapping `Prop<T>` → `T.Value` at the entrance:
 
 ```csharp
 if (value != null && IsPropType(value.GetType()))
@@ -360,7 +360,7 @@ if (value != null && IsPropType(value.GetType()))
 **Remaining problem:** reactivity DOESN'T WORK - `WatchEffect` does not trigger updates because `getter()` doesn't read `.Value`. The generator must generate `() => Progress.Value`.
 
 **Full correction (07/08/2026):**
-1. `BuildMethodGenerator.ResolvePropExpr()` — checks `<script>`: if expression is field identifier ` Prop<T>`, generates `.Value`
+1. `BuildMethodGenerator.ResolvePropExpr()` — checks `<script>`: if expression is field identifier `Prop<T>`, generates `.Value`
 2. `SetChildProp` saves auto-unwrapping as fallback for complex expressions (`unit.CurrentHp`)
 3. `GenerateCommonAttributes` got the parameter `SharqFileModel` to access component fields
 
@@ -370,7 +370,7 @@ if (value != null && IsPropType(value.GetType()))
 
 **Symptom:** The “Graphics” block in the settings is empty - there are no radio buttons.
 
-**Cause:** `SettingsContent.sharq` used `<sus:SusRadioGroup :model="..." :items="..." />`, But ` SusRadioGroup` - slot component (`<slot>`), expecting children ` SusRadio`.
+**Cause:** `SettingsContent.sharq` used `<sus:SusRadioGroup :model="..." :items="..." />`, But `SusRadioGroup` - slot component (`<slot>`), expecting children `SusRadio`.
 
 **Correction:**
 ```xml
@@ -383,11 +383,11 @@ if (value != null && IsPropType(value.GetType()))
 
 ---
 
-## 19. `SusModalService` / ` SusScreen` / ` OverlayHost` - classes did not exist
+## 19. `SusModalService` / `SusScreen` / `OverlayHost` - classes did not exist
 
 **Symptom:** modals do not close (`Close() → ModalService.Close()` - NPE or no-op).
 
-**Reason:** Classes `SusModalService`, ` SusScreen`, ` OverlayHost`, ` SusRouterModal`, ` SusTransitionService`, ` SusOverlayServices`are not defined anywhere in the codebase. ` SusRouter.cs`references them, but they must be created as separate files.
+**Reason:** Classes `SusModalService`, `SusScreen`, `OverlayHost`, `SusRouterModal`, `SusTransitionService`, `SusOverlayServices` are not defined anywhere in the codebase. `SusRouter.cs` references them, but they must be created as separate files.
 
 **Correction:** 6 files created:
 - `sus-core/Runtime/OverlayHost.cs` — container for overlays (last sibling → on top)
@@ -408,47 +408,47 @@ error CS0507: 'X.Left()': cannot change access modifiers when overriding 'public
 error CS0507: 'X.BeforeLeave(SusRoute)': cannot change access modifiers when overriding 'protected internal' inherited member 'SusScreen.BeforeLeave(SusRoute)'
 ```
 
-**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, Part ` protected internal`. Standard screens (` HostScreen`, ` HostScreen`, ` HostScreen`, ` HostScreen`, ` HostScreen`) and tests used ` protected internal override`/` public override`in different combinations, which caused CS0507 when there was a mismatch with the base class.
+**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, Part `protected internal`. Standard screens (`HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`) and tests used `protected internal override`/`public override` in different combinations, which caused CS0507 when there was a mismatch with the base class.
 
 **Correction (07/08/2026):**
-1. Base class `SusScreen` — all lifecycle methods are reduced to ` public virtual`:
-   - `BeforeEnter(SusRoute)` → ` public virtual bool`
-   - `Entered()` → ` public virtual void`
-   - `BeforeRouteUpdate(SusRoute)` → ` public virtual bool`
-   - `BeforeLeave(SusRoute)` → ` public virtual bool`
-   - `Left()` → ` public virtual void`
+1. Base class `SusScreen` — all lifecycle methods are reduced to `public virtual`:
+   - `BeforeEnter(SusRoute)` → `public virtual bool`
+   - `Entered()` → `public virtual void`
+   - `BeforeRouteUpdate(SusRoute)` → `public virtual bool`
+   - `BeforeLeave(SusRoute)` → `public virtual bool`
+   - `Left()` → `public virtual void`
 
 2. All override in heirs - `public override`.
 
-3. **Bug workaround in 3 files:** `HostScreen`, ` HostScreen`, ` HostScreen` - methods ` Entered()`And ` Left()`use ` public new void`instead of ` public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
+3. **Bug workaround in 3 files:** `HostScreen`, `HostScreen`, `HostScreen` - methods `Entered()` And `Left()` use `public new void` instead of `public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
 
-**Side effect of bypassing `new`:** router calls ` SusScreen.Entered()`/` SusScreen.Left()`by reference of the base type, so with ` new`an empty base implementation will be called. The life cycle of these three screens is incomplete. The correct solution is the Template Method pattern (` public void Left() { OnLeft(); }` + ` protected virtual void OnLeft()`).
+**Side effect of bypassing `new`:** router calls `SusScreen.Entered()`/`SusScreen.Left()` by reference of the base type, so with `new` an empty base implementation will be called. The life cycle of these three screens is incomplete. The correct solution is the Template Method pattern (`public void Left() { OnLeft(); }` + `protected virtual void OnLeft()`).
 
 ---
 
-## 21. `SusRouter.FindCommonPrefixDepth` - was ` internal`, tests required ` public`
+## 21. `SusRouter.FindCommonPrefixDepth` - was `internal`, tests required `public`
 
 **Symptom:**
 ```
 error CS0117: 'SusRouter' does not contain a definition for 'FindCommonPrefixDepth'
 ```
-Tests `SusRouterPipelineTests.cs` (Editor/Tests) call ` SusRouter.FindCommonPrefixDepth()`, but the method was declared as ` internal`.
+Tests `SusRouterPipelineTests.cs` (Editor/Tests) call `SusRouter.FindCommonPrefixDepth()`, but the method was declared as `internal`.
 
-**Fixed:** `internal static int FindCommonPrefixDepth(...)` → ` public static int FindCommonPrefixDepth(...)`.
+**Fixed:** `internal static int FindCommonPrefixDepth(...)` → `public static int FindCommonPrefixDepth(...)`.
 
 **Where:** `sus-router/Runtime/SusRouter.cs`, line 299.
 
 ---
 
-## 22. `SusRouter.SetRouteView` - was ` internal`, tests required ` public`
+## 22. `SusRouter.SetRouteView` - was `internal`, tests required `public`
 
 **Symptom:**
 ```
 error CS1061: 'SusRouter' does not contain a definition for 'SetRouteView'
 ```
-Tests `SusRouterKeepAliveTests.cs` cause `_router.SetRouteView(_view)`, but the method was declared as ` internal`.
+Tests `SusRouterKeepAliveTests.cs` cause `_router.SetRouteView(_view)`, but the method was declared as `internal`.
 
-**Fixed:** `internal void SetRouteView(...)` → ` public void SetRouteView(...)`.
+**Fixed:** `internal void SetRouteView(...)` → `public void SetRouteView(...)`.
 
 **Where:** `sus-router/Runtime/SusRouter.cs`, line 1008.
 
@@ -460,7 +460,7 @@ Tests `SusRouterKeepAliveTests.cs` cause `_router.SetRouteView(_view)`, but the 
 ```
 error CS1061: 'ParentScreen' does not contain a definition for 'ChildView'
 ```
-Tests `SusRouterPipelineTests.cs` (NestedRoute) read ` rootScreen.ChildView`, but in ` SusScreen.cs`there was only ` internal IReadOnlyList<SusRouteView> ChildViews`.
+Tests `SusRouterPipelineTests.cs` (NestedRoute) read `rootScreen.ChildView`, but in `SusScreen.cs` there was only `internal IReadOnlyList<SusRouteView> ChildViews`.
 
 **Fixed:** Added public property:
 ```csharp
@@ -479,7 +479,7 @@ public SusRouteView ChildView => _childViews.Count > 0 ? _childViews[0] : null;
 - `Library/Bee/artifacts/<dag>/` — intermediate artifacts Tundra build
 - `Library/ScriptAssemblies/` - final DLLs
 
-When changing base class signatures (`SusScreen`) assemblies that depend on it (` sus.router` + test asmdef), are not recompiled automatically - Unity uses cached `.ref.dll` with the old signature.
+When changing base class signatures (`SusScreen`) assemblies that depend on it (`sus.router` + test asmdef), are not recompiled automatically - Unity uses cached `.ref.dll` with the old signature.
 
 **Solution:** delete cache:
 ```powershell
@@ -488,4 +488,4 @@ Remove-Item "Library/ScriptAssemblies/*" -Force
 ```
 After this, Unity will recompile everything from scratch and pick up the latest signatures.
 
-**Important:** Perform after any change `public`/` protected`/` internal`signatures in base classes on which other asmdef assemblies depend.
+**Important:** Perform after any change `public`/`protected`/`internal` signatures in base classes on which other asmdef assemblies depend.

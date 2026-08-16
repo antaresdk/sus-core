@@ -1,6 +1,6 @@
 # 3. Reactivity
 
-> Updated: 2026-07-01 - added props between components via`SetChildProp`/` BindChildProp`.
+> Updated: 2026-07-01 - added prop passing between components via `SetChildProp`/`BindChildProp`.
 
 ## Prop<T> - reactive property
 
@@ -26,8 +26,8 @@ public class HealthBar : SusComponent
 ```
 
 **Features:**
-- Implicit cast:`Prop<float>` How`float`(through` implicit operator`)
-- Comparison by value: if new == old, event`Changed` not called
+- Implicit cast: `Prop<float>` behaves like `float` (via `implicit operator`)
+- Value comparison: if new == old, the `Changed` event does not fire
 - IL2CPP-safe: does not use reflection
 
 ## Computed<T> - calculated property
@@ -48,11 +48,11 @@ public class Inventory : SusComponent
 }
 ```
 
-`Computed<T>` caches the value and recalculates it only when dependencies change. Auto tracking: when`Value` calculates`_fn()`, All` Prop<T>.Value`**And` Computed<T>.Value`** read inside automatically become dependencies.
+`Computed<T>` caches its value and recalculates only when a dependency changes. Auto-tracking: while `Value` runs `_fn()`, every `Prop<T>.Value` **and `Computed<T>.Value`** read inside automatically becomes a dependency.
 
-**From July 1, 2026:**`Computed<T>` implements`IReactiveSource`— is itself a reactive source:
-- Chains`Prop → Computed A → Computed B → BindText` work (push invalidation up the chain)
-- `BindText(label, () => MyComputed.Value)`— subscribes to computed as a source
+**Since July 1, 2026:** `Computed<T>` implements `IReactiveSource` — it is itself a reactive source:
+- Chains `Prop → Computed A → Computed B → BindText` work (invalidation pushes up the chain)
+- `BindText(label, () => MyComputed.Value)` subscribes to the computed as a source
 
 ## Watch<T> - tracking changes
 
@@ -69,7 +69,7 @@ protected override void Created()
 }
 ```
 
-Returns`IDisposable`— for manual unsubscribing:
+Returns an `IDisposable` for manual unsubscribing:
 
 ```csharp
 var handle = Watch(someProp, callback);
@@ -92,13 +92,13 @@ protected override void Created()
 }
 ```
 
-Automatically tracks everything`Prop<T>` And`Computed<T>`, read inside` fn`, and restarts` fn`when any of them changes. Returns` WatchHandle`to unsubscribe.
+Automatically tracks every `Prop<T>` and `Computed<T>` read inside `fn`, and re-runs `fn` whenever any of them changes. Returns a `WatchHandle` for unsubscribing.
 
-**Internally** uses`ReactiveEffect`- a single reactive primitive on which all` Bind*`methods and` WatchEffect`. When a component detaches, all subscriptions are automatically cleared (` DisposeAllBindings`).
+**Internally** this uses `ReactiveEffect` - the single reactive primitive that every `Bind*` method and `WatchEffect` are built on. When a component detaches, all of its subscriptions are cleared automatically (`DisposeAllBindings`).
 
-## ReactiveEffect - a single reactive primitive (internal)
+## ReactiveEffect - the underlying reactive primitive (internal)
 
-All bindings (`BindText`, ` BindShow`, ` BindVisibility`, ` BindClass`, ` BindList`, ` BindListFor`) work through` ReactiveEffect`:
+Every binding (`BindText`, `BindShow`, `BindVisibility`, `BindClass`, `BindList`, `BindListFor`) is built on `ReactiveEffect`:
 
 ```csharp
 // Operating principle (simplified):
@@ -125,10 +125,10 @@ private WatchHandle ReactiveEffect(Action fn)
 ```
 
 **Key properties:**
-- `fn()` executed under`DependencyTracker.Track()`- auto-collection of dependencies
-- Subscribe via`SubscribeInvalidate` for each source
-- In case of invalidation - batch restart via`ScheduleBindUpdate`(one pass per frame)
-- Deduplication via`HashSet<Action>`— eliminates repetitions with frequent setters
+- `fn()` runs under `DependencyTracker.Track()` - automatic dependency collection
+- Subscribes via `SubscribeInvalidate` for each source
+- On invalidation, restarts in a batch via `ScheduleBindUpdate` (one pass per frame)
+- Deduplicates via `HashSet<Action>` - collapses repeated invalidations from frequent setters
 
 ## Helpers
 
@@ -136,16 +136,16 @@ private WatchHandle ReactiveEffect(Action fn)
 // P<T> is shorthand for new Prop<T>
 public Prop<string> Title = P("Default Title");
 
-// C<T> is short for new Computed<T>
+// C<T> is shorthand for new Computed<T>
 public Computed<bool> IsValid => C(() => !string.IsNullOrEmpty(Title));
 
 // WatchEffect - auto-tracking
 protected WatchHandle WatchEffect(Action fn);
 ```
 
-## Cleaning when disconnected from panel
+## Cleanup on detach
 
-All subscriptions (`Bind*`, ` Watch`, ` WatchEffect`) are automatically cleared when the component is detached via` DisposeAllBindings()`V` OnDetachFromPanelHandler`. Explicitly call` Dispose()`not needed on watch handles unless manual control is required.
+All subscriptions (`Bind*`, `Watch`, `WatchEffect`) are cleared automatically when the component detaches, via `DisposeAllBindings()` in `OnDetachFromPanelHandler`. Calling `Dispose()` explicitly on watch handles is not needed unless you want manual control.
 
 ## API
 
@@ -164,7 +164,7 @@ public class Prop<T> : INotifyBindablePropertyChanged
 ### Computed<T>
 
 ```csharp
-public class Computed<T> : IReactiveSource // itself is the source (push validation)
+public class Computed<T> : IReactiveSource // itself is a source (push invalidation)
 {
     public T Value { get; } // cached, auto-invalidated
     public static implicit operator T(Computed<T> c);
@@ -174,7 +174,7 @@ public class Computed<T> : IReactiveSource // itself is the source (push validat
 }
 ```
 
-> `Computed<T>.Value` causes`DependencyTracker.RegisterSource(this)`— external tracking sees computed as a source.` MarkDirty()`forwards invalidation to subscribers only at the front` false→true`.
+> Reading `Computed<T>.Value` calls `DependencyTracker.RegisterSource(this)` - so external tracking sees the computed as a source. `MarkDirty()` forwards invalidation to subscribers only on the `false→true` edge.
 
 ### WatchHandle
 
@@ -194,7 +194,7 @@ public interface IReactiveSource
 }
 ```
 
-`Prop<T>` implements`IReactiveSource`. ` Computed<T>`uses it for auto-tracking.
+`Prop<T>` implements `IReactiveSource`. `Computed<T>` uses it for auto-tracking.
 
 ### DependencyTracker
 
@@ -206,38 +206,38 @@ internal static class DependencyTracker
 }
 ```
 
-`[ThreadStatic]`- thread safe. No obvious` DependsOn()`no need.
+`[ThreadStatic]` - thread-safe. No explicit `DependsOn()` call is needed.
 
 ---
 
 ## Props between components
 
-When using custom components (`<sus:SusButton>`) V`.sharq`.
+Applies when using custom components (`<sus:SusButton>`) inside `.sharq`.
 
 ### Literal prop
 
 ```xml
-<!-- variant="primary" - mutates the .Value of an existing Prop, does not replace -->
+<!-- variant="primary" - mutates the .Value of an existing Prop, does not replace it -->
 <sus:SusButton variant="primary" :text="Title" />
 ```
 
-Generator issues`SetChildProp(child, "variant", "primary")` which:
-1. Finds the field`Variant`(case insensitive,` BindingFlags.IgnoreCase`)
-2. If the member is`Prop<T>` and not`null`→ writes in`.Value`(preserves the child's internal bindings)
-3. If the member is`Prop<T>` And`null`→ creates a new instance
-4. If the member is a regular type → direct assignment
+The generator emits `SetChildProp(child, "variant", "primary")`, which:
+1. Finds the field `Variant` (case-insensitive, `BindingFlags.IgnoreCase`)
+2. If the member is a non-null `Prop<T>` → writes to `.Value` (preserves the child's internal bindings)
+3. If the member is a `Prop<T>` that is `null` → creates a new instance
+4. If the member is a plain type → assigns directly
 
-### Jet prop
+### Reactive prop
 
 ```xml
 <!-- :variant="item.Kind" - reactive whenever item.Kind changes -->
 <sus:SusButton :variant="item.Kind" />
 ```
 
-Generator issues`BindChildProp(child, "variant", () => item.Kind)` which:
-1. Finds the field`Variant`(case insensitive)
-2. Wraps in`ReactiveEffect`— auto-subscription + cleaning when detaching
-3. Mutates`.Value` existing`Prop<T>`
+The generator emits `BindChildProp(child, "variant", () => item.Kind)`, which:
+1. Finds the field `Variant` (case-insensitive)
+2. Wraps it in a `ReactiveEffect` - auto-subscription plus cleanup on detach
+3. Mutates `.Value` of the existing `Prop<T>`
 
 ### Scalar conversion
 
@@ -252,6 +252,6 @@ string → string (direct assignment)
 
 ### Diagnostics
 
-In the dev build (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`):
-- `LogWarning` in case of conversion error or unknown prop
-- `LogError` If`BindChildProp` didn't find it`Prop<T>`-member by name
+In dev builds (`#if DEVELOPMENT_BUILD || UNITY_EDITOR`):
+- `LogWarning` on a conversion error or an unknown prop
+- `LogError` if `BindChildProp` could not find a matching `Prop<T>` member by name

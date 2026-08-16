@@ -1,73 +1,75 @@
 # SusAudit - built-in checks (Debug / QA)
 
 > Automatic audit modules built into `sus-core` and `sus-router`.
-> Everyone turns on via`#if UNITY_EDITOR || DEVELOPMENT_BUILD`.
-> In the release build, they are completely cut out by the compiler - **zero runtime overhead**.
+> All of them are gated by `#if UNITY_EDITOR || DEVELOPMENT_BUILD`.
+> In release builds they are fully stripped by the compiler - **zero runtime overhead**.
 
-## Pivot table
+<img src="../Documentation~/images/core-inspector.png" width="600" alt="SUS Inspector Editor window with Overview, Inspect, Health, Compile, Connect, and Settings tabs open on the element tree">
 
-| # | Module | Where is it sewn | Trigger | Automatic |
+## Overview table
+
+| # | Module | Where it's wired | Trigger | Automatic |
 |---|--------|----------|---------|:---:|
-| 1 | **ClickAudit** | `SusComponent` + ` ClickAuditService`| Every` ClickEvent`on registered elements | ✅ |
+| 1 | **ClickAudit** | `SusComponent` + `ClickAuditService` | Every `ClickEvent` on registered elements | ✅ |
 | 2 | **BoundsAudit** | `SusComponent` constructor | 2 frames after mount | ✅ |
-| 3 | **CallbackAudit** | `SusComponent.cs` methods + 11`.sharq` | ` ClickEvent`handler guard conditions / timing | ⚠️`.sharq` | <!-- sus:ok local audit count -->
-| 4 | **OverlayAudit** | `OverlayHost.AddToOverlay()`| Adding an element to the overlay | ✅ |
-| 5 | **StateAudit** | `.sharq` (SusButton/Toggle/Dropdown/ListGroup/Modal) | ` WatchEffect`on controversial props | ⚠️`.sharq` |
-| 6 | **LifecycleAudit** | `SusComponent.OnDetachFromPanelHandler()`| Detach from panel | ✅ |
-| 7 | **NavigationAudit** | `SusRouter.Push/Replace/PushNamed/ReplaceNamed` | ` Resolve()`returned null | ✅ |
+| 3 | **CallbackAudit** | `SusComponent.cs` methods + 16 `.sharq` | `ClickEvent` handler guard conditions / timing | ⚠️ `.sharq` | <!-- sus:ok local audit count -->
+| 4 | **OverlayAudit** | `OverlayHost.AddToOverlay()` | Adding an element to the overlay | ✅ |
+| 5 | **StateAudit** | `.sharq` (SusButton/Toggle/Dropdown/ListGroup/Modal) | `WatchEffect` on conflicting props | ⚠️ `.sharq` |
+| 6 | **LifecycleAudit** | `SusComponent.OnDetachFromPanelHandler()` | Detach from panel | ✅ |
+| 7 | **NavigationAudit** | `SusRouter.Push/Replace/PushNamed/ReplaceNamed` | `Resolve()` returned null | ✅ |
 | 8 | **PerformanceAudit** | `SusComponent` constructor | 500ms after mount | ✅ |
-| 9 | **DebounceAudit** | `SusComponent` constructor | Every`ClickEvent` on interactive elements | ✅ |
+| 9 | **DebounceAudit** | `SusComponent` constructor | Every `ClickEvent` on interactive elements | ✅ |
 | 10 | **ClickTargetSizeAudit** | `SusComponent` constructor (combined with BoundsAudit) | 2 frames after mount | ✅ |
-| 11 | **StackDepthAudit** | `SusRouter.PushRecord`| After`_history.Add()` | ✅ |
-| 12 | **GuardAudit** | `SusRouter.Navigate()`| After` NavigateCore`- if the result` Aborted` | ✅ |
-| 13 | **ModalStackAudit** | `OverlayHost.AddToOverlay()`| Adding a modal to the overlay | ✅ |
-| 14 | **EmptyStateAudit** | `.sharq` (SusListGroup/SusDropdown) | ` Items.Count == 0`but the element is open/visible | ⚠️`.sharq` |
-| 15 | **RemountLoopAudit** | `SusComponent.OnAttachToPanelHandler()`| >5 Attach in 1 second | ✅ |
-| 16 | **OverflowAudit** | `SusComponent` constructor | Children go beyond the bounds of the parent (Unity does not clip) | ✅ |
-| 17 | **DeadRouteAudit** | `SusRouter`(manual call` AuditUnusedRoutes()`) | Registered but never used routes | 🔧 manual |
-| 18 | **SusTable StateAudit** | `.sharq` (SusTable) | ` WatchEffect` — ` ItemsPerPage > Items`or` Page > TotalPages` | ⚠️ `.sharq` |
-| 19 | **LayoutReentryAudit** | `SusComponent.OnGeometryChangedForBreakpoint()` | >20 ` GeometryChanged`in 500ms | ✅ |
+| 11 | **StackDepthAudit** | `SusRouter.PushRecord` | After `_history.Add()` | ✅ |
+| 12 | **GuardAudit** | `SusRouter.Navigate()` | After `NavigateCore` - if the result is `Aborted` | ✅ |
+| 13 | **ModalStackAudit** | `OverlayHost.AddToOverlay()` | Adding a modal to the overlay | ✅ |
+| 14 | **EmptyStateAudit** | `.sharq` (SusListGroup/SusDropdown) | `Items.Count == 0` but the element is open/visible | ⚠️ `.sharq` |
+| 15 | **RemountLoopAudit** | `SusComponent.OnAttachToPanelHandler()` | >5 attaches in 1 second | ✅ |
+| 16 | **OverflowAudit** | `SusComponent` constructor | Children go beyond the parent's bounds (Unity does not clip) | ✅ |
+| 17 | **DeadRouteAudit** | `SusRouter` (manual call `AuditUnusedRoutes()`) | Registered but never used routes | 🔧 manual |
+| 18 | **SusTable StateAudit** | `.sharq` (SusTable) | `WatchEffect` - `ItemsPerPage > Items` or `Page > TotalPages` | ⚠️ `.sharq` |
+| 19 | **LayoutReentryAudit** | `SusComponent.OnGeometryChangedForBreakpoint()` | >20 `GeometryChanged` events in 500ms | ✅ |
 | 20 | **IdleGuardAudit** | `SusComponent` constructor | The element is visible for 30+ seconds without clicks | ✅ |
-| 21 | **FocusTrapAudit** | `.sharq` (SusModal) | ` FocusEvent`— Tab takes focus away from the modal | ⚠️`.sharq` |
+| 21 | **FocusTrapAudit** | `.sharq` (SusModal) | `FocusEvent` - Tab moves focus away from the modal | ⚠️ `.sharq` |
 
-> ✅ = fully automatic, no need to add anything to the components.
-> ⚠️ = requires one line`SetClickAuditDescription("Name")` or`WatchEffect` V`.sharq`(already built into all components).
+> ✅ = fully automatic, nothing to add to the component.
+> ⚠️ = requires one line - `SetClickAuditDescription("Name")` or a `WatchEffect` in `.sharq` (already built into all components).
 > 🔧 = manual method call.
 
 ---
 
-## 1. ClickAudit - whether the click reaches the element
+## 1. ClickAudit - does the click reach the element
 
-**Files:**`sus-core/Runtime/Diagnostics/ClickAuditService.cs`, ` sus-core/Runtime/SusComponent.cs`
+**Files:** `sus-core/Runtime/Diagnostics/ClickAuditService.cs`, `sus-core/Runtime/SusComponent.cs`
 
-**Problem:** the element is registered as clickable, but when the mouse is clicked the event does not reach - it is intercepted by another element above (tooltip, overlay, modal with the wrong`pickingMode`).
+**Problem:** the element is registered as clickable, but when clicked the event doesn't reach it - it's intercepted by another element above it (tooltip, overlay, modal with the wrong `pickingMode`).
 
-**How ​​it works:**
-- `ClickAuditService.Instance.Install(panel)`- Called automatically at first` SusBootstrap.Mount<T>()`.
-- The service registers global`ClickEvent` on`panel.visualTree`.
-- Compares with each click`evt.target` with registered elements.
-- If the click does not hit any registered element, the layer of the interceptor element is logged.
+**How it works:**
+- `ClickAuditService.Instance.Install(panel)` - called automatically on the first `SusBootstrap.Mount<T>()`.
+- The service registers a global `ClickEvent` handler on `panel.visualTree`.
+- On each click it compares `evt.target` with the registered elements.
+- If the click doesn't hit any registered element, the intercepting element's layer is logged.
 
 **Example warning:**
 ```
 [ClickAudit] Active: 'SusButton' blocked at center. Reason: Covered by 'SusTooltip'
 ```
 
-**Integration:** element is registered via`SetClickAuditDescription("Name")` V`Created()`. Already built into 11 downstream components <!-- sus:ok local audit count -->.
+**Integration:** an element registers itself via `SetClickAuditDescription("Name")` in `Created()`. Already built into 16 downstream components <!-- sus:ok local audit count -->.
 
 ---
 
-## 2. BoundsAudit - whether the sizes are non-zero
+## 2. BoundsAudit - are the sizes non-zero
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor)
 
-**Problem:** Unity UITK **doesn't call**`ContainsPoint` for elements with zero dimensions. The click goes through. Reasons:
-- No`flexGrow`, ` width`, ` height`in USS/styles
-- The parent did not set the size
-- `display: none` / ` visible: false`
-- The element is not added to the tree (not attached to the panel)
+**Problem:** Unity UITK **doesn't call** `ContainsPoint` for elements with zero dimensions - the click passes through. Common causes:
+- No `flexGrow`, `width`, `height` set in USS/styles
+- The parent didn't allocate any size
+- `display: none` / `visible: false`
+- The element isn't attached to the panel yet
 
-**How ​​it works:** delayed check via`schedule.Execute(...).StartingIn(150)`— waits 2-3 frames for the layout to be calculated, then checks` worldBound.width`And` worldBound.height`.
+**How it works:** a delayed check via `schedule.Execute(...).StartingIn(150)` - waits 2-3 frames for layout to settle, then checks `worldBound.width` and `worldBound.height`.
 
 **Example warning:**
 ```
@@ -78,15 +80,15 @@
 
 ---
 
-## 3. CallbackAudit - whether OnClick worked
+## 3. CallbackAudit - did OnClick actually run
 
-**Files:**`sus-core/Runtime/SusComponent.cs`, 8 `.sharq` <!-- sus:ok local audit count -->
+**Files:** `sus-core/Runtime/SusComponent.cs`, 16 `.sharq` <!-- sus:ok local audit count -->
 
-**Problem:**`ClickEvent` is registered, the element is available, the click goes through - but the handler is NOT called. Reasons:
-- `Disabled.Value = true`→ handler exits early
-- `Loading.Value = true`→ handler exits early
-- Guard condition:`if (someCondition) return;`
-- Handler executed, but took > 50ms (suspiciously long)
+**Problem:** `ClickEvent` fires, the element is reachable, the click gets through - but the handler is NOT called. Common causes:
+- `Disabled.Value = true` → handler returns early
+- `Loading.Value = true` → handler returns early
+- A guard condition: `if (someCondition) return;`
+- The handler ran, but took > 50ms (suspiciously long)
 
 **Two sub-modes:**
 
@@ -99,27 +101,27 @@ if (Disabled.Value)
     return;
 }
 ```
-Example:`[CallbackAudit] 'SusButton' click blocked: Disabled`
+Example: `[CallbackAudit] 'SusButton' click blocked: Disabled`
 
-### 3b. Timing (`AuditClickStart` / ` AuditClickEnd`)
+### 3b. Timing (`AuditClickStart` / `AuditClickEnd`)
 ```csharp
 var t0 = AuditClickStart();
 OnClick?.Invoke();
 AuditClickEnd(t0);  // if > 50ms → warning
 ```
-Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
+Example: `[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
-**Sewn into:**`SusButton`, ` SusLink`, ` SusToggle`, ` SusUnitCard`, ` SusDropdown`, ` SusListGroup`, ` SusModal`, ` SusForm`.
+**Wired into (16 `.sharq`):** `SusAlert`, `SusButton`, `SusDropdown`, `SusEmptyState`, `SusForm`, `SusLink`, `SusListGroup`, `SusMenuButton`, `SusNumberInput`, `SusPagination`, `SusRating`, `SusSnackbar`, `SusStepper`, `SusTabs`, `SusToggle`, `SusUnitCard`. <!-- sus:ok local audit count -->
 
 ---
 
 ## 4. OverlayAudit - UI overlap
 
-**File:**`sus-core/Runtime/OverlayHost.cs`
+**File:** `sus-core/Runtime/OverlayHost.cs`
 
-**Problem:** When adding an element to`OverlayHost`(tooltip, dropdown, modal) a new element can intercept clicks with its pickable children.
+**Problem:** when an element is added to `OverlayHost` (tooltip, dropdown, modal), it can intercept clicks meant for elements underneath via its own pickable children.
 
-**How ​​it works:** in`AddToOverlay()` after inserting the element -`Query<VisualElement>()` looking for everything`pickingMode == Position` inside, and if they are (and the category is not`Modal`) - varnit.
+**How it works:** in `AddToOverlay()`, after the element is inserted, `Query<VisualElement>()` looks for any descendants with `pickingMode == Position`; if any are found (and the category isn't `Modal`) it warns.
 
 **Example warning:**
 ```
@@ -130,23 +132,23 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ---
 
-## 5. StateAudit - consistency of props
+## 5. StateAudit - prop consistency
 
-**Files:**`SusButton.sharq`, ` SusToggle.sharq`, ` SusDropdown.sharq`, ` SusListGroup.sharq`, ` SusModal.sharq`
+**Files:** `SusButton.sharq`, `SusToggle.sharq`, `SusDropdown.sharq`, `SusListGroup.sharq`, `SusModal.sharq`
 
-**Problem:** inconsistent states -`Disabled=true` And`Loading=true` simultaneously (the spinner will never appear),`IsOpen=true` at`Disabled=true`(dropdown is open but inactive),` Selected`not in` Items`(no highlighted element),` Model=false`but the modal is visible.
+**Problem:** inconsistent state combinations - `Disabled=true` and `Loading=true` at the same time (the spinner never shows), `IsOpen=true` while `Disabled=true` (dropdown open but inactive), `Selected` not present in `Items` (nothing highlighted), `Model=false` but the modal is still visible.
 
-**How ​​it works:**`WatchEffect` inside`.sharq` components monitors combinations of props.
+**How it works:** a `WatchEffect` inside each `.sharq` component watches the relevant prop combination.
 
 | Component | Rule |
 |-----------|---------|
-| `SusButton` | ` Disabled && Loading`→ both true at the same time |
-| `SusToggle` | ` Disabled && Loading`→ both true at the same time |
-| `SusDropdown` | ` IsOpen && Disabled`→ open but disabled |
-| `SusListGroup` | ` Selected`not in` Items`→ no highlighted element |
-| `SusModal` | ` Model=false`But` display ≠ None`→ hidden modal is visible |
+| `SusButton` | `Disabled && Loading` → both true at the same time |
+| `SusToggle` | `Disabled && Loading` → both true at the same time |
+| `SusDropdown` | `IsOpen && Disabled` → open but disabled |
+| `SusListGroup` | `Selected` not in `Items` → nothing highlighted |
+| `SusModal` | `Model=false` but `display ≠ None` → hidden modal is still visible |
 
-**Examples of warnings:**
+**Example warnings:**
 ```
 [StateAudit] SusButton: both Disabled and Loading are true.
   Loading spinner will never be visible.
@@ -165,11 +167,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 6. LifecycleAudit - subscription leaks
 
-**File:**`sus-core/Runtime/SusComponent.cs` (` OnDetachFromPanelHandler`)
+**File:** `sus-core/Runtime/SusComponent.cs` (`OnDetachFromPanelHandler`)
 
-**Problem:** the element has been removed from the panel, but subscriptions to`Prop<T>.Changed` remained - memory leak and potential errors when remounting.
+**Problem:** the element was removed from the panel, but its subscriptions to `Prop<T>.Changed` are still alive - a memory leak and a source of errors on remount.
 
-**How ​​it works:** with detach it remembers`_bindings.Count`, after 1 second checks if the panel is still null and the number of subscriptions has not decreased → leak.
+**How it works:** on detach it records `_bindings.Count`; after 1 second it checks whether the panel is still null and the subscription count hasn't dropped → leak.
 
 **Example warning:**
 ```
@@ -181,11 +183,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 7. NavigationAudit - unresolved routes
 
-**File:**`sus-router/Runtime/SusRouter.cs`
+**File:** `sus-router/Runtime/SusRouter.cs`
 
-**Problem:**`SusRouter.Push("/settings")` called but the path was not resolved (`Resolve` returned null) - the user presses the button, nothing happens.
+**Problem:** `SusRouter.Push("/settings")` is called but the path doesn't resolve (`Resolve` returns null) - the user presses the button and nothing happens.
 
-**How ​​it works:** in each navigation method (`Push`, ` Replace`, ` PushNamed`, ` ReplaceNamed`) - If` record == null` → warning.
+**How it works:** each navigation method (`Push`, `Replace`, `PushNamed`, `ReplaceNamed`) warns if `record == null`.
 
 **Example warning:**
 ```
@@ -196,11 +198,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 8. PerformanceAudit - too many elements
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor)
 
-**Problem:** deep tree or many children (>500 VisualElements) → slow`PickAll`, long layout, slow UI.
+**Problem:** a deep tree or too many children (>500 VisualElements) → slow `PickAll`, long layout passes, sluggish UI.
 
-**How ​​it works:** 500ms after mount -`Query<VisualElement>()` counts all elements in a subtree. If > 500 → warning.
+**How it works:** 500ms after mount, `Query<VisualElement>()` counts all elements in the subtree. If > 500 → warning.
 
 **Example warning:**
 ```
@@ -212,11 +214,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 9. DebounceAudit - double clicks
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor)
 
-**Problem:** the user presses the button twice quickly (< 300ms between clicks) - double-submit is possible (two API calls, double debiting of currency, etc.).
+**Problem:** the user clicks a button twice quickly (< 300ms apart) - a double-submit becomes possible (two API calls, double currency deduction, etc.).
 
-**How ​​it works:** in the constructor`SusComponent` registered`ClickEvent` callback (fires BEFORE handlers in`Created()`— UITK guarantees the registration procedure). For each interactive element (with` SetClickAuditDescription`) remembers the time of the last click. If <300ms has passed - warning.
+**How it works:** the `SusComponent` constructor registers a `ClickEvent` callback (it fires BEFORE the handlers registered in `Created()` - UITK guarantees this registration order). For each interactive element (registered via `SetClickAuditDescription`) it remembers the time of the last click; if less than 300ms has passed, it warns.
 
 **Example warning:**
 ```
@@ -224,17 +226,17 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
   Possible unintended double-submit.
 ```
 
-**Important:** this is an **audit**, not a block. It does not prevent a second click - it only warns the developer that a debounce is needed in the business logic.
+**Important:** this is an **audit**, not a block. It doesn't prevent the second click - it only warns the developer that debouncing is needed in the business logic.
 
 ---
 
-## 10. ClickTargetSizeAudit - small target
+## 10. ClickTargetSizeAudit - target too small
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor, combined with BoundsAudit)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor, combined with BoundsAudit)
 
-**Problem:** interactive element (button, icon, checkbox) smaller than 30x30px - difficult to hit with finger/mouse. HIG recommends a minimum of 44x44px.
+**Problem:** an interactive element (button, icon, checkbox) is smaller than 30×30px - hard to hit with a finger or mouse. HIG recommends a minimum of 44×44px.
 
-**How ​​it works:** together with BoundsAudit, for elements with`SetClickAuditDescription`- If` worldBound`> 0 but < 30px on any axis → warning.
+**How it works:** alongside BoundsAudit, for elements with `SetClickAuditDescription` - if `worldBound` is > 0 but < 30px on either axis → warning.
 
 **Example warning:**
 ```
@@ -246,11 +248,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 11. StackDepthAudit - navigation stack depth
 
-**File:**`sus-router/Runtime/SusRouter.cs`
+**File:** `sus-router/Runtime/SusRouter.cs`
 
-**Problem:** navigation history grows unlimitedly (> 50 entries) - possible cyclic navigation (A → B → A → B...) or forgotten`Replace()` instead of`Push()`.
+**Problem:** navigation history grows without bound (> 50 entries) - possibly cyclic navigation (A → B → A → B...) or a forgotten `Replace()` where `Push()` was used instead.
 
-**How ​​it works:** after each`_history.Add()` V`PushRecord`- examination`_history.Count > 50`.
+**How it works:** after each `_history.Add()` in `PushRecord`, checks `_history.Count > 50`.
 
 **Example warning:**
 ```
@@ -263,11 +265,11 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
 
 ## 12. GuardAudit - rejected navigation
 
-**File:**`sus-router/Runtime/SusRouter.cs`
+**File:** `sus-router/Runtime/SusRouter.cs`
 
-**Problem:** the user presses the go button, the navigation is silently rejected by the guard or lifecycle hook - neither the screen changes nor the error messages.
+**Problem:** the user presses a navigation button and the navigation is silently rejected by a guard or lifecycle hook - the screen doesn't change and no error is shown.
 
-**How ​​it works:** in`Navigate()`- single point of interception after` NavigateCore`. If the result` NavigationResult.Aborted`— warning with from→to paths.
+**How it works:** `Navigate()` is a single interception point after `NavigateCore`. If the result is `NavigationResult.Aborted` → warning with the from→to paths.
 
 **Example warning:**
 ```
@@ -275,17 +277,17 @@ Example:`[CallbackAudit] 'SusButton' OnClick took 127.3ms`
   or lifecycle hook (BeforeLeave/CanLeave/BeforeEach/CanEnter/BeforeResolve/BeforeEnter).
 ```
 
-**Covers all abort points:**`BeforeRouteUpdate`, ` BeforeLeave`, ` CanLeave` (ISusRouteGuard), ` BeforeEach`(global),` CanEnter` (ISusRouteGuard), ` BeforeResolve`(global),` BeforeEnter`.
+**Covers all abort points:** `BeforeRouteUpdate`, `BeforeLeave`, `CanLeave` (ISusRouteGuard), `BeforeEach` (global), `CanEnter` (ISusRouteGuard), `BeforeResolve` (global), `BeforeEnter`.
 
 ---
 
 ## 13. ModalStackAudit - too many modals
 
-**File:**`sus-core/Runtime/OverlayHost.cs`
+**File:** `sus-core/Runtime/OverlayHost.cs`
 
-**Problem:** there are > 5 modals on the screen at the same time - there may be a bug (unclosed modals) or bad UX (the user does not understand which modal is active).
+**Problem:** more than 5 modals are open on screen at once - either a bug (modals not closing) or bad UX (the user can't tell which modal is active).
 
-**How ​​it works:** in`AddToOverlay()` after adding - counts`_stack.Count(e => e.Category == OverlayCategory.Modal)`. If > 5 - warning.
+**How it works:** in `AddToOverlay()`, after adding an element, it counts `_stack.Count(e => e.Category == OverlayCategory.Modal)`. If > 5 - warning.
 
 **Example warning:**
 ```
@@ -322,19 +324,19 @@ All modules are active when:
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 ```
 
-In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **completely cut out by the compiler** - not a single byte, not a single call.
+In release builds (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **completely stripped by the compiler** - not a single byte, not a single call remains.
 
 ---
 
 ## 14. EmptyStateAudit - empty list / dropdown
 
-**Files:**`SusListGroup.sharq`, ` SusDropdown.sharq`
+**Files:** `SusListGroup.sharq`, `SusDropdown.sharq`
 
-**Problem:**`Items.Count == 0`, but the element is open or visible - the user sees an empty container.
+**Problem:** `Items.Count == 0`, but the element is open or visible - the user sees an empty container.
 
-**How ​​it works:**`WatchEffect` inside`.sharq` keeps track of the combination.
+**How it works:** a `WatchEffect` inside `.sharq` tracks the combination.
 
-**Examples of warnings:**
+**Example warnings:**
 ```
 [EmptyStateAudit] SusListGroup: Items is empty but element is visible.
 [EmptyStateAudit] SusDropdown: IsOpen=true but Items is empty.
@@ -344,9 +346,9 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ## 15. RemountLoopAudit - cyclic remounts
 
-**File:**`sus-core/Runtime/SusComponent.cs` (` OnAttachToPanelHandler`)
+**File:** `sus-core/Runtime/SusComponent.cs` (`OnAttachToPanelHandler`)
 
-**Problem:** > 5 Attach in 1 second → reactivity bug (WatchEffect modifies visibility/layout).
+**Problem:** > 5 attaches in 1 second → usually a reactivity bug (a `WatchEffect` toggling visibility/layout).
 
 **Example warning:**
 ```
@@ -355,11 +357,11 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ---
 
-## 16. OverflowAudit - children going beyond bounds
+## 16. OverflowAudit - children exceeding bounds
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor)
 
-**Problem:** children exceed the parent's boundaries. Unity UITK does not support`overflow: hidden`.
+**Problem:** children exceed the parent's bounds. Unity UITK does not support `overflow: hidden`.
 
 **Example warning:**
 ```
@@ -370,11 +372,11 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ## 17. DeadRouteAudit - unused routes
 
-**File:**`sus-router/Runtime/SusRouter.cs`
+**File:** `sus-router/Runtime/SusRouter.cs`
 
-**Problem:** routes registered but never used are dead code.
+**Problem:** routes that are registered but never navigated to are dead code.
 
-**Call:**`router.AuditUnusedRoutes()`(manual, from the dev-panel or tests).
+**Call:** `router.AuditUnusedRoutes()` (manual, from the dev panel or tests).
 
 **Example warning:**
 ```
@@ -386,13 +388,13 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ## 18. SusTable StateAudit - inconsistent pagination
 
-**File:**`SusTable.sharq`
+**File:** `SusTable.sharq`
 
-**Problem:**`ItemsPerPage > Items.Count`- one page, extra pagination.` Page > TotalPages`— the table shows empty rows.
+**Problem:** `ItemsPerPage > Items.Count` - a single page with redundant pagination controls. `Page > TotalPages` - the table renders empty rows.
 
-**How ​​it works:**`WatchEffect` keeps an eye on`Controller.Value.Items`, ` ItemsPerPage`, ` Page`, ` TotalPages`.
+**How it works:** a `WatchEffect` watches `Controller.Value.Items`, `ItemsPerPage`, `Page`, `TotalPages`.
 
-**Examples of warnings:**
+**Example warnings:**
 ```
 [StateAudit] SusTable: ItemsPerPage=25 but only 3 items. Single page.
 [StateAudit] SusTable: Page=5 exceeds TotalPages=3. Table may show empty rows.
@@ -402,11 +404,11 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ## 19. LayoutReentryAudit - recursive layout
 
-**File:**`sus-core/Runtime/SusComponent.cs` (` OnGeometryChangedForBreakpoint`)
+**File:** `sus-core/Runtime/SusComponent.cs` (`OnGeometryChangedForBreakpoint`)
 
-**Problem:** WatchEffect modifies size/position → GeometryChangedEvent → Updated() → WatchEffect → infinite loop. UI freezes with high CPU load.
+**Problem:** a `WatchEffect` changes size/position → `GeometryChangedEvent` → `Updated()` → the same `WatchEffect` runs again → infinite loop. The UI freezes under high CPU load.
 
-**How ​​it works:** 500ms sliding window, counter`GeometryChangedEvent`. If > 20 per window - warning.
+**How it works:** a 500ms sliding window counts `GeometryChangedEvent` occurrences. If > 20 per window - warning.
 
 **Example warning:**
 ```
@@ -417,11 +419,11 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ## 20. IdleGuardAudit - element was never clicked
 
-**File:**`sus-core/Runtime/SusComponent.cs`(constructor)
+**File:** `sus-core/Runtime/SusComponent.cs` (constructor)
 
-**Problem:** the interactive element is visible for 30+ seconds, but not a single click - perhaps`pickingMode=Ignore`, covered with transparent overlay or forgotten` ClickEvent`.
+**Problem:** an interactive element has been visible for 30+ seconds without a single click - possibly `pickingMode=Ignore`, a transparent overlay covering it, or a forgotten `ClickEvent` handler.
 
-**How ​​it works:** one-time check 30 seconds after mount. If`_lastClickTime == 0`— warning with diagnostic information (pickingMode, worldBound).
+**How it works:** a one-time check 30 seconds after mount. If `_lastClickTime == 0` - warning with diagnostic details (pickingMode, worldBound).
 
 **Example warning:**
 ```
@@ -431,13 +433,13 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 ---
 
-## 21. FocusTrapAudit - focus outside the modal
+## 21. FocusTrapAudit - focus escaping the modal
 
-**File:**`SusModal.sharq`
+**File:** `SusModal.sharq`
 
-**Problem:** when the modal is open, Tab takes focus to the elements behind it - a violation of accessibility.
+**Problem:** while the modal is open, Tab moves focus to elements behind it - an accessibility violation.
 
-**How ​​it works:**`FocusEvent` + ` this.Contains(focused)`. If` Model=true`, A` evt.target`not inside the modal - warning.
+**How it works:** `FocusEvent` + `this.Contains(focused)`. If `Model=true` and `evt.target` is not inside the modal - warning.
 
 **Example warning:**
 ```
@@ -448,18 +450,18 @@ In the release build (`!UNITY_EDITOR && !DEVELOPMENT_BUILD`) the code is **compl
 
 - [OverlayHost and portals](./07-overlayhost.md) - how OverlayHost works, categories, z-order
 - [API Reference](./11-api-reference.md) - full SusComponent API
-- [Built-in audits (Debug / QA)](./13-audits.md) - a complete catalog of audits with code examples
+- [Built-in audits (Debug / QA)](./13-audits.md) - the complete audit catalog with code examples
 
 ## 22. ScreenAudit - text dumps of screen structure
 
-**File:**`sus-core/Runtime/Diagnostics/ScreenAudit.cs`
+**File:** `sus-core/Runtime/Diagnostics/ScreenAudit.cs`
 
-**Problem:** we need to understand “what does the user see on the screen?” without starting Unity.
-The AI ​​agent cannot look at the screen - it needs a text report.
+**Problem:** we need to answer "what does the user see on screen?" without launching the Unity Editor UI.
+An AI agent can't look at the screen - it needs a text report.
 
-**How ​​it works:** three text dump modes, output to`Debug.Log`(read via` read_console`MCP).
+**How it works:** three text dump modes, written to `Debug.Log` (read via the `read_console` MCP tool).
 
-### 22.1 LayoutDump - map of all elements with coordinates
+### 22.1 LayoutDump - a map of all elements with coordinates
 
 ```
 ══════════ LayoutDump ══════════
@@ -476,10 +478,10 @@ Screen: 1920×1080
 ││SusSettings ⚙ ⊘ HIDDEN [0ch] none (0,0 0×0)
 ```
 
-**Read by icons:**
-- `⚙` = SusComponent, `🖱`= clickable,`⊘`= transparent for clicks
-- `HIDDEN`= not visible (display: none / visible=false / zero-size)
-- `📍clickable area`= actual clickable area
+**Icon legend:**
+- `⚙` = SusComponent, `🖱` = clickable, `⊘` = ignores clicks (picking disabled)
+- `HIDDEN` = not visible (display: none / visible=false / zero-size)
+- `📍clickable area` = the actual clickable area
 
 ### 22.2 PickableLayerAudit - z-order of clickable elements
 
@@ -498,10 +500,10 @@ Z-order = DOM order (last sibling = topmost). No z-index in Unity.
 ⚠ 2 elements have overlapping bounds with higher z-order elements.
 ```
 
-**Read:**`[LAYER 000]`— the larger the number, the higher (closer to the eyes).
-`⚠OVERLAPPED`— someone higher in the z-order overlaps this element: the click will go to the top.
+**Reading it:** `[LAYER 000]` - the higher the number, the closer to the viewer (drawn on top).
+`⚠OVERLAPPED` - a higher-z-order element overlaps this one: the click will go to the element on top.
 
-### 22.3 FullPropsDump - all Prop values ​​of all SusComponents
+### 22.3 FullPropsDump - every Prop value on every SusComponent
 
 ```
 ══════ FullPropsDump ══════
@@ -518,17 +520,17 @@ Total: 2 SusComponents dumped.
 
 ### Hotkey
 
-**Ctrl+Shift+~** - three dumps to the console at once. Installed automatically via`SusBootstrap`.
+**Ctrl+Shift+~** - runs all three dumps to the console at once. Wired up automatically by `SusBootstrap`.
 
 ### Automatic dump
 
-**Every time you navigate the router** (`Push`, ` Replace`, ` PushNamed`, ` ReplaceNamed`, ` Back`, ` Forward`, ` Go`) — after a successful transition, the following are automatically displayed:
-- `LayoutDump`— map of elements on the new screen
-- `FullPropsDump`— values ​​of all Props of all SusComponents
+**On every router navigation** (`Push`, `Replace`, `PushNamed`, `ReplaceNamed`, `Back`, `Forward`, `Go`) - after a successful transition, the following are logged automatically:
+- `LayoutDump` - a map of the elements on the new screen
+- `FullPropsDump` - the values of every Prop on every SusComponent
 
-**Every click`SusButton`** - after execution` OnClick?.Invoke()`automatically displayed` FullPropsDump`. This gives the agent a snapshot of the UI state immediately after the button action has completed.
+**On every `SusButton` click** - after `OnClick?.Invoke()` completes, `FullPropsDump` runs automatically. This gives an agent a snapshot of UI state right after the button's action has finished.
 
-> Both mechanisms -`#if UNITY_EDITOR || DEVELOPMENT_BUILD`, are completely cut out in the release.
+> Both mechanisms are gated by `#if UNITY_EDITOR || DEVELOPMENT_BUILD` and are completely stripped from release builds.
 
 ### Agent use
 
@@ -539,7 +541,7 @@ read_console -> filter_text="[PA]" # PickableLayer (z-order)
 read_console -> filter_text="[FP]" # FullPropsDump (props values)
 ```
 
-The agent receives a text picture of the screen and can:
-- Understand the structure: what components, in what order
-- Find overlaps: which elements block the click
-- See the status: current prop values of all components
+The agent gets a text picture of the screen and can:
+- Understand the structure: which components, in what order
+- Find overlaps: which elements block clicks
+- See the current state: prop values of all components

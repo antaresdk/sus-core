@@ -150,7 +150,7 @@ Create `Assets/sus.config.json`:
 }
 ```
 
-| Field | Destination |
+| Field | Description |
 |------|-----------|
 | `SharqDirectory` | Where your `.sharq` files live |
 | `GeneratedDirectory` | Where to write `.g.cs` and `.g.uss` |
