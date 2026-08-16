@@ -250,6 +250,21 @@ namespace Sharq.Core
             _eventHandlers?.Clear();
         }
 
+        /// <summary>
+        /// True while a subclass is synchronously relocating this element to a different
+        /// parent WITHIN THE SAME PANEL — e.g. <see cref="SusOverlayComponent.IsRelocatingToOverlay"/>
+        /// during <c>MountSelfInOverlay</c>/<c>UnmountSelfFromOverlay</c>. That relocation's own
+        /// <c>RemoveFromHierarchy()</c>/<c>Add()</c> calls trigger a REAL Attach/DetachFromPanelEvent
+        /// as an implementation detail of UI Toolkit reparenting, even though the element never
+        /// truly leaves the visual tree. <see cref="OnDetachFromPanelHandler"/> checks this to skip
+        /// <see cref="DisposeAllBindings"/> during a pure reparent — without it, every
+        /// <c>Watch()</c>/<c>WatchEffect()</c> registered in <c>Created()</c> (which runs once, in
+        /// the constructor) gets permanently unsubscribed the first time an overlay-hosted component
+        /// (Modal/Toast) opens, silently breaking all future reactivity to that Prop (e.g. SusModal's
+        /// <c>Watch(Model, ...)</c> never firing again after the first open — T-493).
+        /// </summary>
+        protected virtual bool IsRelocating => false;
+
         // ─── Breakpoint Service ───────────────────────────────────────────
 
         /// <summary>
@@ -768,7 +783,11 @@ namespace Sharq.Core
 #endif
             BeforeUnmounted();
             _updateItem?.Pause();
-            DisposeAllBindings();
+            // T-493: skip during a same-panel relocation (see IsRelocating) — this detach is not
+            // a real unmount, and disposing bindings here would permanently kill Watch()/WatchEffect()
+            // set up once in Created() (e.g. SusModal's Model watcher stops reacting after first open).
+            if (!IsRelocating)
+                DisposeAllBindings();
             _pendingBindActions.Clear();
             _bindScheduleItem = null;
             UnregisterCallback<GeometryChangedEvent>(OnGeometryChangedForBreakpoint);
