@@ -2,6 +2,8 @@
 
 **Foundation of the SUS UI system.** Analogue of Vue.js — reactivity, SFC compiler, directives, slots, CSS scoped, themes, breakpoints, world-space, console.
 
+**Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
+
 <!-- sus:gen ver pkg=sus-core -->
 **Package:** `com.sharq-it.sus.core` (current version — `1.0.16`)
 <!-- /sus:gen -->
