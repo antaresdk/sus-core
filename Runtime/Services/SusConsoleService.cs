@@ -305,6 +305,7 @@ namespace Sharq.Core
             })
             {
                 var btn = new Button(() => SetFilter(filter)) { text = label };
+                btn.name = RootClass + "-filter-" + label.ToLowerInvariant(); // stable QA/UX-run target (T-426)
                 btn.AddToClassList(RootClass + "__filter");
                 _filterChips[filter] = btn;
                 toolbar.Add(btn);
