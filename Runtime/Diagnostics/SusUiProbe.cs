@@ -55,7 +55,11 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"children\":{el.childCount},");
             sb.Append($"\"w\":{F(wb.width)},\"h\":{F(wb.height)},\"x\":{F(wb.x)},\"y\":{F(wb.y)}");
             var text = GetElementText(el);
-            if (!string.IsNullOrEmpty(text)) sb.Append($",\"text\":{Q(Truncate(text, 80))}");
+            if (!string.IsNullOrEmpty(text))
+            {
+                sb.Append($",\"text\":{Q(Truncate(text, 80))}");
+                if (IsTextClipped(el, text)) sb.Append(",\"truncated\":true");
+            }
             if (el.resolvedStyle.display == DisplayStyle.None) sb.Append(",\"hidden\":true");
             if (!el.visible) sb.Append(",\"invisible\":true");
             if (el.pickingMode == PickingMode.Position) sb.Append(",\"pickable\":true");
@@ -400,6 +404,21 @@ namespace Sharq.Core.Diagnostics
             if (el is Button btn && !string.IsNullOrEmpty(btn.text)) return btn.text;
             if (el is TextField tf && !string.IsNullOrEmpty(tf.value)) return tf.value;
             return null;
+        }
+
+        /// <summary>
+        /// True when the element's own single-line text measures wider than its content box
+        /// (single-line only — Label/Button; multiline TextField content is not single-line
+        /// truncation and is skipped). Feeds R36 slice G3 (T-459) via the geometry sidecar.
+        /// </summary>
+        private static bool IsTextClipped(VisualElement el, string text)
+        {
+            if (el is not TextElement te || string.IsNullOrEmpty(text)) return false;
+            if (te.resolvedStyle.whiteSpace != WhiteSpace.NoWrap) return false;
+            var box = te.contentRect;
+            if (box.width <= 0f || float.IsNaN(box.width)) return false;
+            var measured = te.MeasureTextSize(text, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
+            return measured.x > box.width + 1f;
         }
 
         private static string F(float v) => v.ToString("F0", CultureInfo.InvariantCulture);
