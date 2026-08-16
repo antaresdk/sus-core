@@ -192,11 +192,9 @@ namespace Sharq.Core.Editor
                                 paramStr, @"default\s*:\s*(?<val>(?:""[^""]*""|[^,\)])+)");
                             if (defMatch.Success)
                             {
-                                var defVal = defMatch.Groups["val"].Value.Trim();
-                                // Strip surrounding quotes if string literal
-                                if (defVal.Length >= 2 && defVal.StartsWith("\"") && defVal.EndsWith("\""))
-                                    defVal = defVal.Substring(1, defVal.Length - 2);
-                                createPropDefault = defVal;
+                                // Keep the raw C# literal as written (quotes included for
+                                // strings) — it is re-emitted verbatim into `new(...)`.
+                                createPropDefault = defMatch.Groups["val"].Value.Trim();
                             }
                         }
                         continue;
@@ -210,13 +208,17 @@ namespace Sharq.Core.Editor
                         var defVal = createPropDefault;
                         createPropDefault = null;
 
+                        // A trailing `// comment` after the `;` is tolerated and preserved.
                         var fieldMatch = System.Text.RegularExpressions.Regex.Match(
                             trimmed,
-                            @"^(?<mod>public\s+)(?<type>\w+(?:<[\w,\s]+>)?)\s+(?<name>\w+)\s*(?:=\s*(?<val>[^;]+))?\s*;\s*$");
+                            @"^\s*(?<mod>public\s+)(?<type>\w+(?:<[\w,\s]+>)?)\s+(?<name>\w+)\s*(?:=\s*(?<val>[^;]+))?\s*;\s*(?<comment>//.*)?$");
                         if (fieldMatch.Success)
                         {
                             var typeName = fieldMatch.Groups["type"].Value;
                             var fieldName = fieldMatch.Groups["name"].Value;
+                            var comment = fieldMatch.Groups["comment"].Success
+                                ? " " + fieldMatch.Groups["comment"].Value.TrimEnd()
+                                : "";
 
                             // Author may declare the plain type (int) or the wrapped
                             // reactive type (Prop<int>). Normalize to the element type so
@@ -226,8 +228,10 @@ namespace Sharq.Core.Editor
                             if (alreadyWrapped)
                                 elemType = typeName.Substring(5, typeName.Length - 6);
 
-                            var initVal = defVal;
-                            if (initVal == null && fieldMatch.Groups["val"].Success)
+                            // The author's explicit initializer always wins; the DSL
+                            // `default:` param is only a fallback when the field has none.
+                            string initVal = null;
+                            if (fieldMatch.Groups["val"].Success)
                             {
                                 var rawVal = fieldMatch.Groups["val"].Value.Trim();
                                 // Author wrote "= new(x)" for a Prop<> field — unwrap to x,
@@ -238,6 +242,8 @@ namespace Sharq.Core.Editor
                                     : rawVal;
                             }
                             if (string.IsNullOrWhiteSpace(initVal))
+                                initVal = defVal;
+                            if (string.IsNullOrWhiteSpace(initVal))
                                 initVal = $"default({elemType})";
 
                             // ─── [UxmlAttribute] companion property ───
@@ -247,7 +253,7 @@ namespace Sharq.Core.Editor
                             var newKw = ReservedVisualElementMembers.Contains(camelName) ? "new " : "";
                             sb.AppendLine($"{memberIndent}[UxmlAttribute(\"{fieldName}\")]");
                             sb.AppendLine($"{memberIndent}public {newKw}{elemType} {camelName} {{ get => {fieldName}.Value; set => {fieldName}.Value = value; }}");
-                            sb.AppendLine($"{memberIndent}public Prop<{elemType}> {fieldName} = new({initVal});");
+                            sb.AppendLine($"{memberIndent}public Prop<{elemType}> {fieldName} = new({initVal});{comment}");
 
                             continue;
                         }

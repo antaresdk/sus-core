@@ -254,13 +254,68 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
-        public void CreateProperty_DefaultParam_OverridesInitializer()
+        public void CreateProperty_DefaultParam_FillsMissingInitializer()
         {
             const string sharq =
                 "<template><ui:VisualElement /></template>\n" +
                 "<script>\n[CreateProperty(default: 42)]\npublic int Health;\n</script>";
 
             StringAssert.Contains("new(42)", Gen(sharq));
+        }
+
+        [Test]
+        public void CreateProperty_StringDefault_WithInitializer_KeepsQuotedLiteral()
+        {
+            // Regression (SusMinimap, T-433/T-434): default:"x" used to be emitted unquoted
+            // as `new(center)` → CS0103. The author's own initializer must win verbatim.
+            const string sharq =
+                "<template><ui:VisualElement /></template>\n" +
+                "<script>\n[CreateProperty(default:\"center\")]\npublic Prop<string> PlayerMode = new(\"center\");\n</script>";
+
+            var code = Gen(sharq);
+
+            StringAssert.Contains("public Prop<string> PlayerMode = new(\"center\");", code);
+            StringAssert.DoesNotContain("new(center)", code);
+        }
+
+        [Test]
+        public void CreateProperty_StringDefault_NoInitializer_EmitsQuotedLiteral()
+        {
+            const string sharq =
+                "<template><ui:VisualElement /></template>\n" +
+                "<script>\n[CreateProperty(default:\"north-up\")]\npublic string RotationMode;\n</script>";
+
+            var code = Gen(sharq);
+
+            StringAssert.Contains("public Prop<string> RotationMode = new(\"north-up\");", code);
+        }
+
+        [Test]
+        public void CreateProperty_AuthorInitializer_WinsOverDefaultParam()
+        {
+            const string sharq =
+                "<template><ui:VisualElement /></template>\n" +
+                "<script>\n[CreateProperty(default: 42)]\npublic int Health = 5;\n</script>";
+
+            var code = Gen(sharq);
+
+            StringAssert.Contains("public Prop<int> Health = new(5);", code);
+            StringAssert.DoesNotContain("new(42)", code);
+        }
+
+        [Test]
+        public void CreateProperty_TrailingComment_StillGeneratesCompanion()
+        {
+            // Field lines with a trailing `// note` used to fall through the wrapper
+            // path entirely (no [UxmlAttribute] companion). Now handled and preserved.
+            const string sharq =
+                "<template><ui:VisualElement /></template>\n" +
+                "<script>\n[CreateProperty]\npublic Prop<string> MaskShape = new(\"grid\"); // \"grid\" | \"free\"\n</script>";
+
+            var code = Gen(sharq);
+
+            StringAssert.Contains("[UxmlAttribute(\"MaskShape\")]", code);
+            StringAssert.Contains("public Prop<string> MaskShape = new(\"grid\"); // \"grid\" | \"free\"", code);
         }
 
         [Test]
