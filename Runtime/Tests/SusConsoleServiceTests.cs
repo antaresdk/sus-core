@@ -162,6 +162,28 @@ namespace Sharq.Core.Runtime.Tests
             Assert.IsFalse(service.IsOpen);
         }
 
+        // ─── T-426: filter chips carry stable names for UX-run/QA targeting ──
+
+        [UnityTest]
+        public IEnumerator FilterChips_HaveStableNames_ForUxTargeting()
+        {
+            var service = new SusConsoleService
+            {
+                OverlayHost = SusBootstrap.GetOrCreateOverlay(Root)
+            };
+
+            service.Show();
+            yield return WaitFrame();
+
+            Assert.IsNotNull(Root.Q(name: "sus-console-filter-all"), "All chip needs a stable name");
+            Assert.IsNotNull(Root.Q(name: "sus-console-filter-log"), "Log chip needs a stable name");
+            Assert.IsNotNull(Root.Q(name: "sus-console-filter-warn"), "Warn chip needs a stable name");
+            Assert.IsNotNull(Root.Q(name: "sus-console-filter-err"), "Err chip needs a stable name");
+
+            service.Hide();
+            yield return WaitFrame();
+        }
+
         // ─── C6.5: RegisterCommand + ExecuteCommand ──────────────────────────
 
         [UnityTest]
