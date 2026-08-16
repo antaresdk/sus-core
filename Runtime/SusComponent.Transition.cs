@@ -28,6 +28,40 @@ namespace Sharq.Core
             IVisualElementScheduledItem leaveJob = null;
             bool? lastShown = null;
 
+            // T-541 (2026-08-13): "no animation before the first paint" cannot be a
+            // one-shot latch on the FIRST call of this ReactiveEffect — Build() always
+            // runs this effect once, synchronously, during the constructor (getter()
+            // still reading the Prop's DEFAULT value, since callers set the real value
+            // AFTER `new Component()` but BEFORE `parent.Add()` — e.g. every Storybook
+            // story). That consumes "isFirstRun" using a value nobody ever saw. The
+            // caller's real value is queued (SusComponent.ScheduleBindUpdate: panel is
+            // still null) and only reaches this effect once attached — by which point a
+            // naive isFirstRun flag is already false, so the TRUE initial reveal played a
+            // real Enter() (opacity:0 at t=0 — SusExpansionPanel/SusExpansionPanels
+            // showed the header but not the body in showcase-6 ShotAll frames; likely the
+            // same class of bug behind SusTooltip/SusSnackbar not showing their open
+            // state in a fast capture). A raw `panel == null` check at call time does not
+            // work either: the catch-up run above is dispatched via a SCHEDULED flush
+            // (ScheduleBindUpdate → schedule.Execute(...).ExecuteLater(0)), so by the
+            // time it actually executes the component genuinely IS attached — "attached"
+            // is simply the wrong signal, because a just-flushed catch-up run and a real
+            // user-triggered change many frames later are both "attached" when they run.
+            // The correct signal is "has this element been through at least one real
+            // layout pass" (~= "could the user have possibly seen the PRIOR state
+            // painted") — GeometryChangedEvent only fires after Unity actually computes
+            // layout, which happens strictly after any same-tick scheduled catch-up flush.
+            // Watched on `this` (the component root), not `el` — `el` itself may start
+            // OUT of the tree (Open=false default) and never receive a layout pass until
+            // AFTER the very decision this flag is meant to gate.
+            bool hasRenderedOnce = false;
+            EventCallback<GeometryChangedEvent> onFirstGeometry = null;
+            onFirstGeometry = _ =>
+            {
+                hasRenderedOnce = true;
+                UnregisterCallback(onFirstGeometry);
+            };
+            RegisterCallback(onFirstGeometry);
+
             void ClearPhaseClasses()
             {
                 el.RemoveFromClassList(SusTransition.EnterFrom);
@@ -106,21 +140,23 @@ namespace Sharq.Core
             {
                 bool show = getter();
                 if (lastShown == show) return;
-                bool isFirstRun = lastShown == null;
                 lastShown = show;
 
-                if (isFirstRun)
+                if (!hasRenderedOnce)
                 {
-                    // No enter/leave animation on initial mount (Vue <Transition> default:
-                    // an element that starts v-if=false was never shown, so there is nothing
-                    // to animate OUT of). Without this, the generator's Add-then-bind emission
-                    // order (element is already parented when this effect first runs) made a
-                    // closed-by-default panel play a 200ms+ Leave() — fully opaque
-                    // (.sus-transition-leave-from = opacity:1) until the delayed removal
-                    // fired — so collapsed content was fully visible/readable at mount, and a
-                    // fast screenshot (or a click landing mid-leave) raced the pending removal
-                    // job. Reflect the starting state synchronously instead (T-415, 2026-08-13
-                    // — SusExpansionPanel body visible while collapsed / expand looked inert).
+                    // No enter/leave animation before the first paint (Vue <Transition>
+                    // default: an element that starts v-if=false was never shown, so there
+                    // is nothing to animate OUT of; symmetrically, a value that only ever
+                    // reaches its true/false state before anyone could see the OTHER state
+                    // has nothing to animate FROM either — T-541). Without this, the
+                    // generator's Add-then-bind emission order (element is already parented
+                    // when this effect first runs) made a closed-by-default panel play a
+                    // 200ms+ Leave() — fully opaque (.sus-transition-leave-from = opacity:1)
+                    // until the delayed removal fired — so collapsed content was fully
+                    // visible/readable at mount, and a fast screenshot (or a click landing
+                    // mid-leave) raced the pending removal job. Reflect the starting state
+                    // synchronously instead (T-415, 2026-08-13 — SusExpansionPanel body
+                    // visible while collapsed / expand looked inert).
                     ClearPhaseClasses();
                     if (show)
                     {
@@ -144,6 +180,7 @@ namespace Sharq.Core
             {
                 leaveJob?.Pause();
                 leaveJob = null;
+                UnregisterCallback(onFirstGeometry);
             }));
             return h;
         }

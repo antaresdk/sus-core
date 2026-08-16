@@ -98,5 +98,6 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreEqual(0, comp.IndexOf(comp.Leading), "leading must return to index 0, not jump to the end");
             Assert.AreEqual(1, comp.IndexOf(comp.Trailing), "trailing must stay after leading");
         }
+
     }
 }
