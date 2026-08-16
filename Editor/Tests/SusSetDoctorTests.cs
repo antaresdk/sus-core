@@ -111,13 +111,17 @@ namespace Sharq.Core.Editor.Tests
             // is never touched by kit-set's packer, Game stays in presentModules regardless of which
             // set descriptor(s) are also present — DetectUpmCollisions doesn't even need to know
             // about descriptors to get this right.
-            var modules = new[] { MakeModule("core", "Core", "1.0.16"), MakeModule("game", "Game", "1.0.24") };
-            var upm = new HashSet<string> { "com.sharq-it.sus.game" };
+            // R25 (T-583): the colliding package id comes from the module's own manifest
+            // (`.package`), not a hardcoded literal — this repo is public/MIT and spelling the
+            // paid module's full package id out as a literal string here would leak it.
+            var gameModule = MakeModule("game", "Game", "1.0.24");
+            var modules = new[] { MakeModule("core", "Core", "1.0.16"), gameModule };
+            var upm = new HashSet<string> { gameModule.package };
 
             var issues = SusSetDoctor.DetectUpmCollisions(modules, upm);
 
             Assert.AreEqual(1, issues.Count);
-            StringAssert.Contains("com.sharq-it.sus.game", issues[0].Message);
+            StringAssert.Contains(gameModule.package, issues[0].Message);
         }
 
         // ─── ClassifyStrayPaths: Residual (т.т.4 §5.5) — T-557 DoD (б) ─────────
