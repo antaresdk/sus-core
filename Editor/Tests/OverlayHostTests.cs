@@ -283,5 +283,38 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.AreEqual(2, dismissCount);
         }
+
+        [Test]
+        public void ClearAll_ReentrantRemoveFromOverlay_DoesNotDoubleDismissOrThrow()
+        {
+            // T-499 regression: a self-teleporting overlay (SusModal/SusSnackbar) closes
+            // itself via Unmounted() -> CloseFromOverlay() -> UnmountSelfFromOverlay() ->
+            // RemoveFromOverlay(), fired SYNCHRONOUSLY as a side effect of the
+            // RemoveFromHierarchy() call ClearAll makes on its behalf — this test's OnDismiss
+            // stands in for that chain. The old ClearAll() only cleared `_stack` once, after
+            // its whole sweep finished, so a reentrant removal mid-sweep found its own entry
+            // still present and removed/dismissed it a second time (index bookkeeping for the
+            // REST of the sweep corrupted too — reproduced live as UIR "already being
+            // modified" assertions across 9 subsequent ShotAll captures, see
+            // 2026-08-13-showcase-4.md). ClearAll now routes through the same
+            // RemoveFromOverlay(OverlayEntry) a single dismiss uses, which removes the stack
+            // entry BEFORE touching the DOM/invoking OnDismiss, so a reentrant call finds
+            // nothing left to remove and safely no-ops.
+            int dismissCountA = 0, dismissCountB = 0;
+            OverlayEntry entryA = null;
+            var elA = new VisualElement();
+            entryA = _host.AddToOverlay(elA, OverlayCategory.Modal, onDismiss: () =>
+            {
+                dismissCountA++;
+                _host.RemoveFromOverlay(entryA); // reentrant — must be a safe no-op
+            });
+            _host.AddToOverlay(new VisualElement(), OverlayCategory.Tooltip, onDismiss: () => dismissCountB++);
+
+            Assert.DoesNotThrow(() => _host.ClearAll());
+
+            Assert.AreEqual(0, _host.Count);
+            Assert.AreEqual(1, dismissCountA, "reentrant self-removal must not double-invoke its own OnDismiss");
+            Assert.AreEqual(1, dismissCountB, "an unrelated entry must still be removed once during the same sweep");
+        }
     }
 }
