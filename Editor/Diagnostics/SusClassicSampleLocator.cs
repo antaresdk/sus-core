@@ -1,58 +1,72 @@
 using System;
 using System.IO;
-using System.Linq;
 
 namespace Sharq.Core.Editor.Diagnostics
 {
     /// <summary>
-    /// Shared classic-set (Asset Store) detection for per-module sample Setup menus (T-532).
+    /// Shared classic-set (Asset Store) detection for per-module sample Setup menus (T-532,
+    /// T-557).
     ///
     /// A UPM install and a classic-set install put a module's sample at two structurally
     /// different places: <c>Assets/Samples/&lt;displayName&gt;/&lt;version&gt;/&lt;sample&gt;</c>
     /// for UPM, <c>Assets/&lt;root&gt;/Samples/&lt;ModuleDir&gt;/&lt;sample&gt;</c> for a classic set
     /// (ARCH-PACK-CLASSIC.md §2.1/§3.T2-samples S2). Each Setup menu already knows how to find the
-    /// UPM shape; this class adds the classic one by reading <c>sus-set.json</c> — the same manifest
-    /// <see cref="SusSetDoctor"/> uses — instead of guessing at path substrings (T-532: the previous
-    /// code only searched the UPM sample path and the package cache, so a classic install printed a
-    /// misleading "check that the package is installed" message about a package the purchaser, who
-    /// bought a classic asset and has no such package, was never going to have).
+    /// UPM shape; this class adds the classic one.
+    ///
+    /// Since T-556/D7 this reads the asking module's OWN <c>sus-module.json</c> directly (by
+    /// module id) instead of going through a shared <c>sus-set.json</c>'s module list (T-532's
+    /// original approach): the old approach broke exactly the scenario D7 exists to fix — after
+    /// importing kit-set on top of game-set, the single shared manifest no longer mentioned
+    /// "game" at all, so this locator (and Set Doctor) lost track of the Game sample even though
+    /// its files, and its own manifest, were still sitting untouched on disk. Reading the
+    /// module's own manifest by id sidesteps that: it doesn't matter which set descriptor(s) are
+    /// present, only whether THIS module's own manifest is.
     /// </summary>
     public static class SusClassicSampleLocator
     {
         /// <summary>
-        /// True when a <c>sus-set.json</c> manifest is present anywhere in the project — i.e. this
-        /// project has a classic-set install of *some* набор (not necessarily one containing the
-        /// module asking).
+        /// True when any classic-set manifest (a module's <c>sus-module.json</c> or a set's
+        /// <c>sus-set.&lt;set&gt;.json</c>) is present anywhere in the project — i.e. this
+        /// project has SOME classic-set install, not necessarily one containing the module asking.
         /// </summary>
-        public static bool IsClassicSetInstalled() => TryFindManifest(out _, out _);
+        public static bool IsClassicSetInstalled()
+        {
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("sus-module"))
+            {
+                if (string.Equals(Path.GetFileName(UnityEditor.AssetDatabase.GUIDToAssetPath(guid)),
+                        SusSetDoctor.ModuleManifestFileName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("sus-set"))
+            {
+                if (SusSetDoctor.IsSetDescriptorFileName(Path.GetFileName(UnityEditor.AssetDatabase.GUIDToAssetPath(guid))))
+                    return true;
+            }
+            return false;
+        }
 
         /// <summary>
         /// Resolves the sample folder for <paramref name="moduleId"/> (manifest key, e.g. "kit",
-        /// "game") under the installed classic set, if any. Returns false — never throws — when no
-        /// set is installed, the manifest doesn't list this module, or the folder isn't on disk
-        /// (residual manifest with the module removed by the purchaser).
+        /// "game") under the installed classic module, if any. Returns false — never throws —
+        /// when this module isn't present as a classic module (no manifest), or the sample
+        /// folder isn't on disk (residual manifest with the sample removed by the purchaser).
         /// </summary>
         public static bool TryFindClassicSample(
-            string moduleId, string sampleSubfolder, out string assetsFolder, out SusSetManifest manifest)
+            string moduleId, string sampleSubfolder, out string assetsFolder, out SusModuleManifest manifest)
         {
             assetsFolder = null;
             manifest = null;
 
-            if (!TryFindManifest(out var manifestPath, out var json))
+            if (!TryFindModuleManifest(moduleId, out _, out var json))
                 return false;
 
-            manifest = SusSetManifest.Parse(json);
-            if (manifest?.modules == null)
-                return false;
-
-            var mod = manifest.modules.FirstOrDefault(m =>
-                string.Equals(m.id, moduleId, StringComparison.OrdinalIgnoreCase));
-            if (mod == null || string.IsNullOrEmpty(mod.dir))
+            manifest = SusModuleManifest.Parse(json);
+            if (manifest == null || string.IsNullOrEmpty(manifest.root) || string.IsNullOrEmpty(manifest.dir))
                 return false;
 
             var candidate = string.IsNullOrEmpty(sampleSubfolder)
-                ? $"Assets/{manifest.root}/Samples/{mod.dir}"
-                : $"Assets/{manifest.root}/Samples/{mod.dir}/{sampleSubfolder}";
+                ? $"Assets/{manifest.root}/Samples/{manifest.dir}"
+                : $"Assets/{manifest.root}/Samples/{manifest.dir}/{sampleSubfolder}";
             if (!Directory.Exists(candidate))
                 return false;
 
@@ -60,18 +74,26 @@ namespace Sharq.Core.Editor.Diagnostics
             return true;
         }
 
-        static bool TryFindManifest(out string assetPath, out string json)
+        private static bool TryFindModuleManifest(string moduleId, out string assetPath, out string json)
         {
             assetPath = null;
             json = null;
-            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("sus-set"))
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets("sus-module"))
             {
                 var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                if (!string.Equals(Path.GetFileName(path), SusSetDoctor.ManifestFileName, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(Path.GetFileName(path), SusSetDoctor.ModuleManifestFileName, StringComparison.OrdinalIgnoreCase))
                     continue;
-                try { json = File.ReadAllText(path); }
-                catch (IOException) { return false; } // transient (mid-import)
+
+                string text;
+                try { text = File.ReadAllText(path); }
+                catch (IOException) { continue; } // transient (mid-import) — try the next candidate
+
+                var parsed = SusModuleManifest.Parse(text);
+                if (parsed == null || !string.Equals(parsed.id, moduleId, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 assetPath = path;
+                json = text;
                 return true;
             }
             return false;
