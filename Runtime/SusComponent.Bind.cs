@@ -14,13 +14,25 @@ namespace Sharq.Core
     {
         /// <summary>
         /// v-if: add/remove element from visual tree reactively.
-        /// Parent is remembered on first hide and used to re-add on show.
+        /// Parent AND sibling index are remembered on hide and used to re-insert on show,
+        /// so the element returns to its original template position instead of jumping
+        /// to the end of the parent's children.
         /// </summary>
         /// <remarks>
         /// Sharq currently emits <c>BindVisibility</c> before <c>parent.Add(el)</c>.
         /// When the condition is false on first run, <paramref name="el"/> has no parent yet —
         /// we force <see cref="DisplayStyle.None"/> so the element stays hidden after the
         /// subsequent Add (e.g. SusSelect search field with Searchable=false).
+        ///
+        /// Bug history: re-adding via <c>parent.Add(el)</c> always appended at the END of the
+        /// children list, regardless of where the element was in the template. Any v-if element
+        /// that starts hidden (falsy prop at Mounted) and is later revealed — e.g. a leading
+        /// caption Label bound to a Prop set after construction via a Bind() helper — would jump
+        /// from its authored position (first child) to last child, landing after siblings that
+        /// should visually follow it (T-421, 2026-08-13: SusWedgeSlider label rendered BELOW the
+        /// control instead of above). Fix: remember the sibling index at removal time and
+        /// <see cref="VisualElement.Insert"/> back at that index (clamped to current child count)
+        /// on re-show.
         /// </remarks>
         protected WatchHandle BindVisibility(VisualElement el, Func<bool> getter)
         {
@@ -28,6 +40,7 @@ namespace Sharq.Core
             if (getter == null) throw new ArgumentNullException(nameof(getter));
 
             VisualElement rememberedParent = null;
+            int rememberedIndex = -1;
 
             var h = ReactiveEffect(() =>
             {
@@ -38,13 +51,19 @@ namespace Sharq.Core
                         el.style.display = StyleKeyword.Null;
 
                     if (el.parent == null && rememberedParent != null)
-                        rememberedParent.Add(el);
+                    {
+                        var insertAt = rememberedIndex >= 0
+                            ? Math.Min(rememberedIndex, rememberedParent.childCount)
+                            : rememberedParent.childCount;
+                        rememberedParent.Insert(insertAt, el);
+                    }
                 }
                 else
                 {
                     if (el.parent != null)
                     {
                         rememberedParent = el.parent;
+                        rememberedIndex = rememberedParent.IndexOf(el);
                         el.RemoveFromHierarchy();
                     }
                     else
