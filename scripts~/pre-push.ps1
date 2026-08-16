@@ -7,6 +7,23 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
+# --- docs consistency gate (package scope; skip when tooling absent) ---
+# T-553: gate runs ALWAYS, before the version check, exactly like sus-router/kit/game.
+# It used to run only when .cs/.sharq/.asmdef changed, so a docs-only push of sus-core
+# skipped the docs gate entirely. `--scope sus-core` judges files of THIS package
+# (foreign findings are listed, not counted); umbrella gate stays `npm run docs:verify`.
+$pkgName = Split-Path -Leaf $repoRoot
+$docsTool = Join-Path (Split-Path -Parent $repoRoot) "tools\docs-tool\index.mjs"
+if (Test-Path $docsTool) {
+    node $docsTool verify --scope $pkgName
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[pre-push] docs verify failed for $pkgName - fix findings inside the package and retry" -ForegroundColor Red
+        exit 1
+    }
+} else {
+    Write-Host "[pre-push] docs check skipped (no tools/docs-tool)" -ForegroundColor DarkGray
+}
+
 function Test-VersionGreaterThan([string]$New, [string]$Old) {
     if ($New -eq $Old) { return $false }
     # sort -V equivalent via [version] when possible, else string compare of parts
@@ -72,19 +89,6 @@ if (-not (Test-VersionGreaterThan $newVersion $oldVersion)) {
     Write-Host "  git push" -ForegroundColor White
     Write-Host ""
     exit 1
-}
-
-# --- docs consistency gate (skip when tooling absent) ---
-$pkgName = Split-Path -Leaf $repoRoot
-$docsTool = Join-Path (Split-Path -Parent $repoRoot) "tools\docs-tool\index.mjs"
-if (Test-Path $docsTool) {
-    node $docsTool verify --scope $pkgName
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[pre-push] docs check failed - fix docs consistency and retry" -ForegroundColor Red
-        exit 1
-    }
-} else {
-    Write-Host "[pre-push] docs check skipped" -ForegroundColor DarkGray
 }
 
 Write-Host "[pre-push] Version check OK: $oldVersion -> $newVersion" -ForegroundColor Green
