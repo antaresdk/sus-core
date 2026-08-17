@@ -55,7 +55,7 @@
 [ClickAudit] Active: 'SusButton' blocked at center. Reason: Covered by 'SusTooltip'
 ```
 
-**Integration:** an element registers itself via `SetClickAuditDescription("Name")` in `Created()`. Already built into 16 downstream components <!-- sus:ok local audit count -->.
+**Integration:** an element registers itself via `SetClickAuditDescription("Name")` in `Created()`. Already built into 50 downstream components (kit 40 + game 10) <!-- sus:ok local audit count -->.
 
 ---
 
