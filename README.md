@@ -1,3 +1,11 @@
+<p align="center">
+  <img src="Documentation~/images/sharq-mark.png" width="96" height="96" alt="Sharq mark">
+</p>
+
+<p align="center">
+  <img src="Documentation~/images/readme-banner.png" width="1280" height="640" alt="Sharq UI System Core — single-file components for Unity UI Toolkit">
+</p>
+
 # SusCore
 
 **Foundation of the SUS UI system.** Vue-like single-file components for Unity UI Toolkit — reactivity, SFC compiler, directives, slots, scoped CSS, themes, breakpoints, world-space, console.
