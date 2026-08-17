@@ -7,6 +7,29 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.18] - 2026-08-18
+
+### Added
+- **`SusMotion`** — code-driven tween builder for UITK inline styles (opacity / scale / translate /
+  rotate / background-color) with a fluent API, `SusEase` curves, `SusRestoreMode`, presets
+  (`SusMotionPresets`: FadeIn/Out, SlideIn/Out, Bounce, PunchScale, Shake) and
+  `SusMotionStagger.Children`. One active play per target; distinct from `SusTransition`
+  (USS enter/leave phases). Tests added.
+
+### Fixed
+- WebGL `RangeError: Maximum call stack size exceeded` on deep synchronous mounts: a bind /
+  `WatchEffect` action that adds a freshly built child during the parent's own attach-flush
+  re-entered `FlushPendingBindUpdatesOnAttach` one stack level deeper per nested reveal. The
+  synchronous flush depth is now capped at 1; nested flushes are queued and drained iteratively
+  by the outermost caller within the same tick (nothing is deferred to the scheduler, nothing
+  is dropped). Regression tests added.
+
+### Changed
+- README: first-touch section (requirements, `.sharq` quickstart, exit cost); legacy product
+  comparison dropped.
+- Versioned hooks: `scripts~/pre-push` / `scripts~/prepare-commit-msg` carry the attribution
+  guard (no AI trailers in the pushed range).
+
 ## [1.0.17] - 2026-08-17
 
 ### Added
