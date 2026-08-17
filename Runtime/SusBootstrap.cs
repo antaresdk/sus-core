@@ -545,8 +545,16 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Runtime PanelSettings for the world UIDocument. Sets
-        /// <c>renderMode = WorldSpace</c> when the Unity version exposes that API (6.2+).
+        /// Runtime PanelSettings for the world UIDocument. Stays in Unity's default render mode
+        /// (Screen Space) until the FIRST element is actually attached — <see cref="SusWorldSpacePanel"/>
+        /// switches it to WorldSpace lazily via <see cref="TrySetWorldSpaceRenderMode"/> at that
+        /// point (T-645). <see cref="EnsureWorldSpacePanel"/> creates this panel unconditionally
+        /// for every <see cref="SusApp"/> (unless <c>UseWorldSpace(false)</c>), so the common case —
+        /// an app that never mounts world-space UI — must not pay for a live WorldSpace-mode panel
+        /// that has zero attachments: on Unity 6000.3.17f1 an always-on, empty WorldSpace panel was
+        /// found to trip the engine's internal "Access version should be odd when acquiring lock"
+        /// assert continuously in Play mode (reproduced with SusWorldSpacePanel disabled → 0 asserts
+        /// in 5s vs. continuous spam re-enabled, independent of any capture driver/MCP polling).
         /// </summary>
         public static PanelSettings CreateWorldSpacePanelSettings()
         {
@@ -557,7 +565,6 @@ namespace Sharq.Core
             var ps = ScriptableObject.CreateInstance<PanelSettings>();
             ps.name = "SusWorldPanelSettings (auto-created)";
             ps.scaleMode = PanelScaleMode.ConstantPixelSize;
-            TrySetWorldSpaceRenderMode(ps);
 
             var tss = UnityEngine.Resources.Load<ThemeStyleSheet>(ResourcePath + "SusDefault");
             if (tss != null)
@@ -568,9 +575,12 @@ namespace Sharq.Core
 
         /// <summary>
         /// Sets PanelSettings.renderMode to WorldSpace via reflection so the package still
-        /// compiles against Unity 6000.0 (API shipped in 6.2+). No-op if unavailable.
+        /// compiles against Unity 6000.0 (API shipped in 6.2+). No-op if unavailable. Called
+        /// lazily by <see cref="SusWorldSpacePanel"/> on first <c>AttachElement</c> (T-645) —
+        /// NOT at panel creation time, so an app that never uses world-space UI never switches
+        /// its always-on auto-created panel into WorldSpace mode.
         /// </summary>
-        static void TrySetWorldSpaceRenderMode(PanelSettings ps)
+        internal static void TrySetWorldSpaceRenderMode(PanelSettings ps)
         {
             if (ps == null) return;
             var prop = typeof(PanelSettings).GetProperty("renderMode");
