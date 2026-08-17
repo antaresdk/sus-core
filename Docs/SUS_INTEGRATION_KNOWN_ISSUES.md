@@ -34,13 +34,13 @@ public static SusBreakpointService Attach(VisualElement root)
 public static void Detach(VisualElement root)
 ```
 
-Singleton properties `Instance` No.
+There is no singleton property `Instance`.
 
 **Solution:** `SusBreakpointService.Attach(_root)` instead of `.Instance.Attach()`.
 
 ---
 
-## 3. `SusBootstrap.ApplyDefaultTSS` accepts `UIDocument`, Not `VisualElement`
+## 3. `SusBootstrap.ApplyDefaultTSS` accepts `UIDocument`, not `VisualElement`
 
 **Symptom:** `error CS1503: Argument 1: cannot convert from 'VisualElement' to 'UIDocument'`
 
@@ -185,7 +185,7 @@ if (IsCustomComponent(typeName) && ...)
 ## 10. `#nullable enable` - absent in manual and generated ones `.cs`
 
 **Symptom:** `warning CS8632: The annotation for nullable reference types should only be used in code within a '#nullable' annotations context`  
-And also `warning CS8669` For `.g.cs`.
+There's also `warning CS8669` for `.g.cs`.
 
 **Reason:** The project uses `T?` (nullable reference types) but the directive is not included in any manual `.cs`, nor in the generated `.g.cs`.
 
@@ -272,17 +272,17 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 |---|---|
 | `Runtime/SusComponent.cs` | Added `BindListFor<T>` + non-generic `BindListFor` |
 | `Runtime/OverlayHost.cs` | Full implementation: `AddToOverlay`, `RemoveFromOverlay`, `Stack`, `Count`, `InstallFocusTrap`, `ValidateIsLastChild`, `DumpStack` |
-| `Editor/SourceGenerator/Generator/BuildMethodGenerator.cs` | `__wrap` always being created; `InferItemType` For `Prop<List<T>>`; `text` on custom components → `SetChildProp`; `#nullable enable` in the generated files; `ResolvePropExpr` For `.Value` unwrapping |
+| `Editor/SourceGenerator/Generator/BuildMethodGenerator.cs` | `__wrap` always being created; `InferItemType` for `Prop<List<T>>`; `text` on custom components → `SetChildProp`; `#nullable enable` in the generated files; `ResolvePropExpr` for `.Value` unwrapping |
 
 ### sus-router (8 files)
 
 | File | What's fixed |
 |---|---|
-| `Runtime/SusScreen.cs` | Created by: lifecycle `BeforeEnter`/`Entered`/`BeforeRouteUpdate`/`BeforeLeave`/`Left`, `GetProp<T>`/`GetProp`, `RegisterChildView`, `ChildView`/`ChildViews` |
-| `Runtime/SusModal.cs` | Created by: lifecycle `Shown`/`BeforeDismiss`/`Dismissed`, `Dismiss()` |
-| `Runtime/SusModalService.cs` | Created by: modal stack, `Show`/`Close`/`CloseAll` |
-| `Runtime/SusTransitionService.cs` | Created by: Transition Animation Stub |
-| `Runtime/SusOverlayServices.cs` | Created by: aggregation `Host`/`ModalService`/`TransitionService` |
+| `Runtime/SusScreen.cs` | Created: lifecycle `BeforeEnter`/`Entered`/`BeforeRouteUpdate`/`BeforeLeave`/`Left`, `GetProp<T>`/`GetProp`, `RegisterChildView`, `ChildView`/`ChildViews` |
+| `Runtime/SusModal.cs` | Created: lifecycle `Shown`/`BeforeDismiss`/`Dismissed`, `Dismiss()` |
+| `Runtime/SusModalService.cs` | Created: modal stack, `Show`/`Close`/`CloseAll` |
+| `Runtime/SusTransitionService.cs` | Created: transition animation stub |
+| `Runtime/SusOverlayServices.cs` | Created: aggregation `Host`/`ModalService`/`TransitionService` |
 | `Runtime/SusRouter.cs` | `FindCommonPrefixDepth` internal→public; `SetRouteView` internal→public; `Init()` fix `OverlayServices.Host`; `BeforeEnter`/`BeforeLeave` return `bool` instead of `void` |
 | `Runtime/StandardScreens/*.cs` (5 files) | Access modifiers override → `public`; `HostScreen*` — `new` workaround for bug CS0507 |
 | `Runtime/Tests/*.cs` + `Editor/Tests/*.cs` (3 files) | Access modifiers override → `public`
@@ -300,14 +300,14 @@ private void GoToSquadManager() => DemoBootstrapper.Instance.Router.Push("/squad
 1. **Always** enable `#nullable enable` in `.cs` files and the project's `.asmdef`
 2. **Always** add `$using System.Linq;` in `.sharq` files where `.Select/.Sum/.Max/.ToList` is used
 3. Router is accessible through its bootstrapper (`YourBootstrapper.Instance.Router`)
-4. `SusRouterModal.Dismiss()` do not call - use `Router.ModalService.Close()`
+4. Don't call `SusRouterModal.Dismiss()` - use `Router.ModalService.Close()`
 5. `SusRouteRecord.Config` - only through the constructor
 6. `SusBreakpointService.Attach(root)` - static method, not singleton
-7. `SusBootstrap.ApplyDefaultTSS(UIDocument)` - Not `VisualElement`
+7. `SusBootstrap.ApplyDefaultTSS(UIDocument)` accepts `UIDocument`, not `VisualElement`
 8. `@click` in `.sharq` — prefer reference methods, avoid inline lambdas
 9. Warnings from generated UI package folders - expected, not design errors
 10. **Don't** create scenes manually - use Editor script `Tools → SusDemo → Create DemoScene`
-11. **After changing the signatures of base classes** (access modifiers, new virtual methods) - delete `Library/Bee/` And `Library/ScriptAssemblies/` to force a complete recompilation
+11. **After changing the signatures of base classes** (access modifiers, new virtual methods) - delete `Library/Bee/` and `Library/ScriptAssemblies/` to force a complete recompilation
 12. **SusScreen Lifecycle methods** - all `public virtual`; override → `public override`; if CS0507 does not go away - bypass via `public new` (with loss of polymorphism)
 
 ---
@@ -339,7 +339,7 @@ public class SplashScreen : SusScreen
 
 **Symptom:** `ArgumentException: Object of type 'Sharq.Core.Prop`1[System.Int32]' cannot be converted to type 'System.Single'.`
 
-**Reason:** Generator for `:value="Progress"` (Where `Progress` — `Prop<int>`) generates:
+**Reason:** Generator for `:value="Progress"` (where `Progress` — `Prop<int>`) generates:
 
 ```csharp
 BindChildProp(__el, "value", () => Progress);  // ← returns Prop<int>, not int
@@ -370,7 +370,7 @@ if (value != null && IsPropType(value.GetType()))
 
 **Symptom:** The “Graphics” block in the settings is empty - there are no radio buttons.
 
-**Cause:** `SettingsContent.sharq` used `<sus:SusRadioGroup :model="..." :items="..." />`, But `SusRadioGroup` - slot component (`<slot>`), expecting children `SusRadio`.
+**Cause:** `SettingsContent.sharq` used `<sus:SusRadioGroup :model="..." :items="..." />`, but `SusRadioGroup` - slot component (`<slot>`), expecting children `SusRadio`.
 
 **Correction:**
 ```xml
@@ -408,7 +408,7 @@ error CS0507: 'X.Left()': cannot change access modifiers when overriding 'public
 error CS0507: 'X.BeforeLeave(SusRoute)': cannot change access modifiers when overriding 'protected internal' inherited member 'SusScreen.BeforeLeave(SusRoute)'
 ```
 
-**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, Part `protected internal`. Standard screens (`HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`) and tests used `protected internal override`/`public override` in different combinations, which caused CS0507 when there was a mismatch with the base class.
+**Cause:** `SusScreen.cs` created in issue #19 had inconsistent access modifiers for lifecycle methods - some were `public`, others `protected internal`. Standard screens (`HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`, `HostScreen`) and tests used `protected internal override`/`public override` in different combinations, which caused CS0507 when there was a mismatch with the base class.
 
 **Correction (07/08/2026):**
 1. Base class `SusScreen` — all lifecycle methods are reduced to `public virtual`:
@@ -420,7 +420,7 @@ error CS0507: 'X.BeforeLeave(SusRoute)': cannot change access modifiers when ove
 
 2. All override in heirs - `public override`.
 
-3. **Bug workaround in 3 files:** `HostScreen`, `HostScreen`, `HostScreen` - methods `Entered()` And `Left()` use `public new void` instead of `public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
+3. **Bug workaround in 3 files:** `HostScreen`, `HostScreen`, `HostScreen` - methods `Entered()` and `Left()` use `public new void` instead of `public override void`. The Unity compiler issues CS0507 despite a complete match of signatures - a probable Roslyn/caching bug in this version of Unity (appears selectively, not in all files).
 
 **Side effect of bypassing `new`:** router calls `SusScreen.Entered()`/`SusScreen.Left()` by reference of the base type, so with `new` an empty base implementation will be called. The life cycle of these three screens is incomplete. The correct solution is the Template Method pattern (`public void Left() { OnLeft(); }` + `protected virtual void OnLeft()`).
 
@@ -471,7 +471,7 @@ public SusRouteView ChildView => _childViews.Count > 0 ? _childViews[0] : null;
 
 ---
 
-## 24. Caching DLLs in `Library/Bee/` And `Library/ScriptAssemblies/`
+## 24. Caching DLLs in `Library/Bee/` and `Library/ScriptAssemblies/`
 
 **Symptom:** edits `.cs` files are applied, but Unity continues to throw errors for the old code (for example, CS0507 for lines that are no longer in the file).
 
