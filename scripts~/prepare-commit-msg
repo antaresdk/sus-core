@@ -28,7 +28,8 @@ MSG="$1"
 if command -v grep >/dev/null 2>&1; then
     CLEAN="$MSG.sus-clean"
     # `|| true`: grep exits 1 when nothing is left to print — for this hook that is not an error.
-    grep -Eiv '^[[:space:]]*(Co-authored-by:[[:space:]]*Cursor([[:space:]]+Agent)?[[:space:]]*<cursoragent@cursor\.com>|Made-with:[[:space:]]*Cursor)[[:space:]]*$|cursoragent@cursor\.com' \
+    # Any AI/agent attribution: Cursor, Claude/Anthropic, Copilot, Codex/OpenAI, "Generated with" lines.
+    grep -Eiv '^[[:space:]]*(Co-authored-by:.*(cursor|claude|anthropic|copilot|codex|openai|noreply@anthropic\.com|cursoragent@cursor\.com)|Made-with:[[:space:]]*Cursor|.*Generated with \[?(Claude|Cursor|Copilot|Codex))|cursoragent@cursor\.com|noreply@anthropic\.com' \
         "$MSG" > "$CLEAN" 2>/dev/null || true
     if command -v cmp >/dev/null 2>&1 && cmp -s "$MSG" "$CLEAN"; then
         : # nothing was removed — leave the message file exactly as git wrote it
