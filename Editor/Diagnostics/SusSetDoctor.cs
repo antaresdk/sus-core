@@ -26,6 +26,12 @@ namespace Sharq.Core.Editor.Diagnostics
     ///     updated (or manually replaced) while others were not.
     ///  4. <b>Unattributed files</b>, <b>missing module manifests</b>, <b>incomplete sets</b> and
     ///     <b>relocated folders</b> — see the "правило атрибуции" below.
+    ///  5. <b>Root file provenance</b> (<see cref="DetectRootFileProvenance"/>, T-561) — the
+    ///     generated <c>README.txt</c>/<c>LICENSE.txt</c>/<c>Third-Party Notices.txt</c> share ONE
+    ///     path per set root; re-importing a smaller set on top of an already-installed larger one
+    ///     silently overwrites them with the smaller set's content (e.g. Complete's demo-art
+    ///     notices quietly dropped out of the combined Third-Party Notices.txt after a Kit
+    ///     re-import).
     ///
     /// <b>Правило атрибуции (§2.3 D7).</b> Before T-556 a single shared
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> was overwritten by WHICHEVER set was imported
@@ -67,8 +73,20 @@ namespace Sharq.Core.Editor.Diagnostics
         private const string SetDescriptorSuffix = ".json";
         private const string PackageIdPrefix = "com.sharq-it.sus.";
 
+        /// <summary>Generated root files whose CONTENT is shared/overwritable per set root (they
+        /// are listed in a set descriptor's <c>sharedPaths</c>, not owned by any one module) —
+        /// mirrors <c>GENERATED_ROOT_FILES</c> in <c>tools/docsys/sets.mjs</c> (§5.5 point 10 /
+        /// risk R11, T-561).</summary>
+        internal static readonly string[] RootFileNames = { "README.txt", "LICENSE.txt", "Third-Party Notices.txt" };
+
         private static readonly Regex ChangelogVersionHeading =
             new(@"^##\s*\[([^\]]+)\]", RegexOptions.Multiline | RegexOptions.Compiled);
+
+        /// <summary>Matches the packer's deterministic provenance marker
+        /// (<c>Generated for: &lt;set&gt; v&lt;version&gt;</c>, no dates — <c>tools/docsys/sets.mjs::
+        /// withProvenanceMarker</c>) against a single trimmed line.</summary>
+        private static readonly Regex RootFileProvenanceMarker =
+            new(@"^Generated for:\s*(?<set>\S+)\s+v(?<version>.+)$", RegexOptions.Compiled);
 
         /// <summary>True for a per-SET descriptor filename, i.e. <c>sus-set.&lt;set&gt;.json</c>
         /// (the pre-T-556 single <c>sus-set.json</c> does NOT match — that name is never written
@@ -152,6 +170,9 @@ namespace Sharq.Core.Editor.Diagnostics
                 }
             }
             issues.AddRange(DetectVersionMismatches(presentModules, actualVersionByModuleId));
+
+            var rootFileMarkers = ReadRootFileProvenanceMarkers(setRootAbs);
+            issues.AddRange(DetectRootFileProvenance(root, presentDescriptors, rootFileMarkers));
 
             return issues;
         }
@@ -372,6 +393,122 @@ namespace Sharq.Core.Editor.Diagnostics
                     $"so every path under Assets/{m.root}/{m.dir} matches, or check for a partial/interrupted update."));
             }
             return issues;
+        }
+
+        /// <summary>State (10, §5.5 point 10 / risk R11): the generated root files (README.txt,
+        /// LICENSE.txt, Third-Party Notices.txt) are a SET-level shared path
+        /// (<c>sharedPaths</c>), not owned by any module — a classic re-import of a SMALLER set
+        /// on top of an ALREADY-INSTALLED LARGER one silently overwrites them with the smaller
+        /// set's content (same path, last import wins; Unity's importer has no notion of "these
+        /// three files should be a union"). The real-world case that motivated this: a Complete
+        /// owner re-imports/updates Kit, and the combined <c>Third-Party Notices.txt</c> quietly
+        /// drops Game's demo-art attributions — a legal document silently regressing, not
+        /// cosmetics. The packer stamps a deterministic marker
+        /// (<c>Generated for: &lt;set&gt; v&lt;version&gt;</c>, no dates) as the last non-empty
+        /// line of each such file; this compares the set it names against every OTHER present
+        /// set descriptor and flags it when that other set is a STRICT superset of the
+        /// marker's module list. Never a "delete" hint (§5.5 point 10 explicitly): the files on
+        /// disk are legitimate content of the smaller set, just not the most complete content
+        /// currently available.</summary>
+        internal static List<SusValidationIssue> DetectRootFileProvenance(
+            string root,
+            IReadOnlyList<SusSetManifest> presentDescriptors,
+            IReadOnlyDictionary<string, (string set, string version)> rootFileMarkers)
+        {
+            var issues = new List<SusValidationIssue>();
+            if (rootFileMarkers == null || rootFileMarkers.Count == 0) return issues;
+            if (presentDescriptors == null || presentDescriptors.Count < 2) return issues; // nothing to be a subset OF
+
+            // One re-import normally stamps every generated root file with the SAME marker — group
+            // by (markerSet -> supersetSet) so that produces one issue naming all affected files,
+            // not one issue per file.
+            var groups = new Dictionary<(string markerSet, string supersetSet), List<string>>();
+            foreach (var kv in rootFileMarkers)
+            {
+                var fileName = kv.Key;
+                var markerSet = kv.Value.set;
+                var markerDesc = presentDescriptors.FirstOrDefault(d => string.Equals(d.set, markerSet, StringComparison.Ordinal));
+                if (markerDesc == null) continue; // marker names a set Doctor has no present descriptor for — nothing to compare against
+
+                var superset = presentDescriptors.FirstOrDefault(d =>
+                    !string.Equals(d.set, markerSet, StringComparison.Ordinal) && IsStrictModuleSuperset(d.modules, markerDesc.modules));
+                if (superset == null) continue;
+
+                var key = (markerDesc.set, superset.set);
+                if (!groups.TryGetValue(key, out var files)) groups[key] = files = new List<string>();
+                files.Add(fileName);
+            }
+
+            foreach (var kv in groups)
+            {
+                var markerDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.markerSet, StringComparison.Ordinal));
+                var supersetDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.supersetSet, StringComparison.Ordinal));
+                issues.Add(BuildRootFileProvenanceIssue(root, markerDesc, supersetDesc, kv.Value));
+            }
+            return issues;
+        }
+
+        private static bool IsStrictModuleSuperset(IReadOnlyList<string> maybeSuperset, IReadOnlyList<string> maybeSubset)
+        {
+            var superset = new HashSet<string>(maybeSuperset ?? Array.Empty<string>(), StringComparer.Ordinal);
+            var subset = new HashSet<string>(maybeSubset ?? Array.Empty<string>(), StringComparer.Ordinal);
+            if (superset.Count <= subset.Count) return false;
+            foreach (var id in subset)
+                if (!superset.Contains(id)) return false;
+            return true;
+        }
+
+        private static SusValidationIssue BuildRootFileProvenanceIssue(
+            string root, SusSetManifest markerDesc, SusSetManifest supersetDesc, List<string> files)
+        {
+            var sortedFiles = files.OrderBy(f => f, StringComparer.Ordinal).ToList();
+            var fileList = string.Join(", ", sortedFiles.Select(f => $"'{f}'"));
+            var verb = sortedFiles.Count == 1 ? "was" : "were";
+            return SusValidationIssue.Warning("SetDoctor.RootFileProvenance",
+                $"{fileList} in 'Assets/{root}' {verb} generated for '{markerDesc.displayName}' ('{markerDesc.set}'), " +
+                $"but the larger installed set '{supersetDesc.displayName}' ('{supersetDesc.set}') is also present — " +
+                "content only the larger set adds (e.g. its own demo-art third-party notices) is missing from the " +
+                "combined file(s).",
+                $"Reimport '{supersetDesc.displayName}' to regenerate these files for the full set.");
+        }
+
+        /// <summary>Parses the packer's deterministic provenance marker from the LAST non-empty
+        /// line of a generated root file's text. Returns null when there is no such line (the
+        /// file is hand-edited, foreign, or from a version of the packer before T-561) — silence,
+        /// not a false positive, when there is no signal to compare against.</summary>
+        internal static (string set, string version)? ParseRootFileProvenanceMarker(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            for (var i = lines.Length - 1; i >= 0; i--)
+            {
+                var line = lines[i].Trim();
+                if (line.Length == 0) continue;
+                var m = RootFileProvenanceMarker.Match(line);
+                if (!m.Success) return null;
+                return (m.Groups["set"].Value, m.Groups["version"].Value.Trim());
+            }
+            return null;
+        }
+
+        /// <summary>Reads and parses every present <see cref="RootFileNames"/> entry under the
+        /// set root. A file that's missing, unreadable (transient mid-import), or carries no
+        /// marker is silently absent from the result — <see cref="DetectRootFileProvenance"/>
+        /// only ever compares markers it actually found.</summary>
+        private static Dictionary<string, (string set, string version)> ReadRootFileProvenanceMarkers(string setRootAbs)
+        {
+            var result = new Dictionary<string, (string set, string version)>();
+            foreach (var fileName in RootFileNames)
+            {
+                var path = Path.Combine(setRootAbs, fileName);
+                if (!File.Exists(path)) continue;
+                string text;
+                try { text = File.ReadAllText(path); }
+                catch (IOException) { continue; } // transient (mid-import) — next trigger retries
+                var marker = ParseRootFileProvenanceMarker(text);
+                if (marker.HasValue) result[fileName] = marker.Value;
+            }
+            return result;
         }
 
         /// <summary>State (4d): a module manifest's declared root/dir disagree with where the

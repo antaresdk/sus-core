@@ -395,6 +395,171 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreEqual("SetDoctor.Relocated", issues[0].Category);
         }
 
+        // ─── ParseRootFileProvenanceMarker (T-561, §5.5 point 10 / risk R11) ───
+
+        [Test]
+        public void ParseRootFileProvenanceMarker_ValidMarker_ParsesSetAndVersion()
+        {
+            var text = "Some notices text.\n\nGenerated for: kit-set v1.0.19\n";
+
+            var marker = SusSetDoctor.ParseRootFileProvenanceMarker(text);
+
+            Assert.IsTrue(marker.HasValue);
+            Assert.AreEqual("kit-set", marker.Value.set);
+            Assert.AreEqual("1.0.19", marker.Value.version);
+        }
+
+        [Test]
+        public void ParseRootFileProvenanceMarker_TrailingBlankLines_StillFindsLastNonEmptyLine()
+        {
+            var text = "body\n\nGenerated for: game-set v1.0.24\n\n\n";
+
+            var marker = SusSetDoctor.ParseRootFileProvenanceMarker(text);
+
+            Assert.IsTrue(marker.HasValue);
+            Assert.AreEqual("game-set", marker.Value.set);
+            Assert.AreEqual("1.0.24", marker.Value.version);
+        }
+
+        [Test]
+        public void ParseRootFileProvenanceMarker_NoMarkerLine_ReturnsNull()
+        {
+            Assert.IsNull(SusSetDoctor.ParseRootFileProvenanceMarker("just some body text\nno marker here\n"));
+        }
+
+        [Test]
+        public void ParseRootFileProvenanceMarker_LastLineIsNotTheMarker_ReturnsNull()
+        {
+            // the marker must be the LAST non-empty line — a hand-edited file that appended
+            // something after it is no longer trustworthy provenance
+            var text = "body\n\nGenerated for: kit-set v1.0.19\n\nsomeone appended this\n";
+
+            Assert.IsNull(SusSetDoctor.ParseRootFileProvenanceMarker(text));
+        }
+
+        [TestCase("")]
+        [TestCase(null)]
+        public void ParseRootFileProvenanceMarker_EmptyOrNull_ReturnsNull(string text)
+        {
+            Assert.IsNull(SusSetDoctor.ParseRootFileProvenanceMarker(text));
+        }
+
+        // ─── DetectRootFileProvenance (T-561) ──────────────────────────────────
+
+        [Test]
+        public void DetectRootFileProvenance_MarkerNamesStrictSubsetOfPresentSet_ReportsWarningWithoutDelete()
+        {
+            // real-world case (§5.5 point 10): Complete (game-set) already installed, purchaser
+            // re-imports Kit on top — README/LICENSE/Third-Party Notices.txt get overwritten with
+            // Kit's content, whose marker names 'kit-set' — a strict subset of 'game-set'.
+            var kitSet = MakeDescriptor("kit-set", "kit", "core", "router", "kit");
+            var gameSet = MakeDescriptor("game-set", "game", "core", "router", "kit", "game");
+            var descriptors = new[] { kitSet, gameSet };
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["Third-Party Notices.txt"] = ("kit-set", "1.0.19"),
+            };
+
+            var issues = SusSetDoctor.DetectRootFileProvenance(Root, descriptors, markers);
+
+            Assert.AreEqual(1, issues.Count);
+            Assert.AreEqual("SetDoctor.RootFileProvenance", issues[0].Category);
+            Assert.AreEqual(SusValidationSeverity.Warning, issues[0].Severity);
+            StringAssert.Contains("Third-Party Notices.txt", issues[0].Message);
+            StringAssert.Contains("kit-set", issues[0].Message);
+            StringAssert.Contains("game-set", issues[0].Message);
+            StringAssert.DoesNotContain("delete", (issues[0].FixHint ?? "").ToLowerInvariant());
+            StringAssert.DoesNotContain("delete", issues[0].Message.ToLowerInvariant());
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_MultipleFilesSameMarker_GroupedIntoOneIssue()
+        {
+            var kitSet = MakeDescriptor("kit-set", "kit", "core", "router", "kit");
+            var gameSet = MakeDescriptor("game-set", "game", "core", "router", "kit", "game");
+            var descriptors = new[] { kitSet, gameSet };
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["README.txt"] = ("kit-set", "1.0.19"),
+                ["LICENSE.txt"] = ("kit-set", "1.0.19"),
+                ["Third-Party Notices.txt"] = ("kit-set", "1.0.19"),
+            };
+
+            var issues = SusSetDoctor.DetectRootFileProvenance(Root, descriptors, markers);
+
+            Assert.AreEqual(1, issues.Count, "one re-import stamps all generated files with the same marker — one issue, not three");
+            StringAssert.Contains("README.txt", issues[0].Message);
+            StringAssert.Contains("LICENSE.txt", issues[0].Message);
+            StringAssert.Contains("Third-Party Notices.txt", issues[0].Message);
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_MarkerNamesTheLargerSetItself_NoFinding()
+        {
+            // Complete re-imported last (normal/forward order) — root files already carry the
+            // most complete content there is; kit-set being also present must not flag anything.
+            var kitSet = MakeDescriptor("kit-set", "kit", "core", "router", "kit");
+            var gameSet = MakeDescriptor("game-set", "game", "core", "router", "kit", "game");
+            var descriptors = new[] { kitSet, gameSet };
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["Third-Party Notices.txt"] = ("game-set", "1.0.24"),
+            };
+
+            Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(Root, descriptors, markers));
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_OnlyOneDescriptorPresent_NoFinding()
+        {
+            var kitSet = MakeDescriptor("kit-set", "kit", "core", "router", "kit");
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["Third-Party Notices.txt"] = ("kit-set", "1.0.19"),
+            };
+
+            Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(Root, new[] { kitSet }, markers));
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_NoMarkersFound_NoFinding()
+        {
+            var kitSet = MakeDescriptor("kit-set", "kit", "core", "router", "kit");
+            var gameSet = MakeDescriptor("game-set", "game", "core", "router", "kit", "game");
+
+            Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(
+                Root, new[] { kitSet, gameSet }, new Dictionary<string, (string set, string version)>()));
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_MarkerNamesSetWithNoPresentDescriptor_NoFinding()
+        {
+            // the descriptor for the set named in the marker was itself removed by hand — Doctor
+            // has nothing to compare its module list against, so it says nothing rather than guess
+            var gameSet = MakeDescriptor("game-set", "game", "core", "router", "kit", "game");
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["Third-Party Notices.txt"] = ("kit-set", "1.0.19"),
+            };
+
+            Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(Root, new[] { gameSet }, markers));
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_SiblingSetsNeitherSubset_NoFinding()
+        {
+            // two unrelated sets sharing some modules but neither a strict superset of the other
+            // — e.g. two hypothetical same-tier sets — must not flag either direction
+            var setA = MakeDescriptor("a-set", "kit", "core", "router", "kit");
+            var setB = MakeDescriptor("b-set", "game", "core", "router", "game");
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["Third-Party Notices.txt"] = ("a-set", "1.0.0"),
+            };
+
+            Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(Root, new[] { setA, setB }, markers));
+        }
+
         // ─── T-557 DoD (а): kit + game manifests together -> 0 findings ───────
 
         [Test]
@@ -422,6 +587,15 @@ namespace Sharq.Core.Editor.Tests
             issues.AddRange(SusSetDoctor.DetectVersionMismatches(modules, new Dictionary<string, string>()));
             issues.AddRange(SusSetDoctor.DetectRelocatedModules(modules.Select(m => (m, Root, m.dir)).ToList()));
             issues.AddRange(SusSetDoctor.DetectRelocatedDescriptors(descriptors.Select(d => (d, Root)).ToList()));
+            // forward order (Kit then Complete, or Complete alone) — root files carry the LARGER
+            // set's marker, which is present and not a subset of anything else present
+            var rootFileMarkers = new Dictionary<string, (string set, string version)>
+            {
+                ["README.txt"] = ("game-set", "1.0.24"),
+                ["LICENSE.txt"] = ("game-set", "1.0.24"),
+                ["Third-Party Notices.txt"] = ("game-set", "1.0.24"),
+            };
+            issues.AddRange(SusSetDoctor.DetectRootFileProvenance(Root, descriptors, rootFileMarkers));
 
             CollectionAssert.IsEmpty(issues);
         }
