@@ -5,7 +5,7 @@
 **Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
 
 <!-- sus:gen ver pkg=sus-core -->
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.16`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.17`)
 <!-- /sus:gen -->
 
 ---
@@ -51,7 +51,7 @@ public class AppEntry : MonoBehaviour
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.16
+https://github.com/antaresdk/sus-core.git#v1.0.17
 ```
 <!-- /sus:gen -->
 
