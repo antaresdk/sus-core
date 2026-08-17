@@ -214,14 +214,37 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Re-arm the bind schedule after panel attach. Queued invalidations that
-        /// arrived while detached never ran (schedule was a no-op).
+        /// Catch up pending bind actions right on panel attach. Queued invalidations that
+        /// arrived while detached never ran (schedule was a no-op — see <see cref="ScheduleBindUpdate"/>).
         /// </summary>
+        /// <remarks>
+        /// T-587 (2026-08-17): this used to defer the catch-up via
+        /// <c>schedule.Execute(ApplyAllBindUpdates).ExecuteLater(0)</c>, i.e. it queued a NEW
+        /// one-shot scheduled item on <c>this</c> element's panel scheduler instead of just
+        /// running the pending actions directly. That is harmless for a single component
+        /// attaching on its own — the one-shot item fires next tick and nothing else competes
+        /// for it — but it silently dropped the flush when SEVERAL freshly-built reactive
+        /// siblings attach in the SAME synchronous cascade (e.g. a list of rows built off-panel
+        /// then added to an already-mounted host in one call — SusProfileScreenContent.SetFriends
+        /// building N SusChip rows with Label/Color set before Add()). Every sibling's
+        /// OnAttachToPanelHandler calls <c>schedule.Execute(...)</c> reentrantly on the SAME
+        /// panel scheduler within the SAME editor tick while that scheduler is itself mid-dispatch
+        /// for the ongoing attach; some of those one-shot items never got a chance to fire, so the
+        /// affected sibling's BindClass/BindVisibility never applied — permanently, since nothing
+        /// else was pending to retrigger it (confirmed live via Unity MCP: forcing the same Prop
+        /// again on the broken chip minutes later did not self-heal it either, because
+        /// re-triggering ALSO goes through <c>ScheduleBindUpdate</c> → the very same scheduler
+        /// call that was already dropping items for that element). There is no reason for this
+        /// specific catch-up to go through the scheduler at all: we are already inside the
+        /// synchronous AttachToPanelEvent dispatch, so applying pending actions directly is both
+        /// simpler and immune to sibling scheduler contention. Regression tests:
+        /// PreAttachBindFlushTests.TwoSiblings_PlainHost_PropsSetBeforeAdd_BothApplyOnSharedAttachBatch
+        /// / ThreeSiblings_SusComponentHost_PropsSetBeforeAdd_AllApplyOnSharedAttachBatch.
+        /// </remarks>
         private void FlushPendingBindUpdatesOnAttach()
         {
             if (_pendingBindActions.Count == 0) return;
-            _bindScheduleItem = schedule.Execute(ApplyAllBindUpdates);
-            _bindScheduleItem.ExecuteLater(0);
+            ApplyAllBindUpdates();
         }
 
         /// <summary>
