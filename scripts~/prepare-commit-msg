@@ -1,0 +1,47 @@
+#!/bin/sh
+# sus-prepare-commit-msg v1 — strips Cursor attribution trailers from the commit message
+# (clean public history: the umbrella agent rules forbid AI attribution in commits).
+#
+# Canonical instance lives in the umbrella tooling folder; the versioned copy inside each package
+# is `<pkg>/scripts~/prepare-commit-msg` and is BYTE-IDENTICAL to it. Install/compare from the
+# umbrella:  node tools/docs-tool/index.mjs ...   (`hooks --install` writes both sides)
+#
+# WHY /bin/sh AND NOT PowerShell (T-646). The former hook called `scripts~/prepare-commit-msg.ps1`,
+# where `Get-Content` without `-Encoding utf8` decoded the UTF-8 message file with the ANSI code
+# page of Windows PowerShell 5.1, and `Set-Content -Encoding utf8` wrote the mis-decoded characters
+# back: the REAL commit object then carried valid-but-wrong UTF-8 (an em-dash became three
+# characters; Cyrillic text was destroyed per character). The umbrella copy was fixed on
+# 2026-08-12 by adding the flag; the four package copies were not, and on 2026-08-17 the same
+# defect was caught again in a package commit. So the class is not cured by a flag but by the
+# absence of any re-encoding: `sh` and `grep` move BYTES and know no code page at all.
+#
+# Second lesson from the same incident: the file is rewritten ONLY when something was actually
+# removed. The old script rewrote it on EVERY commit (the trailing-blank-line trim ran
+# unconditionally), which is why it corrupted every non-ASCII message, not just the ones that
+# carried a trailer.
+#
+# Trailing blank lines left behind by a removed trailer are not touched here: git strips them
+# itself while cleaning up the message, so doing it again would only add a reason to rewrite.
+MSG="$1"
+[ -n "$MSG" ] && [ -f "$MSG" ] || exit 0
+
+if command -v grep >/dev/null 2>&1; then
+    CLEAN="$MSG.sus-clean"
+    # `|| true`: grep exits 1 when nothing is left to print — for this hook that is not an error.
+    grep -Eiv '^[[:space:]]*(Co-authored-by:[[:space:]]*Cursor([[:space:]]+Agent)?[[:space:]]*<cursoragent@cursor\.com>|Made-with:[[:space:]]*Cursor)[[:space:]]*$|cursoragent@cursor\.com' \
+        "$MSG" > "$CLEAN" 2>/dev/null || true
+    if command -v cmp >/dev/null 2>&1 && cmp -s "$MSG" "$CLEAN"; then
+        : # nothing was removed — leave the message file exactly as git wrote it
+    else
+        # `cat >`, not `mv`: git already knows this path, so keep the very same file.
+        cat "$CLEAN" > "$MSG"
+    fi
+    rm -f "$CLEAN"
+fi
+
+# A pre-existing repo hook (not ours) is kept and called in a chain, like pre-commit/commit-msg.
+PREV="$(dirname "$0")/prepare-commit-msg.local"
+if [ -f "$PREV" ]; then
+    sh "$PREV" "$@" || exit $?   # sh, not the exec bit: file modes are unreliable on Windows
+fi
+exit 0
