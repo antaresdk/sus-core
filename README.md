@@ -6,13 +6,15 @@
   <img src="Documentation~/images/readme-banner.png" width="1280" height="640" alt="Sharq UI System Core — single-file components for Unity UI Toolkit">
 </p>
 
-# SusCore
+# Sharq UI System Core
 
-**Foundation of the SUS UI system.** Vue-like single-file components for Unity UI Toolkit — reactivity, SFC compiler, directives, slots, scoped CSS, themes, breakpoints, world-space, console.
+**SusCore** — foundation of the SUS UI system. Vue-like single-file components for Unity UI Toolkit — reactivity, SFC compiler, directives, slots, scoped CSS, themes, breakpoints, world-space, console.
 
 **License:** [MIT](./LICENSE.md)
 
-**Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
+**Community & support:** [support@sus-ui.dev](mailto:support@sus-ui.dev) · [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
+
+**Tests & releases:** 378 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-core/releases)
 
 <!-- sus:gen ver pkg=sus-core -->
 **Package:** `com.sharq-it.sus.core` (current version — `1.0.18`)
