@@ -75,16 +75,16 @@ namespace Sharq.Core.Editor.Diagnostics
 
         /// <summary>Generated root files whose CONTENT is shared/overwritable per set root (they
         /// are listed in a set descriptor's <c>sharedPaths</c>, not owned by any one module) —
-        /// mirrors <c>GENERATED_ROOT_FILES</c> in <c>tools/docsys/sets.mjs</c> (§5.5 point 10 /
-        /// risk R11, T-561).</summary>
+        /// mirrors the equivalent list in the set packaging tool that generates these files
+        /// (§5.5 point 10 / risk R11, T-561).</summary>
         internal static readonly string[] RootFileNames = { "README.txt", "LICENSE.txt", "Third-Party Notices.txt" };
 
         private static readonly Regex ChangelogVersionHeading =
             new(@"^##\s*\[([^\]]+)\]", RegexOptions.Multiline | RegexOptions.Compiled);
 
-        /// <summary>Matches the packer's deterministic provenance marker
-        /// (<c>Generated for: &lt;set&gt; v&lt;version&gt;</c>, no dates — <c>tools/docsys/sets.mjs::
-        /// withProvenanceMarker</c>) against a single trimmed line.</summary>
+        /// <summary>Matches the set packaging tool's deterministic provenance marker
+        /// (<c>Generated for: &lt;set&gt; v&lt;version&gt;</c>, no dates) against a single
+        /// trimmed line.</summary>
         private static readonly Regex RootFileProvenanceMarker =
             new(@"^Generated for:\s*(?<set>\S+)\s+v(?<version>.+)$", RegexOptions.Compiled);
 
