@@ -14,7 +14,7 @@
 
 **Community & support:** [support@sus-ui.dev](mailto:support@sus-ui.dev) · [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
 
-**Tests & releases:** 378 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-core/releases)
+**Tests & releases:** 378 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-core/releases) <!-- sus:ok -->
 
 <!-- sus:gen ver pkg=sus-core -->
 **Package:** `com.sharq-it.sus.core` (current version — `1.0.18`)
