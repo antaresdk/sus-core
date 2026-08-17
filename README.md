@@ -20,7 +20,7 @@
 | **Themes** | `SusThemeService` + `SusTheme` (`readonly struct`) + `.theme-*` classes | ✅ |
 | **Colors (3 layers)** | `_palette.uss` (L1 `--base-*`), `_theme.uss` (L2 `--thm-*`), `design-tokens.uss` (L3 `--sus-*`) | ✅ |
 | **Fonts** | `_font.uss` (Montserrat + override), `--sus-font-*` tokens | ✅ |
-| **Icons** | Phosphor (~1512×6) + core subset, `SusIconRegistry` / providers, `SusIcon`, theme tint | ✅ |
+| **Icons** | Curated in-package subset; optional Phosphor sample for the long tail. `SusIconRegistry` / providers, `SusIconElement`, theme tint | ✅ |
 | **Breakpoints** | `SusBreakpointService`, `Prop<Breakpoint>`, `.breakpoint-*` classes on root | ✅ |
 | **OverlayHost** | Portal container, layers by `OverlayCategory`, z-order via DOM | ✅ |
 | **World-space** | `WorldSpaceService` (separate world panel preferred; OverlayCategory.World fallback) | ✅ |
@@ -81,24 +81,18 @@ Samples from this package (ThemeShowcase + Comp) — design tokens and compositi
 </tr>
 </table>
 
-## What replaces
-
-| Old (v1) | New (v2) |
-|---|---|
-| `sus` (UPM `com.sus.sfc`) | `com.sharq-it.sus.core` |
-| `sharq-ui-system` (SusCompiler.exe, LibSassHost) | `SharqFileImporter` (AssetPostprocessor) |
-| `ElementBase` — reflective | `SusComponent : VisualElement` |
-| `compiled ui/` — a mixture of manual and auto | `generated/` — auto, `.gitignored` |
-
 ## Place in the ecosystem
 
+`sus-router` is a **sibling** package that depends on this one — not a folder inside it.
+
 ```
-sus-core (this package)
-    ├── sus-router — navigation (Push/Replace/Back, screens, modals, KeepAlive)
-    └── your Unity project — consumer app
+your Unity project
+├── sus-core (this package) — reactivity, compiler, themes, overlays
+└── sus-router — navigation (screens, modals, KeepAlive); depends on this package
 ```
 
 ## Documentation
 
-Full documentation: [`Docs/README.md`](./Docs/README.md)
+- Package guides: [`Docs/README.md`](./Docs/README.md)
+- Product site: [sus-ui.dev](https://sus-ui.dev)
 
