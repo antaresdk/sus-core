@@ -7,7 +7,7 @@
 **Community & support:** [Discord](https://discord.gg/gwS9nwqWWj) · [Telegram](https://t.me/sus_public)
 
 <!-- sus:gen ver pkg=sus-core -->
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.17`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.18`)
 <!-- /sus:gen -->
 
 ---
@@ -74,7 +74,7 @@ Samples from this package (ThemeShowcase + Comp) — design tokens and compositi
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.17
+https://github.com/antaresdk/sus-core.git#v1.0.18
 ```
 <!-- /sus:gen -->
 
@@ -90,6 +90,8 @@ Configuration (`Assets/sus.config.json`):
   "HotReloadStatePreserve": true
 }
 ```
+
+**Public demo** (cloneable runtime example): [sus-demo-public](https://github.com/antaresdk/sus-demo-public)
 
 ---
 
