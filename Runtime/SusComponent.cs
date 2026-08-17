@@ -241,10 +241,91 @@ namespace Sharq.Core
         /// PreAttachBindFlushTests.TwoSiblings_PlainHost_PropsSetBeforeAdd_BothApplyOnSharedAttachBatch
         /// / ThreeSiblings_SusComponentHost_PropsSetBeforeAdd_AllApplyOnSharedAttachBatch.
         /// </remarks>
+        // ─── T-726: bounded re-entrant flush (trampoline) ──────────────────
+        // A bind action applied by ApplyAllBindUpdates() can itself perform a structural
+        // change (BindVisibility re-Insert, a WatchEffect that Add()s a freshly-built
+        // child) that attaches MORE elements to an already-on-panel parent — and UITK
+        // dispatches THAT attach synchronously, nested inside the very call we are in.
+        // If that nested element ALSO has a pending flush (very common: freshly-built
+        // reactive content, props set before Add — exactly the T-587 pattern), calling
+        // ApplyAllBindUpdates() directly here would recurse the SAME small chain of
+        // frames (OnAttachToPanelHandler → FlushPendingBindUpdatesOnAttach →
+        // ApplyAllBindUpdates → action) once per nesting level. For a static handful of
+        // levels that's invisible; for a screen whose reveal cascades several levels
+        // deep in one synchronous mount (GameFlow app boot building the whole initial
+        // route tree) it compounds into a deep, repeating call pattern — harmless on
+        // Mono's generous Editor stack, but exactly the shape of the WebGL wasm
+        // "RangeError: Maximum call stack size exceeded" from T-726 (small wasm stack,
+        // interpreted invoke_iii/invoke_ii trampolines burn more stack per managed
+        // frame than native Mono).
+        //
+        // Fix: cap re-entrant synchronous flushes to depth 1. Anything nested deeper
+        // is queued instead of executed inline, and drained ITERATIVELY by the
+        // outermost (depth-0) caller once its own ApplyAllBindUpdates() returns — so
+        // the whole cascade still fully flushes within the SAME tick (nobody observes
+        // an unflushed frame), but the C# call stack used by SUS's own flush machinery
+        // stays O(1) regardless of how many levels re-enter, instead of O(depth).
+        //
+        // Deliberately NOT falling back to schedule.Execute(...).ExecuteLater(0) for the
+        // deferred case — that is the exact mechanism T-587 removed (reentrant
+        // registration on the panel's scheduler while it is mid-dispatch silently drops
+        // some one-shot items). The queue below is plain, private, and drained by a
+        // normal loop, so it carries none of that race.
+        [ThreadStatic] private static int _flushDepth;
+        [ThreadStatic] private static Queue<SusComponent> _deferredFlushQueue;
+        private bool _flushQueuedPending;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>Test-only count of flushes that were re-entrant (would have added a
+        /// stack frame on top of an in-progress flush and were queued instead). A deep
+        /// synchronous reveal cascade drives this above 0 — proving the guard actually
+        /// intercepted nesting, not just that nesting never happens to occur. Regression
+        /// tests reset this to 0 and assert on it (see T-726).</summary>
+        internal static int DebugInterceptedReentrantFlushCount;
+#endif
+
         private void FlushPendingBindUpdatesOnAttach()
         {
             if (_pendingBindActions.Count == 0) return;
-            ApplyAllBindUpdates();
+
+            if (_flushDepth > 0)
+            {
+                // Re-entrant: some ancestor's bind action is still on the stack, mid-flush,
+                // and just attached us as a side effect. Don't add another frame on top of
+                // that chain — queue for the outermost caller to drain after it returns.
+                if (!_flushQueuedPending)
+                {
+                    _flushQueuedPending = true;
+                    (_deferredFlushQueue ??= new Queue<SusComponent>()).Enqueue(this);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                    DebugInterceptedReentrantFlushCount++;
+#endif
+                }
+                return;
+            }
+
+            _flushDepth = 1;
+            try
+            {
+                ApplyAllBindUpdates();
+                DrainDeferredFlushQueue();
+            }
+            finally
+            {
+                _flushDepth = 0;
+            }
+        }
+
+        private static void DrainDeferredFlushQueue()
+        {
+            var queue = _deferredFlushQueue;
+            if (queue == null) return;
+            while (queue.Count > 0)
+            {
+                var comp = queue.Dequeue();
+                comp._flushQueuedPending = false;
+                comp.ApplyAllBindUpdates();
+            }
         }
 
         /// <summary>
