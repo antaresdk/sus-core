@@ -64,10 +64,20 @@ if (-not (Test-Path $prePushSrc)) {
 $text = [System.IO.File]::ReadAllText($prePushSrc) -replace "`r`n", "`n" -replace "`r", "`n"
 [System.IO.File]::WriteAllText($prePushDst, $text, (New-Object System.Text.UTF8Encoding $false))
 
-# ─── optional message hooks (strip Cursor co-author noise) ───
-if (Test-Path (Join-Path $scriptDir "prepare-commit-msg.ps1")) {
-    Install-Hook "prepare-commit-msg" "prepare-commit-msg.ps1" -PassGitArgs
+# ─── prepare-commit-msg: strip Cursor co-author trailers (T-646) ───
+# Copied AS-IS, not wrapped, for the same reason as pre-push above: scripts~/prepare-commit-msg is
+# the versioned copy of the shared canonical hook. It is /bin/sh on purpose — the former
+# PowerShell script read the message file with the system ANSI code page (`Get-Content` without
+# `-Encoding utf8`) and wrote the mis-decoded characters back, so every non-ASCII commit message
+# reached the real git object corrupted.
+$prepareSrc = Join-Path $scriptDir "prepare-commit-msg"
+$prepareDst = Join-Path $hooksDir "prepare-commit-msg"
+if (Test-Path $prepareSrc) {
+    $text = [System.IO.File]::ReadAllText($prepareSrc) -replace "`r`n", "`n" -replace "`r", "`n"
+    [System.IO.File]::WriteAllText($prepareDst, $text, (New-Object System.Text.UTF8Encoding $false))
 }
+
+# ─── optional message hooks ───
 if (Test-Path (Join-Path $scriptDir "commit-msg.ps1")) {
     Install-Hook "commit-msg" "commit-msg.ps1" -PassGitArgs
 }
