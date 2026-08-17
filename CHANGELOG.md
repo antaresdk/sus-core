@@ -7,6 +7,31 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.17] - 2026-08-17
+
+### Added
+- **SUS Set Doctor**: `RootFileProvenance` — reads the packer's `Generated for: <set> v<version>`
+  marker in generated root files (README / LICENSE / Third-Party Notices) and warns (never
+  "delete") when a smaller set's re-import overwrote the root files of a larger installed set.
+- `ResourcesFolderIconProvider`: a requested icon weight (e.g. `Fill`) that the curated set does
+  not ship degrades to `Regular` instead of returning no image.
+
+### Fixed
+- Reactive sibling attach-flush race: several freshly built reactive components attached in the
+  same synchronous cascade could lose their post-attach bind catch-up (blank / uncoloured
+  `BindClass` / `BindVisibility` targets); the flush is now applied without a per-component
+  one-shot scheduler item. Regression tests added.
+- `SusWorldSpacePanel`: the auto-created world-space `PanelSettings` stays in Screen Space until
+  the first `AttachElement` call — apps that never mount world-space UI no longer keep an idle
+  WorldSpace panel alive.
+- Public doc-comments in `SusSetDoctor` no longer mention internal tool names.
+
+### Changed
+- Test infrastructure: `SusLogLevelGuardAttribute` resets `SusLog.Level` around every test in
+  the shared PlayMode domain; `scripts~/prepare-commit-msg` is the versioned hook (PowerShell
+  copy removed).
+- README: community links (Discord / Telegram); `Docs/13-audits.md` callback-audit count fixed.
+
 ## [1.0.16] - 2026-08-16
 
 ### Added
