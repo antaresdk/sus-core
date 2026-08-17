@@ -52,6 +52,7 @@ namespace Sharq.Core
 
         private UIDocument _document;
         private VisualElement _root;
+        private bool _worldSpaceModeActivated;
         private readonly Dictionary<VisualElement, Attachment> _attachments = new();
 
         private sealed class Attachment
@@ -147,6 +148,23 @@ namespace Sharq.Core
             _attachments.Clear();
         }
 
+        /// <summary>
+        /// Switches this panel's PanelSettings to WorldSpace render mode on the FIRST attach
+        /// (T-645) — an always-on empty WorldSpace panel was found to spam the Unity engine's
+        /// internal "Access version should be odd when acquiring lock" assert continuously in
+        /// Play mode on 6000.3.17f1, and <see cref="SusBootstrap.EnsureWorldSpacePanel"/> creates
+        /// this panel unconditionally for every <c>SusApp</c> whether or not it ever mounts
+        /// world-space UI. No-op after the first call or if there's no PanelSettings yet.
+        /// </summary>
+        private void EnsureWorldSpaceRenderMode()
+        {
+            if (_worldSpaceModeActivated) return;
+            _worldSpaceModeActivated = true;
+            var ps = _document != null ? _document.panelSettings : null;
+            if (ps != null)
+                SusBootstrap.TrySetWorldSpaceRenderMode(ps);
+        }
+
         // ─── W7.2: Attach / Detach ───────────────────────────────────────────
 
         /// <summary>
@@ -172,6 +190,8 @@ namespace Sharq.Core
                 SusLog.Error("[SusWorldSpacePanel] AttachElement: panel not initialised (no rootVisualElement).");
                 return;
             }
+
+            EnsureWorldSpaceRenderMode();
 
             // Already attached → detach first
             if (_attachments.TryGetValue(element, out var old))
