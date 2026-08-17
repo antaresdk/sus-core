@@ -22,8 +22,25 @@ PKG="$(basename "$TOP")"
 # `verify --scope <pkg>` judges FILES OF THIS PACKAGE: an unrelated wave in the umbrella does not
 # block the push, and is not silenced either — it is printed as a count with its own route.
 # No umbrella next to the package (standalone clone) — the step is skipped, loudly.
+# git feeds the ref list on stdin ONCE - read it whole, otherwise a chained `.local` hook would
+# get an empty stream and stay silent instead of checking anything.
+REFS="$(cat)"
+
 DOCS_TOOL="$UMBRELLA/tools/docs-tool/index.mjs"
 if [ -f "$DOCS_TOOL" ]; then
+    # R47 (T-691): reject push of commits with AI trailers / AI author|committer emails.
+    # Runs BEFORE docs verify so a lone attribution hit is named without a wall of foreign findings.
+    printf '%s\n' "$REFS" | while read local_ref local_sha remote_ref remote_sha; do
+        [ -n "$local_sha" ] || continue
+        if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+            continue
+        fi
+        if ! node "$DOCS_TOOL" attribution --cwd "$TOP" --local "$local_sha" --remote "$remote_sha"; then
+            echo "[pre-push] R47 attribution-guard failed — strip AI trailers/emails, then retry" >&2
+            exit 1
+        fi
+    done || exit 1
+
     if ! node "$DOCS_TOOL" verify --scope "$PKG"; then
         echo "[pre-push] docs verify failed for $PKG - fix findings inside the package and retry" >&2
         echo "[pre-push] umbrella-wide findings are NOT this gate: run 'npm run docs:loop' there" >&2
@@ -37,16 +54,29 @@ fi
 # Any source change (.cs except *.g.cs, .sharq, .asmdef) must raise package.json STRICTLY above
 # the remote version. The baseline comes from the refs git feeds the hook on stdin, so the check
 # does not depend on what the remote is called (origin / gitea / anything else).
+# Strict X.Y.Z (or fewer parts) compare. Do NOT use `sort -V`: on Git-for-Windows the first
+# `sort` on PATH is often `C:\Windows\system32\sort.exe`, which has no -V and leaves top empty —
+# then a real bump (1.0.0→1.0.1) is rejected as "not bumped" (caught by plant-prepush A3).
 version_gt() {
-    a="$1"; b="$2"
+    a=$(printf '%s' "$1" | tr -d '\r')
+    b=$(printf '%s' "$2" | tr -d '\r')
+    [ -n "$a" ] && [ -n "$b" ] || return 1
     [ "$a" != "$b" ] || return 1
-    top=$(printf '%s\n%s\n' "$a" "$b" | sort -V | tail -n1)
-    [ "$top" = "$a" ]
+    oldIFS=$IFS
+    IFS=.
+    # shellcheck disable=SC2086
+    set -- $a
+    a1=${1:-0} a2=${2:-0} a3=${3:-0}
+    # shellcheck disable=SC2086
+    set -- $b
+    b1=${1:-0} b2=${2:-0} b3=${3:-0}
+    IFS=$oldIFS
+    [ "$a1" -gt "$b1" ] && return 0
+    [ "$a1" -lt "$b1" ] && return 1
+    [ "$a2" -gt "$b2" ] && return 0
+    [ "$a2" -lt "$b2" ] && return 1
+    [ "$a3" -gt "$b3" ]
 }
-
-# git feeds the ref list on stdin ONCE - read it whole, otherwise a chained `.local` hook would
-# get an empty stream and stay silent instead of checking anything.
-REFS="$(cat)"
 
 # The pipe spawns a subshell, so `exit 1` inside `while` would only kill that subshell: without
 # the trailing `|| exit 1` a rejected version would turn into a green push.

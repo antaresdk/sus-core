@@ -1,6 +1,6 @@
 #!/bin/sh
-# sus-prepare-commit-msg v1 — strips Cursor attribution trailers from the commit message
-# (clean public history: the umbrella agent rules forbid AI attribution in commits).
+# sus-prepare-commit-msg v1 — strips AI/agent attribution trailers from the commit message
+# (clean public history: no Cursor/Claude/Anthropic/Copilot/Codex trailers in commits).
 #
 # Canonical instance lives in the umbrella tooling folder; the versioned copy inside each package
 # is `<pkg>/scripts~/prepare-commit-msg` and is BYTE-IDENTICAL to it. Install/compare from the
@@ -22,6 +22,9 @@
 #
 # Trailing blank lines left behind by a removed trailer are not touched here: git strips them
 # itself while cleaning up the message, so doing it again would only add a reason to rewrite.
+#
+# Push-time second line of defence: R47 attribution-guard (verify + pre-push) rejects a range that
+# still carries AI trailers or AI author/committer emails (T-691).
 MSG="$1"
 [ -n "$MSG" ] && [ -f "$MSG" ] || exit 0
 
