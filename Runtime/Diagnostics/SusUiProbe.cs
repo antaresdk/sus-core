@@ -4,6 +4,9 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using UnityEngine.UIElements;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 
@@ -63,6 +66,9 @@ namespace Sharq.Core.Diagnostics
             if (el.resolvedStyle.display == DisplayStyle.None) sb.Append(",\"hidden\":true");
             if (!el.visible) sb.Append(",\"invisible\":true");
             if (el.pickingMode == PickingMode.Position) sb.Append(",\"pickable\":true");
+            // R36 layer A / D-028 (T-654): source texture size + scale mode — bbox alone cannot
+            // detect stretch (stretched pixels look like a differently shaped image).
+            TryAppendImageMeta(el, sb);
             sb.Append('}');
 
             if (depth >= maxDepth) return;
@@ -419,6 +425,126 @@ namespace Sharq.Core.Diagnostics
             if (box.width <= 0f || float.IsNaN(box.width)) return false;
             var measured = te.MeasureTextSize(text, 0f, VisualElement.MeasureMode.Undefined, 0f, VisualElement.MeasureMode.Undefined);
             return measured.x > box.width + 1f;
+        }
+
+        /// <summary>
+        /// Appends <c>"image":{src,w,h,scaleMode}</c> when the node paints a background image
+        /// (T-654 / D-028). <c>w</c>/<c>h</c> are source texture pixels — not the element bbox.
+        /// Sidecar writers (ShowcaseShotCapture) embed <see cref="GetTreeJson"/> verbatim.
+        /// </summary>
+        private static bool TryAppendImageMeta(VisualElement el, StringBuilder sb)
+        {
+            if (el == null || sb == null) return false;
+            if (!TryResolveBackground(el, out var bg, out var scaleMode)) return false;
+            if (!TryBackgroundSource(bg, out var src, out var w, out var h)) return false;
+            if (w <= 0 || h <= 0) return false;
+
+            sb.Append(",\"image\":{");
+            sb.Append($"\"src\":{Q(src ?? string.Empty)},");
+            sb.Append($"\"w\":{w},\"h\":{h},");
+            sb.Append($"\"scaleMode\":{Q(scaleMode)}");
+            sb.Append('}');
+            return true;
+        }
+
+        private static bool TryResolveBackground(VisualElement el, out Background bg, out string scaleMode)
+        {
+            bg = default;
+            scaleMode = "stretch-to-fill";
+
+            var resolved = el.resolvedStyle.backgroundImage;
+            if (BackgroundHasSource(resolved))
+            {
+                bg = resolved;
+                // Unity 6+: IResolvedStyle.unityBackgroundScaleMode is StyleEnum<ScaleMode>.
+                scaleMode = ScaleModeToKebab(el.resolvedStyle.unityBackgroundScaleMode.value);
+                return true;
+            }
+
+            // Detached trees (EditMode fixtures): resolvedStyle may be empty while style is set.
+            var styled = el.style.backgroundImage;
+            if (styled.keyword == StyleKeyword.None || styled.keyword == StyleKeyword.Null)
+                return false;
+            bg = styled.value;
+            if (!BackgroundHasSource(bg)) return false;
+
+            var modeStyle = el.style.unityBackgroundScaleMode;
+            if (modeStyle.keyword == StyleKeyword.Undefined || modeStyle.keyword == StyleKeyword.Null)
+                scaleMode = "stretch-to-fill"; // UITK default = stretch (D-028)
+            else
+                scaleMode = ScaleModeToKebab(modeStyle.value);
+            return true;
+        }
+
+        private static bool BackgroundHasSource(Background bg)
+            => bg.texture != null || bg.sprite != null || bg.vectorImage != null || bg.renderTexture != null;
+
+        private static bool TryBackgroundSource(Background bg, out string src, out int w, out int h)
+        {
+            src = string.Empty;
+            w = 0;
+            h = 0;
+
+            if (bg.texture != null)
+            {
+                var tex = bg.texture;
+                w = tex.width;
+                h = tex.height;
+                src = AssetPathOf(tex);
+                return true;
+            }
+
+            if (bg.sprite != null)
+            {
+                var sp = bg.sprite;
+                // Sprite.rect is the source pixel rect in the atlas — correct aspect for R36 A1.
+                w = Mathf.RoundToInt(sp.rect.width);
+                h = Mathf.RoundToInt(sp.rect.height);
+                src = AssetPathOf(sp);
+                return w > 0 && h > 0;
+            }
+
+            if (bg.renderTexture != null)
+            {
+                var rt = bg.renderTexture;
+                w = rt.width;
+                h = rt.height;
+                src = AssetPathOf(rt);
+                return true;
+            }
+
+            if (bg.vectorImage != null)
+            {
+                var vi = bg.vectorImage;
+                w = Mathf.RoundToInt(vi.width);
+                h = Mathf.RoundToInt(vi.height);
+                src = AssetPathOf(vi);
+                return w > 0 && h > 0;
+            }
+
+            return false;
+        }
+
+        private static string AssetPathOf(Object obj)
+        {
+            if (obj == null) return string.Empty;
+#if UNITY_EDITOR
+            var path = AssetDatabase.GetAssetPath(obj);
+            if (!string.IsNullOrEmpty(path)) return path.Replace('\\', '/');
+#endif
+            // Runtime / transient textures: name is better than empty for A1 diagnostics.
+            return string.IsNullOrEmpty(obj.name) ? string.Empty : obj.name;
+        }
+
+        /// <summary>USS / frames-spec kebab: StretchToFill → stretch-to-fill.</summary>
+        private static string ScaleModeToKebab(ScaleMode mode)
+        {
+            switch (mode)
+            {
+                case ScaleMode.ScaleAndCrop: return "scale-and-crop";
+                case ScaleMode.ScaleToFit: return "scale-to-fit";
+                default: return "stretch-to-fill";
+            }
         }
 
         private static string F(float v) => v.ToString("F0", CultureInfo.InvariantCulture);

@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Diagnostics;
@@ -47,6 +48,66 @@ namespace Sharq.Core.Runtime.Tests
             Assert.IsTrue(json.EndsWith("]"), "tree JSON must end with ]");
             StringAssert.Contains("\"name\":\"greeting\"", json);
             StringAssert.Contains("\"text\":\"hello\"", json);
+        }
+
+        [Test]
+        public void GetTreeJson_WithBackgroundImage_EmitsImageSourceSizeAndScaleMode()
+        {
+            // T-654 / D-028: sidecar image {src,w,h,scaleMode} from backgroundImage source pixels.
+            var tex = new Texture2D(64, 32, TextureFormat.RGBA32, false) { name = "probe-hero" };
+            try
+            {
+                var hero = new VisualElement { name = "hero" };
+                hero.style.width = 240;
+                hero.style.height = 80;
+                hero.style.backgroundImage = new StyleBackground(tex);
+                hero.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
+
+                var root = new VisualElement { name = "root" };
+                root.Add(hero);
+
+                var json = SusUiProbe.GetTreeJson(root);
+
+                StringAssert.Contains("\"name\":\"hero\"", json);
+                StringAssert.Contains("\"image\":{", json);
+                StringAssert.Contains("\"w\":64", json);
+                StringAssert.Contains("\"h\":32", json);
+                StringAssert.Contains("\"scaleMode\":\"stretch-to-fill\"", json);
+                // Transient textures have no AssetDatabase path — name is acceptable src.
+                StringAssert.Contains("\"src\":", json);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void GetTreeJson_WithScaleToFit_EmitsSafeScaleMode()
+        {
+            var tex = new Texture2D(100, 100, TextureFormat.RGBA32, false) { name = "probe-fit" };
+            try
+            {
+                var el = new VisualElement { name = "fit" };
+                el.style.backgroundImage = new StyleBackground(tex);
+                el.style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+                var json = SusUiProbe.GetTreeJson(el);
+                StringAssert.Contains("\"scaleMode\":\"scale-to-fit\"", json);
+                StringAssert.Contains("\"w\":100", json);
+                StringAssert.Contains("\"h\":100", json);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [Test]
+        public void GetTreeJson_WithoutBackgroundImage_OmitsImageField()
+        {
+            var el = new VisualElement { name = "plain" };
+            var json = SusUiProbe.GetTreeJson(el);
+            StringAssert.DoesNotContain("\"image\":", json);
         }
 
         [Test]
