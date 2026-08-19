@@ -7,6 +7,17 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.19] - 2026-08-19
+
+### Added
+- SusUiProbe tree JSON emits image src/width/height/scaleMode for the frame-geometry aspect gate (T-654).
+
+### Fixed
+- Sharq USS AtomicWrite no longer fails on locked Resources files (T-886).
+
+### Changed
+- README: hero banner, support e-mail, GitHub Releases link (T-703, T-747, T-749, T-761).
+
 ## [1.0.18] - 2026-08-18
 
 ### Added
