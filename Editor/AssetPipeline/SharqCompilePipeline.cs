@@ -133,15 +133,46 @@ namespace Sharq.Core.Editor
             }
         }
 
-        /// <summary>Writes via a sibling temp file then replaces the target, so readers never see a partial file.</summary>
+        /// <summary>
+        /// Writes via a sibling temp file then replaces the target, so readers never see a
+        /// partial file. Retries / falls back to overwrite-copy when Unity holds the asset
+        /// open (Windows sharing violation / EBUSY on tracked Resources companions — T-886).
+        /// </summary>
         private static void AtomicWrite(string path, string content)
         {
             var tmp = path + ".tmp";
             File.WriteAllText(tmp, content, Encoding.UTF8);
-            if (File.Exists(path))
-                File.Replace(tmp, path, null);
-            else
-                File.Move(tmp, path);
+
+            const int attempts = 8;
+            for (var i = 0; i < attempts; i++)
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        try
+                        {
+                            File.Replace(tmp, path, null);
+                        }
+                        catch (IOException)
+                        {
+                            // File.Replace needs exclusive access; AssetDatabase often holds
+                            // StyleSheet imports. Overwrite-copy then drop the temp.
+                            File.Copy(tmp, path, overwrite: true);
+                            File.Delete(tmp);
+                        }
+                    }
+                    else
+                    {
+                        File.Move(tmp, path);
+                    }
+                    return;
+                }
+                catch (IOException) when (i < attempts - 1)
+                {
+                    System.Threading.Thread.Sleep(40 * (i + 1));
+                }
+            }
         }
     }
 }
