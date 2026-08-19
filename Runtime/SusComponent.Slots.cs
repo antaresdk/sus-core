@@ -87,10 +87,27 @@ namespace Sharq.Core
             map[propName] = value;
         }
 
+        /// <summary>USS class present on every slot container (T-530).</summary>
+        public const string SlotContainerClass = "sus-slot";
+
+        /// <summary>
+        /// Returns the USS modifier class of a named slot container:
+        /// <c>sus-slot--&lt;name&gt;</c> (e.g. <c>sus-slot--append</c>, <c>sus-slot--default</c>).
+        /// </summary>
+        public static string SlotContainerClassFor(string name)
+            => SlotContainerClass + "--" + (string.IsNullOrEmpty(name) ? "default" : name);
+
         /// <summary>
         /// Returns the container element where slot content should be projected.
         /// Created lazily — first call per slot name creates a VisualElement
         /// placeholder that will receive projected content.
+        /// The container carries the stable classes <c>sus-slot sus-slot--&lt;name&gt;</c>
+        /// (T-530): a <c>&lt;slot&gt;</c> compiles to this extra element nested INSIDE the
+        /// author's wrapper, so a row-direction wrapper lays out only the container, not the
+        /// projected children. Component USS targets the container explicitly:
+        /// <c>.my-wrapper &gt; .sus-slot { flex-direction: row; }</c>. The container itself
+        /// adds no layout of its own (UI Toolkit column defaults) — see
+        /// <c>_global.uss</c> for the shared <c>.sus-slot</c> rule.
         /// </summary>
         protected VisualElement GetSlotContainer(string name)
         {
@@ -98,7 +115,9 @@ namespace Sharq.Core
 
             if (!_slotContainers.TryGetValue(name, out var container))
             {
-                container = new VisualElement();
+                container = new VisualElement { name = "slot-" + name };
+                container.AddToClassList(SlotContainerClass);
+                container.AddToClassList(SlotContainerClassFor(name));
                 _slotContainers[name] = container;
             }
             return container;

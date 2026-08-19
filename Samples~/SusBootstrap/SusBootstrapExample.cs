@@ -2,263 +2,266 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core;
 
-/// <summary>
-/// Showcase of the entire sus-core design-token system on one screen:
-/// themes, colors, fonts, sizes, breakpoints, icons.
-///
-/// How to run:
-/// 1. Open ThemeShowcase.unity (in this folder) and press Play, OR
-/// 2. Create an empty GameObject, attach this script (UIDocument is added automatically),
-///    assign the ThemeShowcase StyleSheet to Showcase Style Sheet, press Play.
-///
-/// What is demonstrated:
-/// - SusBootstrap.Mount → EventSystem + token cascade (_theme → design-tokens →
-///   _font → _icon → _global) + SusBreakpointService.Attach on root.
-/// - SusThemeService.SetTheme → theme as a class on root (T key to toggle).
-/// - All colors/sizes/fonts come ONLY via var(--sus-*) in ThemeShowcase.uss.
-/// - SusBreakpointService — reactive badge with the current breakpoint.
-/// - SusIconElement — icons from the registry, recolored for the theme via tint token.
-///
-/// Keys: T — Dark — Light.
-/// </summary>
-[RequireComponent(typeof(UIDocument))]
-public class SusBootstrapExample : MonoBehaviour
+namespace Sharq.Core.Examples
 {
-    [SerializeField] private UIDocument _uiDocument;
-
-    [Tooltip("Showcase styles (ThemeShowcase.uss). All rules use var(--sus-*).")]
-    [SerializeField] private StyleSheet _showcaseStyleSheet;
-
-    private SusTheme _theme = SusTheme.Dark;
-
-    private void Start()
+    /// <summary>
+    /// Showcase of the entire sus-core design-token system on one screen:
+    /// themes, colors, fonts, sizes, breakpoints, icons.
+    ///
+    /// How to run:
+    /// 1. Open ThemeShowcase.unity (in this folder) and press Play, OR
+    /// 2. Create an empty GameObject, attach this script (UIDocument is added automatically),
+    ///    assign the ThemeShowcase StyleSheet to Showcase Style Sheet, press Play.
+    ///
+    /// What is demonstrated:
+    /// - SusBootstrap.Mount → EventSystem + token cascade (_theme → design-tokens →
+    ///   _font → _icon → _global) + SusBreakpointService.Attach on root.
+    /// - SusThemeService.SetTheme → theme as a class on root (T key to toggle).
+    /// - All colors/sizes/fonts come ONLY via var(--sus-*) in ThemeShowcase.uss.
+    /// - SusBreakpointService — reactive badge with the current breakpoint.
+    /// - SusIconElement — icons from the registry, recolored for the theme via tint token.
+    ///
+    /// Keys: T — Dark — Light.
+    /// </summary>
+    [RequireComponent(typeof(UIDocument))]
+    public class SusBootstrapExample : MonoBehaviour
     {
-        _uiDocument = GetOrCreateUIDocument();
-        var root = _uiDocument.rootVisualElement;
+        [SerializeField] private UIDocument _uiDocument;
 
-        // Add showcase styles on root — visible to all screen descendants.
-        if (_showcaseStyleSheet != null)
-            root.styleSheets.Add(_showcaseStyleSheet);
-        else
-            Debug.LogWarning("[SusExample] Showcase StyleSheet is not assigned — " +
-                             "color swatches will have no token styles. Assign ThemeShowcase.uss.");
+        [Tooltip("Showcase styles (ThemeShowcase.uss). All rules use var(--sus-*).")]
+        [SerializeField] private StyleSheet _showcaseStyleSheet;
 
-        // Mount loads the token cascade, creates EventSystem, and attaches SusBreakpointService.
-        SusBootstrap.ApplyDefaultTSS(_uiDocument);
-        SusBootstrap.Mount<ThemeShowcaseScreen>(_uiDocument);
+        private SusTheme _theme = SusTheme.Dark;
 
-        // Portal host for tooltips/modals.
-        SusBootstrap.GetOrCreateOverlay(root);
-
-        // Theme — once at startup (class on root).
-        SusThemeService.Instance.SetTheme(root, _theme);
-
-        AddKeyHint("T — toggle theme");
-
-        Debug.Log("[SusExample] Showcase mounted. T — toggle theme.");
-    }
-
-    private void Update()
-    {
-        if (_uiDocument == null) return;
-        if (Input.GetKeyDown(KeyCode.T))
+        private void Start()
         {
-            _theme = _theme == SusTheme.Dark ? SusTheme.Light : SusTheme.Dark;
-            SusThemeService.Instance.SetTheme(_uiDocument.rootVisualElement, _theme);
-            Debug.Log($"[SusExample] Theme → {_theme}");
-        }
-    }
+            _uiDocument = GetOrCreateUIDocument();
+            var root = _uiDocument.rootVisualElement;
 
-    private void AddKeyHint(string text)
-    {
-        var hint = new Label(text)
-        {
-            name = "key-hint",
-            pickingMode = PickingMode.Ignore
-        };
-        hint.style.position = Position.Absolute;
-        hint.style.left = 0;
-        hint.style.right = 0;
-        hint.style.bottom = 0;
-        hint.style.paddingTop = 8;
-        hint.style.paddingBottom = 8;
-        hint.style.paddingLeft = 12;
-        hint.style.paddingRight = 12;
-        hint.style.backgroundColor = new Color(0f, 0f, 0f, 0.65f);
-        hint.style.color = new Color(0.9f, 0.9f, 0.95f);
-        hint.style.fontSize = 14;
-        hint.style.unityTextAlign = TextAnchor.MiddleCenter;
-        hint.style.whiteSpace = WhiteSpace.Normal;
-        _uiDocument.rootVisualElement.Add(hint);
-    }
+            // Add showcase styles on root — visible to all screen descendants.
+            if (_showcaseStyleSheet != null)
+                root.styleSheets.Add(_showcaseStyleSheet);
+            else
+                Debug.LogWarning("[SusExample] Showcase StyleSheet is not assigned — " +
+                                 "color swatches will have no token styles. Assign ThemeShowcase.uss.");
 
-    private UIDocument GetOrCreateUIDocument()
-    {
-        var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
-        if (doc.panelSettings == null)
-        {
-            var ps = Resources.Load<PanelSettings>("PanelSettings");
-            if (ps != null) doc.panelSettings = ps;
-            else doc.panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
-        }
-        return doc;
-    }
+            // Mount loads the token cascade, creates EventSystem, and attaches SusBreakpointService.
+            SusBootstrap.ApplyDefaultTSS(_uiDocument);
+            SusBootstrap.Mount<ThemeShowcaseScreen>(_uiDocument);
 
-    /// <summary>Root showcase screen. Builds a tree from token classes.</summary>
-    private class ThemeShowcaseScreen : SusComponent
-    {
-        private Label _bpBadge;
+            // Portal host for tooltips/modals.
+            SusBootstrap.GetOrCreateOverlay(root);
 
-        protected override void Build()
-        {
-            name = "theme-showcase-screen";
-            AddToClassList("showcase-root");
+            // Theme — once at startup (class on root).
+            SusThemeService.Instance.SetTheme(root, _theme);
 
-            BuildHeader();
-            BuildColors();
-            BuildTypography();
-            BuildIcons();
+            AddKeyHint("T — toggle theme");
 
-            RegisterCallback<AttachToPanelEvent>(_ => WireBreakpoint());
+            Debug.Log("[SusExample] Showcase mounted. T — toggle theme.");
         }
 
-        private void BuildHeader()
+        private void Update()
         {
-            var header = new VisualElement { name = "header" };
-            header.AddToClassList("showcase-header");
-
-            var title = new Label("SUS — Design Tokens");
-            title.AddToClassList("showcase-title");
-            header.Add(title);
-
-            var spacer = new VisualElement();
-            spacer.AddToClassList("showcase-spacer");
-            header.Add(spacer);
-
-            _bpBadge = new Label("—");
-            _bpBadge.AddToClassList("showcase-badge");
-            header.Add(_bpBadge);
-
-            var themeBtn = new Label("Theme (T)");
-            themeBtn.AddToClassList("showcase-btn");
-            themeBtn.RegisterCallback<ClickEvent>(_ => ToggleTheme());
-            header.Add(themeBtn);
-
-            Add(header);
+            if (_uiDocument == null) return;
+            if (Input.GetKeyDown(KeyCode.T))
+            {
+                _theme = _theme == SusTheme.Dark ? SusTheme.Light : SusTheme.Dark;
+                SusThemeService.Instance.SetTheme(_uiDocument.rootVisualElement, _theme);
+                Debug.Log($"[SusExample] Theme → {_theme}");
+            }
         }
 
-        private void BuildColors()
+        private void AddKeyHint(string text)
         {
-            var section = Section("Colors — var(--sus-*)");
-            var row = new VisualElement();
-            row.AddToClassList("swatch-row");
-
-            AddSwatch(row, "primary", "swatch--primary");
-            AddSwatch(row, "secondary", "swatch--secondary");
-            AddSwatch(row, "success", "swatch--success");
-            AddSwatch(row, "warning", "swatch--warning");
-            AddSwatch(row, "error", "swatch--error");
-
-            section.Add(row);
-            Add(section);
+            var hint = new Label(text)
+            {
+                name = "key-hint",
+                pickingMode = PickingMode.Ignore
+            };
+            hint.style.position = Position.Absolute;
+            hint.style.left = 0;
+            hint.style.right = 0;
+            hint.style.bottom = 0;
+            hint.style.paddingTop = 8;
+            hint.style.paddingBottom = 8;
+            hint.style.paddingLeft = 12;
+            hint.style.paddingRight = 12;
+            hint.style.backgroundColor = new Color(0f, 0f, 0f, 0.65f);
+            hint.style.color = new Color(0.9f, 0.9f, 0.95f);
+            hint.style.fontSize = 14;
+            hint.style.unityTextAlign = TextAnchor.MiddleCenter;
+            hint.style.whiteSpace = WhiteSpace.Normal;
+            _uiDocument.rootVisualElement.Add(hint);
         }
 
-        private void BuildTypography()
+        private UIDocument GetOrCreateUIDocument()
         {
-            var section = Section("Typography — var(--sus-font-*)");
-
-            // Подписи = фактические значения --sus-font-size-* (_font.uss → base-font-size).
-            AddType(section, "Hero 48", "type-hero");
-            AddType(section, "Heading1 32", "type-heading1");
-            AddType(section, "Heading2 24", "type-heading2");
-            AddType(section, "Heading3 20", "type-heading3");
-            AddType(section, "Subtitle 16", "type-subtitle");
-            AddType(section, "Body 14", "type-body");
-            AddType(section, "Small 12", "type-small");
-            AddType(section, "Caption 10", "type-caption");
-
-            Add(section);
+            var doc = _uiDocument != null ? _uiDocument : GetComponent<UIDocument>();
+            if (doc.panelSettings == null)
+            {
+                var ps = Resources.Load<PanelSettings>("PanelSettings");
+                if (ps != null) doc.panelSettings = ps;
+                else doc.panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+            }
+            return doc;
         }
 
-        private void BuildIcons()
+        /// <summary>Root showcase screen. Builds a tree from token classes.</summary>
+        private class ThemeShowcaseScreen : SusComponent
         {
-            var section = Section("Icons — SusIconElement + tint token");
-            var row = new VisualElement();
-            row.AddToClassList("icon-row");
+            private Label _bpBadge;
 
-            // Regular — tinted with --sus-text-primary (inherited from .sus-icon-bg).
-            foreach (var alias in new[] { "settings", "user", "star", "bell", "calendar", "lock" })
-                row.Add(MakeIcon(alias, null));
+            protected override void Build()
+            {
+                name = "theme-showcase-screen";
+                AddToClassList("showcase-root");
 
-            // Accent — override tint to --sus-primary / --sus-success.
-            row.Add(MakeIcon("fire", "demo-icon--accent"));
-            row.Add(MakeIcon("check", "demo-icon--success"));
+                BuildHeader();
+                BuildColors();
+                BuildTypography();
+                BuildIcons();
 
-            section.Add(row);
-            Add(section);
-        }
+                RegisterCallback<AttachToPanelEvent>(_ => WireBreakpoint());
+            }
 
-        // ─── helpers ─────────────────────────────────────────────
+            private void BuildHeader()
+            {
+                var header = new VisualElement { name = "header" };
+                header.AddToClassList("showcase-header");
 
-        private VisualElement Section(string titleText)
-        {
-            var section = new VisualElement();
-            section.AddToClassList("showcase-section");
-            var title = new Label(titleText);
-            title.AddToClassList("showcase-section__title");
-            section.Add(title);
-            return section;
-        }
+                var title = new Label("SUS — Design Tokens");
+                title.AddToClassList("showcase-title");
+                header.Add(title);
 
-        private void AddSwatch(VisualElement row, string label, string variantClass)
-        {
-            var swatch = new VisualElement();
-            swatch.AddToClassList("swatch");
-            swatch.AddToClassList(variantClass);
-            var l = new Label(label);
-            l.AddToClassList("swatch__label");
-            swatch.Add(l);
-            row.Add(swatch);
-        }
+                var spacer = new VisualElement();
+                spacer.AddToClassList("showcase-spacer");
+                header.Add(spacer);
 
-        private void AddType(VisualElement section, string text, string typeClass)
-        {
-            var l = new Label(text);
-            l.AddToClassList("type-sample");
-            l.AddToClassList(typeClass);
-            section.Add(l);
-        }
+                _bpBadge = new Label("—");
+                _bpBadge.AddToClassList("showcase-badge");
+                header.Add(_bpBadge);
 
-        private SusIconElement MakeIcon(string alias, string extraClass)
-        {
-            var icon = new SusIconElement(alias);
-            icon.AddToClassList("demo-icon");
-            if (extraClass != null) icon.AddToClassList(extraClass);
-            return icon;
-        }
+                var themeBtn = new Label("Theme (T)");
+                themeBtn.AddToClassList("showcase-btn");
+                themeBtn.RegisterCallback<ClickEvent>(_ => ToggleTheme());
+                header.Add(themeBtn);
 
-        private void ToggleTheme()
-        {
-            var root = panel?.visualTree;
-            if (root == null) return;
-            var next = SusThemeService.Current.Value == SusTheme.Dark ? SusTheme.Light : SusTheme.Dark;
-            SusThemeService.Instance.SetTheme(root, next);
-        }
+                Add(header);
+            }
 
-        private void WireBreakpoint()
-        {
-            var root = panel?.visualTree;
-            if (root == null) return;
+            private void BuildColors()
+            {
+                var section = Section("Colors — var(--sus-*)");
+                var row = new VisualElement();
+                row.AddToClassList("swatch-row");
 
-            var svc = SusBreakpointService.For(root);
-            UpdateBadge(svc.Current.Value);
-            // Prop.Changed — reactive badge update on resize.
-            svc.Current.Changed += (_, next) => UpdateBadge(next);
-        }
+                AddSwatch(row, "primary", "swatch--primary");
+                AddSwatch(row, "secondary", "swatch--secondary");
+                AddSwatch(row, "success", "swatch--success");
+                AddSwatch(row, "warning", "swatch--warning");
+                AddSwatch(row, "error", "swatch--error");
 
-        private void UpdateBadge(Breakpoint bp)
-        {
-            if (_bpBadge != null) _bpBadge.text = bp.ToString().ToLowerInvariant();
+                section.Add(row);
+                Add(section);
+            }
+
+            private void BuildTypography()
+            {
+                var section = Section("Typography — var(--sus-font-*)");
+
+                // Подписи = фактические значения --sus-font-size-* (_font.uss → base-font-size).
+                AddType(section, "Hero 48", "type-hero");
+                AddType(section, "Heading1 32", "type-heading1");
+                AddType(section, "Heading2 24", "type-heading2");
+                AddType(section, "Heading3 20", "type-heading3");
+                AddType(section, "Subtitle 16", "type-subtitle");
+                AddType(section, "Body 14", "type-body");
+                AddType(section, "Small 12", "type-small");
+                AddType(section, "Caption 10", "type-caption");
+
+                Add(section);
+            }
+
+            private void BuildIcons()
+            {
+                var section = Section("Icons — SusIconElement + tint token");
+                var row = new VisualElement();
+                row.AddToClassList("icon-row");
+
+                // Regular — tinted with --sus-text-primary (inherited from .sus-icon-bg).
+                foreach (var alias in new[] { "settings", "user", "star", "bell", "calendar", "lock" })
+                    row.Add(MakeIcon(alias, null));
+
+                // Accent — override tint to --sus-primary / --sus-success.
+                row.Add(MakeIcon("fire", "demo-icon--accent"));
+                row.Add(MakeIcon("check", "demo-icon--success"));
+
+                section.Add(row);
+                Add(section);
+            }
+
+            // ─── helpers ─────────────────────────────────────────────
+
+            private VisualElement Section(string titleText)
+            {
+                var section = new VisualElement();
+                section.AddToClassList("showcase-section");
+                var title = new Label(titleText);
+                title.AddToClassList("showcase-section__title");
+                section.Add(title);
+                return section;
+            }
+
+            private void AddSwatch(VisualElement row, string label, string variantClass)
+            {
+                var swatch = new VisualElement();
+                swatch.AddToClassList("swatch");
+                swatch.AddToClassList(variantClass);
+                var l = new Label(label);
+                l.AddToClassList("swatch__label");
+                swatch.Add(l);
+                row.Add(swatch);
+            }
+
+            private void AddType(VisualElement section, string text, string typeClass)
+            {
+                var l = new Label(text);
+                l.AddToClassList("type-sample");
+                l.AddToClassList(typeClass);
+                section.Add(l);
+            }
+
+            private SusIconElement MakeIcon(string alias, string extraClass)
+            {
+                var icon = new SusIconElement(alias);
+                icon.AddToClassList("demo-icon");
+                if (extraClass != null) icon.AddToClassList(extraClass);
+                return icon;
+            }
+
+            private void ToggleTheme()
+            {
+                var root = panel?.visualTree;
+                if (root == null) return;
+                var next = SusThemeService.Current.Value == SusTheme.Dark ? SusTheme.Light : SusTheme.Dark;
+                SusThemeService.Instance.SetTheme(root, next);
+            }
+
+            private void WireBreakpoint()
+            {
+                var root = panel?.visualTree;
+                if (root == null) return;
+
+                var svc = SusBreakpointService.For(root);
+                UpdateBadge(svc.Current.Value);
+                // Prop.Changed — reactive badge update on resize.
+                svc.Current.Changed += (_, next) => UpdateBadge(next);
+            }
+
+            private void UpdateBadge(Breakpoint bp)
+            {
+                if (_bpBadge != null) _bpBadge.text = bp.ToString().ToLowerInvariant();
+            }
         }
     }
 }

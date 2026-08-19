@@ -126,6 +126,62 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreSame(childContainer, slotContent.parent);
         }
 
+        /// <summary>
+        /// T-530: the slot container created by GetSlotContainer() must carry stable classes
+        /// so component USS can reach the projected children (row wrappers) without a
+        /// type selector: <c>.wrapper &gt; .sus-slot { flex-direction: row }</c>.
+        /// </summary>
+        private class SlotHostComponent : SusComponent
+        {
+            public VisualElement Wrapper;
+            public VisualElement DefaultSlot;
+            public VisualElement AppendSlot;
+
+            protected override void Build()
+            {
+                Wrapper = new VisualElement();
+                Wrapper.AddToClassList("host__append");
+                AppendSlot = GetSlotContainer("append");
+                Wrapper.Add(AppendSlot);
+                BuildSlot("append", null, AppendSlot);
+                Add(Wrapper);
+
+                DefaultSlot = GetSlotContainer(null);
+                Add(DefaultSlot);
+                BuildSlot("default", null, DefaultSlot);
+            }
+        }
+
+        [Test]
+        public void GetSlotContainer_CarriesStableSlotClasses()
+        {
+            var host = new SlotHostComponent();
+
+            Assert.IsTrue(host.AppendSlot.ClassListContains(SusComponent.SlotContainerClass),
+                "named slot container must have the shared 'sus-slot' class");
+            Assert.IsTrue(host.AppendSlot.ClassListContains("sus-slot--append"),
+                "named slot container must have 'sus-slot--<name>'");
+            Assert.AreSame(host.AppendSlot, host.Wrapper[0],
+                "slot container stays nested inside the author's wrapper");
+
+            Assert.IsTrue(host.DefaultSlot.ClassListContains("sus-slot"));
+            Assert.IsTrue(host.DefaultSlot.ClassListContains("sus-slot--default"),
+                "null/empty name normalizes to 'default'");
+            Assert.AreEqual("sus-slot--default", SusComponent.SlotContainerClassFor(""));
+
+            // Public accessor returns the same (classed) element; classes are idempotent.
+            Assert.AreSame(host.AppendSlot, host.Slot("append"));
+            Assert.AreEqual(2, CountClasses(host.Slot("append")),
+                "repeated GetSlotContainer must not stack duplicate classes");
+        }
+
+        private static int CountClasses(VisualElement ve)
+        {
+            var n = 0;
+            foreach (var _ in ve.GetClasses()) n++;
+            return n;
+        }
+
         #endregion
     }
 }

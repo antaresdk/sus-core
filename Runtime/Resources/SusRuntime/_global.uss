@@ -25,6 +25,20 @@
     flex-grow: 1;
 }
 
+/* ── Slot container (T-530) ───────────────────────────────────
+   <slot> / <slot name="x"> compiles to a VisualElement created by
+   SusComponent.GetSlotContainer(): classes `sus-slot sus-slot--<name>`,
+   nested INSIDE the author's wrapper element. UI Toolkit lays it out
+   as a column by default, so a row wrapper only positions this one
+   box — repeat the direction on the container in component USS:
+       .my-wrapper > .sus-slot { flex-direction: row; align-items: center; }
+   The container itself stays layout-transparent (UI Toolkit defaults,
+   restated here so a project override has a hook to replace).
+   ──────────────────────────────────────────────────────────── */
+.sus-slot {
+    flex-shrink: 1;
+}
+
 /* ── Utility: text truncation ──────────────────────────────── */
 .sus-text-truncate {
         overflow: hidden;
