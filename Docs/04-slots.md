@@ -65,3 +65,22 @@ In consumer:
 ```csharp
 RegisterSlotContent("header", __el, null);
 ```
+
+## Styling the slot container
+
+`GetSlotContainer()` returns a real `VisualElement` that sits **inside** the element wrapping
+`<slot>` in your template. It carries two stable USS classes:
+
+- `sus-slot` — every slot container;
+- `sus-slot--<name>` — e.g. `sus-slot--header`, `sus-slot--default`.
+
+The container itself adds no layout of its own (UI Toolkit defaults: `flex-direction: column`).
+So a row-direction wrapper lays out only that one box — the projected children still stack
+vertically. Repeat the direction on the container:
+
+```css
+.my-card__actions { flex-direction: row; align-items: center; }
+.my-card__actions > .sus-slot { flex-direction: row; align-items: center; }
+```
+
+Never rely on the type selector (`> VisualElement`) for this — the class is the contract.
