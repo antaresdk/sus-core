@@ -591,6 +591,19 @@ namespace Sharq.Core
         }
 #endif
 
+        private static readonly string[] s_companionSuffixes = { "_static.g", "_scoped.g", ".g" };
+
+        /// <summary>
+        /// Caches, per most-derived component type, which type in its base-type chain actually
+        /// owns the companion stylesheet(s) found on disk (T-1273). A Tier-B C# subclass with no
+        /// .sharq of its own (e.g. LfScoreboard : SusTable, LfNavButton : SusButton) has nothing
+        /// under its OWN name — without this fallback its base's entire companion stylesheet
+        /// silently never attaches. Caching avoids repeating the failing exact-name lookup (and
+        /// the walk up the chain) on every construction of the same derived type — same pattern
+        /// as <see cref="s_updatedOverrideCache"/> (T-1102) / prop-accessor cache (T-1101).
+        /// </summary>
+        private static readonly Dictionary<Type, Type> s_companionOwnerTypeCache = new Dictionary<Type, Type>();
+
         /// <summary>
         /// Loads all companion USS files for this component from Resources/SusRuntime/.
         /// Tries: {ClassName}_static.g.uss, {ClassName}_scoped.g.uss, {ClassName}.g.uss
@@ -601,12 +614,54 @@ namespace Sharq.Core
         /// <summary>
         /// Loads companion USS, optionally restricted to specific suffixes
         /// ("_static.g" / "_scoped.g" / ".g") for partial hot reload.
+        ///
+        /// Resolves the companion filename from <c>GetType()</c> first (exact match — the common
+        /// case, and unchanged behavior for any type that has its own companion sheet). When that
+        /// yields nothing at all, walks up the base-type chain (stopping at <see cref="SusComponent"/>)
+        /// so a Tier-B subclass with no .sharq of its own inherits its nearest styled ancestor's
+        /// companion stylesheet(s) instead of silently getting none (T-1273).
         /// </summary>
-        private void LoadCompanionStyleSheets(System.Collections.Generic.ICollection<string> onlySuffixes)
+        private void LoadCompanionStyleSheets(ICollection<string> onlySuffixes)
         {
-            var name = GetType().Name;
-            string[] suffixes = { "_static.g", "_scoped.g", ".g" };
-            foreach (var suf in suffixes)
+            var mostDerived = GetType();
+
+            // Fast path for the full load (the hot path — every construction): reuse the owner
+            // type resolved for a prior instance of the same class instead of re-walking.
+            if (onlySuffixes == null && s_companionOwnerTypeCache.TryGetValue(mostDerived, out var cachedOwner))
+            {
+                LoadCompanionStyleSheetsForType(cachedOwner, onlySuffixes);
+                return;
+            }
+
+            for (var type = mostDerived; type != null; type = type.BaseType)
+            {
+                var anyLoaded = LoadCompanionStyleSheetsForType(type, onlySuffixes);
+                if (anyLoaded)
+                {
+                    if (onlySuffixes == null)
+                        s_companionOwnerTypeCache[mostDerived] = type;
+                    return;
+                }
+                if (type == typeof(SusComponent)) break; // reached root — nothing found anywhere
+            }
+
+            // Nothing found anywhere in the chain (a component that simply has no companion USS
+            // at all — the common case for plain code-only components). Cache the type itself, NOT
+            // the root ancestor: RemoveCompanionStyleSheets/ApplyHotReloadStyleSheet key off this
+            // cached owner too, and must keep matching sheet names built from THIS type's own name
+            // (e.g. hand-added sheets named "<mostDerived>_scoped.g" in hot-reload/tests) — caching
+            // the root here would make removal look for "SusComponent_scoped.g" instead and silently
+            // fail to match anything.
+            if (onlySuffixes == null)
+                s_companionOwnerTypeCache[mostDerived] = mostDerived;
+        }
+
+        /// <summary>Loads companion sheets named after <paramref name="type"/> specifically (no fallback).</summary>
+        private bool LoadCompanionStyleSheetsForType(Type type, ICollection<string> onlySuffixes)
+        {
+            var name = type.Name;
+            var anyLoaded = false;
+            foreach (var suf in s_companionSuffixes)
             {
                 if (onlySuffixes != null && !onlySuffixes.Contains(suf)) continue;
                 var fileName = suf.Length > 0 ? $"{name}{suf}" : name;
@@ -626,8 +681,12 @@ namespace Sharq.Core
 #endif
 
                 if (sheet != null)
+                {
                     styleSheets.Add(sheet);
+                    anyLoaded = true;
+                }
             }
+            return anyLoaded;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD || SUS_RUNTIME_MCP
@@ -655,7 +714,12 @@ namespace Sharq.Core
         /// </summary>
         public void RemoveCompanionStyleSheets(System.Collections.Generic.ICollection<string> onlySuffixes = null)
         {
-            var className = GetType().Name;
+            // Tier-B subclasses (T-1273) load companion sheets under an ANCESTOR type's name
+            // (e.g. LfScoreboard loads "SusTable.g.uss"); remove by the resolved owner type so
+            // hot-reload actually strips the sheets that were actually added, not zero of them.
+            var mostDerived = GetType();
+            var ownerType = s_companionOwnerTypeCache.TryGetValue(mostDerived, out var cached) ? cached : mostDerived;
+            var className = ownerType.Name;
 
             for (int i = styleSheets.count - 1; i >= 0; i--)
             {
