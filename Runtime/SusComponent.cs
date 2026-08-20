@@ -203,14 +203,59 @@ namespace Sharq.Core
             _bindScheduleItem.ExecuteLater(0);
         }
 
+        /// <summary>Safety bound for the re-entrant drain loop below — see T-1204 remarks.
+        /// A real WatchEffect-writes-derived-Prop chain settles in 1-2 iterations; this only
+        /// exists to turn an actual A-writes-B-writes-A cycle into a logged warning instead
+        /// of an infinite loop.</summary>
+        private const int MaxSteadyStateFlushIterations = 100;
+
+        /// <remarks>
+        /// T-1204 (2026-08-20): this used to be a single snapshot-and-clear pass. That silently
+        /// dropped updates in the STEADY-STATE case (same failure class T-587 fixed for the
+        /// attach-time path, but T-587's fix did not cover this one): when a bind action run
+        /// from this loop synchronously writes a Prop that ANOTHER Bind*/WatchEffect on the SAME
+        /// component reads — e.g. <c>Mounted()</c>'s <c>WatchEffect(ApplyVisual)</c> sets a
+        /// derived <c>HpText</c> Prop that <c>Build()</c>'s <c>BindText(HpCounterLabel, () =&gt;
+        /// HpText.Value)</c> reads — the write's <c>Prop.Value</c> setter synchronously invokes
+        /// <see cref="ScheduleBindUpdate"/> for the BindText effect. We are INSIDE this very
+        /// scheduled item's dispatch (<c>_bindScheduleItem</c>'s <c>Execute</c> callback is on
+        /// the stack right now), so that nested call's <c>_bindScheduleItem.ExecuteLater(0)</c>
+        /// is a reentrant re-arm of the SAME scheduled item while UITK's scheduler is mid-
+        /// dispatch for it — and per T-587, Unity's scheduler silently drops that re-arm. The
+        /// action lands (harmlessly) back in <c>_pendingBindActions</c> for "next time", but
+        /// there never IS a next time: nothing else ever re-triggers that scheduled item again,
+        /// so the bound Label.text is stuck one generation behind forever.
+        ///
+        /// Fix: loop here instead of doing one pass. Newly-queued actions (from a bind action's
+        /// own synchronous side effects) are applied immediately, within the SAME dispatch, so
+        /// we never depend on a reentrant re-arm succeeding. Bounded by
+        /// <see cref="MaxSteadyStateFlushIterations"/> so an actual A-writes-B-writes-A Prop
+        /// cycle logs a warning and yields instead of hanging. Regression:
+        /// SteadyStateBindCascadeTests (WatchEffect writes a derived Prop that a same-instance
+        /// BindText/BindClass reads — must re-render every generation, not just the first).
+        /// </remarks>
         private void ApplyAllBindUpdates()
         {
-            if (_pendingBindActions.Count == 0) return;
-            // Snapshot and clear to allow re-registration during execution
-            var actions = new List<Action>(_pendingBindActions);
-            _pendingBindActions.Clear();
-            foreach (var action in actions)
-                action();
+            var iterations = 0;
+            while (_pendingBindActions.Count > 0)
+            {
+                if (++iterations > MaxSteadyStateFlushIterations)
+                {
+                    SusLog.Warn(
+                        $"[SusComponent] ApplyAllBindUpdates on {GetType().Name} exceeded " +
+                        $"{MaxSteadyStateFlushIterations} re-entrant iterations in one flush — " +
+                        "likely a bind/WatchEffect cycle (a Prop write re-triggers itself, " +
+                        "directly or via another Prop, on the same component). Remaining " +
+                        "actions deferred to the next tick.");
+                    break;
+                }
+
+                // Snapshot and clear to allow re-registration during execution
+                var actions = new List<Action>(_pendingBindActions);
+                _pendingBindActions.Clear();
+                foreach (var action in actions)
+                    action();
+            }
         }
 
         /// <summary>
