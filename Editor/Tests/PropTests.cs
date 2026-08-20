@@ -271,5 +271,81 @@ namespace Sharq.Core.Editor.Tests
         }
 
         #endregion
+
+        #region Peek — T-1302/T-1206
+
+        [Test]
+        public void Peek_ReturnsCurrentValue()
+        {
+            var p = new Prop<int>(42);
+            Assert.AreEqual(42, p.Peek());
+            p.Value = 99;
+            Assert.AreEqual(99, p.Peek());
+        }
+
+        [Test]
+        public void Peek_DoesNotRegisterDependency()
+        {
+            // Mirrors the Computed<T>/ReactiveEffect tracking idiom directly against
+            // DependencyTracker (internal, InternalsVisibleTo this assembly) so the test
+            // doesn't need a live component/effect to prove the primitive's contract.
+            var p = new Prop<int>(1);
+            var registered = new System.Collections.Generic.List<IReactiveSource>();
+
+            using (DependencyTracker.Track(src => registered.Add(src)))
+            {
+                _ = p.Peek();
+            }
+
+            Assert.AreEqual(0, registered.Count,
+                "Peek() must not call DependencyTracker.RegisterSource — a plain Value get " +
+                "would have added this Prop to the tracking scope's dependency list");
+        }
+
+        [Test]
+        public void Peek_ReadThenValueWrite_DoesNotSelfInvalidate()
+        {
+            // The T-1302/T-1206 antipattern in miniature: a "SetParam"-shaped accumulator
+            // that reads the CURRENT value to compute the next one, then writes it back —
+            // all while some effect is tracking. Reading the accumulator source via Peek()
+            // must not make the currently-tracking scope a dependent of this Prop, so the
+            // WRITE two lines later does not re-invoke that scope's invalidation callback.
+            var p = new Prop<System.Collections.Generic.List<int>>(new System.Collections.Generic.List<int> { 1 });
+            var invalidations = 0;
+
+            using (DependencyTracker.Track(src =>
+                       src.SubscribeInvalidate(() => invalidations++)))
+            {
+                var next = new System.Collections.Generic.List<int>(p.Peek()) { 2 };
+                p.Value = next; // always a new list — reference-unequal, always invalidates IF subscribed
+            }
+
+            Assert.AreEqual(0, invalidations,
+                "a Peek()-based read-modify-write of the SAME Prop must not invalidate a " +
+                "scope that was tracking during the read — Value would have (T-1302/T-1206)");
+        }
+
+        [Test]
+        public void Value_ReadThenWrite_DoesSelfInvalidate_DemonstratesTheBugPeekFixes()
+        {
+            // Control case: same shape as the test above but using Value (the pre-fix
+            // SusTooltip.SetParam behavior) — documents exactly what Peek() had to avoid.
+            var p = new Prop<System.Collections.Generic.List<int>>(new System.Collections.Generic.List<int> { 1 });
+            var invalidations = 0;
+
+            using (DependencyTracker.Track(src =>
+                       src.SubscribeInvalidate(() => invalidations++)))
+            {
+                var next = new System.Collections.Generic.List<int>(p.Value) { 2 }; // tracked read — subscribes
+                p.Value = next; // fires the subscription just registered, reentrantly
+            }
+
+            Assert.AreEqual(1, invalidations,
+                "control: Value read-then-write of the SAME Prop DOES self-invalidate when a " +
+                "scope is tracking — this is the mechanism behind the 90+ iteration re-entrant " +
+                "flush warning (T-1302/T-1206) before the SetParam fix");
+        }
+
+        #endregion
     }
 }
