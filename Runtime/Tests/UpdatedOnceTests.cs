@@ -3,6 +3,7 @@ using UnityEngine.UIElements;
 using UnityEngine.TestTools;
 using NUnit.Framework;
 using System.Collections;
+using System.Reflection;
 
 namespace Sharq.Core.Runtime.Tests
 {
@@ -69,6 +70,47 @@ namespace Sharq.Core.Runtime.Tests
 
             Assert.Greater(comp.UpdateCount, countAfterDetach,
                 "Updated should resume after reattach");
+        }
+
+        // ─── T-1102: components that never override Updated() must not be scheduled ──────
+
+        private class NoUpdateOverrideComp : SusComponent
+        {
+            protected override void Build()
+            {
+                Add(new Label("no-update-override"));
+            }
+        }
+
+        private static readonly FieldInfo s_updateItemField =
+            typeof(SusComponent).GetField("_updateItem", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        [UnityTest]
+        public IEnumerator Updated_NotScheduled_WhenComponentNeverOverridesIt()
+        {
+            var comp = new NoUpdateOverrideComp();
+            Root.Add(comp);
+            yield return new WaitForSeconds(0.1f);
+
+            var updateItem = s_updateItemField.GetValue(comp);
+            Assert.IsNull(updateItem,
+                "T-1102: a component whose Updated() is never overridden must not get an " +
+                "Every(16) schedule item at all — it would tick 60 times/sec calling a no-op.");
+        }
+
+        [UnityTest]
+        public IEnumerator Updated_StillScheduled_WhenOverridden_SideBySideWithNonOverriding()
+        {
+            // Regression guard: adding the T-1102 skip must not accidentally suppress
+            // scheduling for a sibling component that DOES override Updated().
+            var overriding = new TestComp();
+            var nonOverriding = new NoUpdateOverrideComp();
+            Root.Add(overriding);
+            Root.Add(nonOverriding);
+            yield return new WaitForSeconds(0.1f);
+
+            Assert.GreaterOrEqual(overriding.UpdateCount, 2);
+            Assert.IsNull(s_updateItemField.GetValue(nonOverriding));
         }
     }
 }

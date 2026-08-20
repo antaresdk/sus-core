@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -166,6 +168,107 @@ namespace Sharq.Core.Runtime.Tests
             Assert.IsTrue(h.IsPlaying);
             h.Stop(applyRestore: true);
             Assert.IsFalse(h.IsPlaying);
+        }
+
+        // ─── T-1103 — ActiveByTarget FEP-reset + detach cleanup (R-A4) ────────────────────
+
+        [Test]
+        public void T1103_ForeverRepeat_StopsWhenTargetDetaches()
+        {
+            var el = new VisualElement { name = "forever" };
+            _root.Add(el);
+
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.1f, SusEase.Linear)
+                .Repeat(0) // <=0 == forever, per SusMotion.Group.Repeat contract
+                .Restore(SusRestoreMode.Keep);
+            var handle = motion.Play();
+
+            Assert.IsTrue(handle.IsPlaying, "sanity: forever motion should be playing after Play()");
+
+            el.RemoveFromHierarchy(); // synchronously dispatches DetachFromPanelEvent
+
+            Assert.IsFalse(handle.IsPlaying,
+                "T-1103: a forever-Repeat motion never reaches CompleteInternal() on its own — " +
+                "it must be stopped when its target leaves the panel, or it ticks forever.");
+        }
+
+        [Test]
+        public void T1103_ForeverRepeat_DetachRemovesFromActiveByTarget()
+        {
+            var el = new VisualElement { name = "forever-registry" };
+            _root.Add(el);
+
+            SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.1f, SusEase.Linear)
+                .Repeat(0)
+                .Restore(SusRestoreMode.Keep)
+                .Play();
+
+            var active = GetActiveByTarget();
+            Assert.IsTrue(active.Contains(el), "sanity: Play() registers the target in ActiveByTarget");
+
+            el.RemoveFromHierarchy();
+
+            Assert.IsFalse(active.Contains(el),
+                "T-1103: detach must remove the target from the static ActiveByTarget map, " +
+                "or it keeps a VisualElement from a dead panel pinned alive forever.");
+        }
+
+        [Test]
+        public void T1103_StopThenDetach_DoesNotThrow()
+        {
+            // A motion that already completed/stopped naturally must not blow up when its
+            // (now inert) detach handler fires later — defensive against double-unregister bugs.
+            var el = new VisualElement { name = "stop-then-detach" };
+            _root.Add(el);
+
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.02f, SusEase.Linear)
+                .Restore(SusRestoreMode.Keep);
+            var handle = motion.Play();
+            handle.Stop(applyRestore: false);
+
+            Assert.DoesNotThrow(() => el.RemoveFromHierarchy());
+        }
+
+        [Test]
+        public void T1103_ResetStatics_ClearsActiveByTarget()
+        {
+            var el = new VisualElement { name = "fep-reset" };
+            _root.Add(el);
+
+            SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 1f, SusEase.Linear)
+                .Repeat(0)
+                .Restore(SusRestoreMode.Keep)
+                .Play();
+
+            var active = GetActiveByTarget();
+            Assert.Greater(active.Count, 0, "sanity: Play() should populate ActiveByTarget");
+
+            var resetMethod = typeof(SusMotion).GetMethod("ResetStatics",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(resetMethod,
+                "T-1103 requires a static FEP-reset method (RuntimeInitializeOnLoadMethod " +
+                "pattern used by the other 15 statics in sus-core, e.g. ClickAuditService)");
+            resetMethod.Invoke(null, null);
+
+            Assert.AreEqual(0, active.Count,
+                "ResetStatics() must clear ActiveByTarget so it doesn't hold VisualElements " +
+                "from a previous Play session (T-1103, Domain Reload disabled scenario)");
+        }
+
+        private static IDictionary GetActiveByTarget()
+        {
+            var field = typeof(SusMotion).GetField("ActiveByTarget",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(field, "SusMotion.ActiveByTarget field not found — test needs updating");
+            return (IDictionary)field.GetValue(null);
         }
     }
 }

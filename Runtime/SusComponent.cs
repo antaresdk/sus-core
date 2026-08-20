@@ -794,9 +794,35 @@ namespace Sharq.Core
 
         private IVisualElementScheduledItem _updateItem;
 
+        // T-1102: Updated() is a no-op virtual by default (SusComponent.Lifecycle.cs). Scheduling
+        // an Every(16) tick for it on EVERY component — most of which never override it — burns
+        // 60Hz calls that do nothing. Cache per-type whether Updated() is actually overridden
+        // anywhere in the hierarchy and skip scheduling entirely when it is not.
+        private static readonly Dictionary<Type, bool> s_updatedOverrideCache = new Dictionary<Type, bool>();
+
+        // internal (not private): SusComponentUpdateSchedulingTests (T-1102) verifies the
+        // override-detection directly without needing a live panel attach/detach cycle.
+        internal static bool TypeOverridesUpdated(Type type)
+        {
+            if (s_updatedOverrideCache.TryGetValue(type, out var cached))
+                return cached;
+
+            var method = type.GetMethod("Updated",
+                System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic);
+            var overridden = method != null && method.DeclaringType != typeof(SusComponent);
+            s_updatedOverrideCache[type] = overridden;
+            return overridden;
+        }
+
         private void ScheduleReactiveUpdates()
         {
             _updateItem?.Pause();
+            _updateItem = null;
+
+            if (!TypeOverridesUpdated(GetType())) return;
+
             _updateItem = schedule.Execute(() =>
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -915,6 +941,109 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Cached descriptor for a (child type, prop name) pair resolved once by
+        /// <see cref="SetChildProp"/> — avoids re-running <c>GetField</c>/<c>GetProperty</c>
+        /// reflection lookups on every prop-bind change (T-1101, R-A2/P0-2).
+        /// </summary>
+        private sealed class ChildPropAccessor
+        {
+            internal static readonly ChildPropAccessor NotFound = new ChildPropAccessor { Found = false };
+
+            internal bool Found = true;
+            internal System.Reflection.FieldInfo Field;
+            internal System.Reflection.PropertyInfo Property;
+            internal bool IsPropWrapper;
+            internal System.Reflection.PropertyInfo InnerValueProperty; // Prop<T>.Value, only when IsPropWrapper
+            internal Type InnerValueType;
+        }
+
+        // (child type) → (prop name, case-insensitive) → accessor. Built lazily, once per pair.
+        private static readonly Dictionary<Type, Dictionary<string, ChildPropAccessor>> s_childPropCache =
+            new Dictionary<Type, Dictionary<string, ChildPropAccessor>>();
+
+        // Type → "Value" PropertyInfo of that Prop<T>-shaped type. Shared by the incoming-value
+        // unwrap in SetChildProp and by ChildPropAccessor construction.
+        private static readonly Dictionary<Type, System.Reflection.PropertyInfo> s_propValuePropertyCache =
+            new Dictionary<Type, System.Reflection.PropertyInfo>();
+
+        private static System.Reflection.PropertyInfo GetPropValueProperty(Type propWrapperType)
+        {
+            if (!s_propValuePropertyCache.TryGetValue(propWrapperType, out var pi))
+            {
+                pi = propWrapperType.GetProperty("Value");
+                s_propValuePropertyCache[propWrapperType] = pi;
+            }
+            return pi;
+        }
+
+        private static ChildPropAccessor GetChildPropAccessor(Type childType, string propName)
+        {
+            if (!s_childPropCache.TryGetValue(childType, out var byName))
+            {
+                byName = new Dictionary<string, ChildPropAccessor>(StringComparer.OrdinalIgnoreCase);
+                s_childPropCache[childType] = byName;
+            }
+            if (byName.TryGetValue(propName, out var accessor))
+                return accessor;
+
+            accessor = BuildChildPropAccessor(childType, propName);
+            byName[propName] = accessor;
+            return accessor;
+        }
+
+        private static ChildPropAccessor BuildChildPropAccessor(Type childType, string propName)
+        {
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.IgnoreCase;
+
+            var field = childType.GetField(propName, flags);
+            if (field != null)
+            {
+                var isWrapper = IsPropType(field.FieldType);
+                System.Reflection.PropertyInfo innerProp = null;
+                Type innerType = null;
+                if (isWrapper)
+                {
+                    innerProp = GetPropValueProperty(field.FieldType);
+                    innerType = innerProp?.PropertyType;
+                    isWrapper = innerProp != null;
+                }
+                return new ChildPropAccessor
+                {
+                    Field = field,
+                    IsPropWrapper = isWrapper,
+                    InnerValueProperty = innerProp,
+                    InnerValueType = innerType,
+                };
+            }
+
+            var prop = childType.GetProperty(propName, flags);
+            if (prop != null && prop.CanWrite)
+            {
+                var isWrapper = IsPropType(prop.PropertyType);
+                System.Reflection.PropertyInfo innerProp = null;
+                Type innerType = null;
+                if (isWrapper)
+                {
+                    innerProp = GetPropValueProperty(prop.PropertyType);
+                    innerType = innerProp?.PropertyType;
+                    isWrapper = innerProp != null;
+                }
+                return new ChildPropAccessor
+                {
+                    Property = prop,
+                    IsPropWrapper = isWrapper,
+                    InnerValueProperty = innerProp,
+                    InnerValueType = innerType,
+                };
+            }
+
+            return ChildPropAccessor.NotFound;
+        }
+
+        /// <summary>
         /// Sets a property or field by name (case-insensitive) on a VisualElement child.
         /// Used by the Sharq compiler for prop passing: &lt;sus:Child variant="primary" /&gt;
         /// and &lt;sus:Child :variant="SourceProp" /&gt;.
@@ -922,6 +1051,10 @@ namespace Sharq.Core
         /// For Prop&lt;T&gt; fields: mutates .Value without replacing the instance
         /// (preserves internal bindings subscribed to the Prop).
         /// For plain types: direct property/field assignment.
+        ///
+        /// The (child type, propName) accessor is resolved via reflection once and cached
+        /// (T-1101) — repeat calls (every reactive re-apply of a :prop bind) skip GetField/
+        /// GetProperty entirely.
         /// </summary>
         public static void SetChildProp(VisualElement child, string propName, object value)
         {
@@ -932,59 +1065,42 @@ namespace Sharq.Core
             // the getter returns the Prop wrapper, not the inner value.
             if (value != null && IsPropType(value.GetType()))
             {
-                var vp = value.GetType().GetProperty("Value");
+                var vp = GetPropValueProperty(value.GetType());
                 if (vp != null)
                     value = vp.GetValue(value);
             }
 
-            var type = child.GetType();
-            var flags = System.Reflection.BindingFlags.Public
-                      | System.Reflection.BindingFlags.NonPublic
-                      | System.Reflection.BindingFlags.Instance
-                      | System.Reflection.BindingFlags.IgnoreCase;
+            var accessor = GetChildPropAccessor(child.GetType(), propName);
+            if (!accessor.Found) return;
 
-            // Try field first
-            var field = type.GetField(propName, flags);
-            if (field != null)
+            if (accessor.Field != null)
             {
-                var fieldValue = field.GetValue(child);
-                if (fieldValue != null && IsPropType(field.FieldType))
+                var fieldValue = accessor.Field.GetValue(child);
+                if (fieldValue != null && accessor.IsPropWrapper)
                 {
                     // Prop<T> — mutate .Value
-                    var propValueField = field.FieldType.GetProperty("Value");
-                    if (propValueField != null)
-                    {
-                        var converted = ConvertValue(value, propValueField.PropertyType);
-                        propValueField.SetValue(fieldValue, converted);
-                        return;
-                    }
+                    var converted = ConvertValue(value, accessor.InnerValueType);
+                    accessor.InnerValueProperty.SetValue(fieldValue, converted);
+                    return;
                 }
 
                 // Plain field — direct assignment
-                var convertedField = ConvertValue(value, field.FieldType);
-                field.SetValue(child, convertedField);
+                var convertedField = ConvertValue(value, accessor.Field.FieldType);
+                accessor.Field.SetValue(child, convertedField);
                 return;
             }
 
-            // Fallback to property
-            var prop = type.GetProperty(propName, flags);
-            if (prop != null && prop.CanWrite)
+            // Property path
+            var propValue = accessor.Property.GetValue(child);
+            if (propValue != null && accessor.IsPropWrapper)
             {
-                var propValue = prop.GetValue(child);
-                if (propValue != null && IsPropType(prop.PropertyType))
-                {
-                    var innerValue = prop.PropertyType.GetProperty("Value");
-                    if (innerValue != null)
-                    {
-                        var converted = ConvertValue(value, innerValue.PropertyType);
-                        innerValue.SetValue(propValue, converted);
-                        return;
-                    }
-                }
-
-                var convertedProp = ConvertValue(value, prop.PropertyType);
-                prop.SetValue(child, convertedProp);
+                var converted = ConvertValue(value, accessor.InnerValueType);
+                accessor.InnerValueProperty.SetValue(propValue, converted);
+                return;
             }
+
+            var convertedProp = ConvertValue(value, accessor.Property.PropertyType);
+            accessor.Property.SetValue(child, convertedProp);
         }
 
         /// <summary>

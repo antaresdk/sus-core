@@ -100,6 +100,19 @@ namespace Sharq.Core
         static readonly Dictionary<VisualElement, SusMotion> ActiveByTarget =
             new Dictionary<VisualElement, SusMotion>();
 
+#if UNITY_EDITOR
+        // With Domain Reload disabled ActiveByTarget survives leaving Play Mode (T-1103): it would
+        // keep VisualElement references from the destroyed panel of the previous session pinned
+        // alive via a static dictionary, and a forever-Repeat motion (Play() with Repeat<=0) never
+        // reaches CompleteInternal() on its own — its schedule.Execute(Tick).Every(16) item and
+        // dictionary entry would outlive the panel that created them.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            ActiveByTarget.Clear();
+        }
+#endif
+
         readonly VisualElement _target;
         readonly List<Group> _groups = new List<Group>(4);
         Group _current;
@@ -121,6 +134,7 @@ namespace Sharq.Core
         float _totalDuration;
         bool _playing;
         bool _forever;
+        bool _detachRegistered;
 
         SusMotion(VisualElement target)
         {
@@ -325,6 +339,14 @@ namespace Sharq.Core
             _playing = true;
             ActiveByTarget[_target] = this;
 
+            // T-1103: a target that detaches mid-play (element removed/pooled) must not keep a
+            // forever-Repeat motion ticking forever on it — stop and unregister on detach.
+            if (!_detachRegistered)
+            {
+                _target.RegisterCallback<DetachFromPanelEvent>(OnTargetDetached);
+                _detachRegistered = true;
+            }
+
             _item?.Pause();
             _item = _target.schedule.Execute(Tick).Every(16);
 
@@ -344,12 +366,27 @@ namespace Sharq.Core
             _item?.Pause();
             _item = null;
             _playing = false;
+            RemoveDetachHandler();
             if (ActiveByTarget.TryGetValue(_target, out var cur) && cur == this)
                 ActiveByTarget.Remove(_target);
 
             if (applyRestore)
                 ApplyRestore();
             _onComplete = null;
+        }
+
+        /// <summary>
+        /// T-1103: target left the panel while this motion was playing. A forever-Repeat chain
+        /// (Repeat &lt;= 0) never calls CompleteInternal() on its own, so without this the
+        /// schedule item keeps ticking a detached element and ActiveByTarget pins it alive.
+        /// </summary>
+        void OnTargetDetached(DetachFromPanelEvent evt) => Stop();
+
+        void RemoveDetachHandler()
+        {
+            if (!_detachRegistered) return;
+            _target?.UnregisterCallback<DetachFromPanelEvent>(OnTargetDetached);
+            _detachRegistered = false;
         }
 
         void Tick()
@@ -381,6 +418,7 @@ namespace Sharq.Core
             _item?.Pause();
             _item = null;
             _playing = false;
+            RemoveDetachHandler();
             if (ActiveByTarget.TryGetValue(_target, out var cur) && cur == this)
                 ActiveByTarget.Remove(_target);
 

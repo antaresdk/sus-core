@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Reflection;
 using UnityEngine.UIElements;
 using NUnit.Framework;
 
@@ -102,6 +104,164 @@ namespace Sharq.Core.Editor.Tests
             SusComponent.SetChildProp(mock, "variant", "danger");
             Assert.AreSame(original, mock.Variant, "Should mutate, not replace");
             Assert.AreEqual("danger", mock.Variant.Value);
+        }
+
+        #endregion
+
+        #region T-1101 — SetChildProp accessor cache (R-A2/P0-2)
+
+        [Test]
+        public void SetChildProp_CachedAccessor_ReusedAcrossCalls_StillMutatesCorrectly()
+        {
+            var child = new MockComponent();
+
+            // First call resolves + caches the (Type,"Variant") accessor.
+            SusComponent.SetChildProp(child, "Variant", "first");
+            Assert.AreEqual("first", child.Variant.Value);
+
+            // Second/third calls hit the cache — must still mutate correctly, not "freeze"
+            // the value from the first (cold) resolution.
+            SusComponent.SetChildProp(child, "Variant", "second");
+            Assert.AreEqual("second", child.Variant.Value);
+            SusComponent.SetChildProp(child, "Variant", "third");
+            Assert.AreEqual("third", child.Variant.Value,
+                "cached accessor must keep mutating Prop.Value correctly on repeat calls");
+        }
+
+        [Test]
+        public void SetChildProp_CachedAccessor_IndependentAcrossInstances()
+        {
+            // The accessor cache is keyed by (Type, propName), shared across ALL instances of
+            // that type — verify it does not leak field VALUES between instances, only the
+            // reflected FieldInfo/PropertyInfo descriptor.
+            var a = new MockComponent();
+            var b = new MockComponent();
+
+            SusComponent.SetChildProp(a, "variant", "alpha");
+            SusComponent.SetChildProp(b, "variant", "beta");
+
+            Assert.AreEqual("alpha", a.Variant.Value);
+            Assert.AreEqual("beta", b.Variant.Value,
+                "cached (Type,name) accessor must not leak state between instances");
+        }
+
+        [Test]
+        public void SetChildProp_UnknownPropName_NoOpAndDoesNotThrow_EvenOnRepeatedCalls()
+        {
+            var child = new MockComponent();
+
+            // First call builds + caches the "NotFound" sentinel; second call must hit that
+            // cached sentinel and still be a safe no-op (not re-throw / re-reflect into a crash).
+            Assert.DoesNotThrow(() => SusComponent.SetChildProp(child, "DoesNotExist", "x"));
+            Assert.DoesNotThrow(() => SusComponent.SetChildProp(child, "DoesNotExist", "y"));
+        }
+
+        [Test]
+        public void SetChildProp_BoolLiteral_ConvertsCorrectly_OnRepeatedCachedCalls()
+        {
+            var toggle = new Toggle();
+            SusComponent.SetChildProp(toggle, "value", "True");
+            Assert.IsTrue(toggle.value);
+            SusComponent.SetChildProp(toggle, "value", "false"); // cache hit
+            Assert.IsFalse(toggle.value);
+            SusComponent.SetChildProp(toggle, "value", "true"); // cache hit again
+            Assert.IsTrue(toggle.value, "Convert.ChangeType/bool.TryParse conversion must run on every call, not just the cold one");
+        }
+
+        /// <summary>
+        /// Not a hard perf gate (JIT warm-up / CI noise make hard thresholds flaky) — logs
+        /// cached-vs-raw-reflection timings for the R-A2/P0-2 "before/after" numbers, with a
+        /// generous soft assertion that only fails if the cache stops paying for itself at all.
+        /// </summary>
+        [Test]
+        public void SetChildProp_Benchmark_CachedVsRawReflection()
+        {
+            const int N = 20000;
+            var child = new MockComponent();
+
+            // Warm the cache (mirrors steady-state: one cold resolve, then N reactive re-applies).
+            SusComponent.SetChildProp(child, "Variant", "warm");
+
+            var swCached = Stopwatch.StartNew();
+            for (int i = 0; i < N; i++)
+                SusComponent.SetChildProp(child, "Variant", i % 2 == 0 ? "a" : "b");
+            swCached.Stop();
+
+            // Baseline: the exact reflection sequence SetChildProp used to run on EVERY call
+            // before T-1101 (GetField + GetProperty("Value") + SetValue, no caching).
+            var swRaw = Stopwatch.StartNew();
+            const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic
+                | BindingFlags.Instance | BindingFlags.IgnoreCase;
+            for (int i = 0; i < N; i++)
+            {
+                var type = child.GetType();
+                var field = type.GetField("Variant", flags);
+                var fieldValue = field.GetValue(child);
+                var propValueField = field.FieldType.GetProperty("Value");
+                propValueField.SetValue(fieldValue, i % 2 == 0 ? "a" : "b");
+            }
+            swRaw.Stop();
+
+            TestContext.WriteLine(
+                $"[T-1101 benchmark] {N} calls — cached SetChildProp: {swCached.ElapsedMilliseconds}ms, " +
+                $"raw GetField/GetProperty every call (pre-T-1101 path): {swRaw.ElapsedMilliseconds}ms");
+
+            Assert.LessOrEqual(swCached.ElapsedMilliseconds, swRaw.ElapsedMilliseconds + 50,
+                "cached SetChildProp must not be slower than doing raw reflection on every call");
+        }
+
+        #endregion
+
+        #region T-1102 — Updated() scheduled only for overriding types (R-A3)
+
+        private class OverridesUpdatedComponent : SusComponent
+        {
+            protected override void Build() { }
+            protected override void Updated() { }
+        }
+
+        private class DoesNotOverrideUpdatedComponent : SusComponent
+        {
+            protected override void Build() { }
+        }
+
+        // Two levels deep: overrides Updated() once, in a grandparent — leaf itself does not.
+        private class GrandparentOverridesUpdated : SusComponent
+        {
+            protected override void Build() { }
+            protected override void Updated() { }
+        }
+        private class ChildOfGrandparentOverrides : GrandparentOverridesUpdated { }
+
+        [Test]
+        public void TypeOverridesUpdated_TrueForDirectOverride()
+        {
+            Assert.IsTrue(SusComponent.TypeOverridesUpdated(typeof(OverridesUpdatedComponent)));
+        }
+
+        [Test]
+        public void TypeOverridesUpdated_FalseWhenNeverOverridden()
+        {
+            Assert.IsFalse(SusComponent.TypeOverridesUpdated(typeof(DoesNotOverrideUpdatedComponent)),
+                "T-1102: a component that never overrides Updated() must not be scheduled at 60Hz");
+        }
+
+        [Test]
+        public void TypeOverridesUpdated_TrueWhenOverriddenByAncestor()
+        {
+            Assert.IsTrue(SusComponent.TypeOverridesUpdated(typeof(ChildOfGrandparentOverrides)),
+                "override anywhere in the hierarchy still means Updated() does real work");
+        }
+
+        [Test]
+        public void TypeOverridesUpdated_CachedResultIsStable()
+        {
+            // Calling twice must hit the cache and return the identical answer both times —
+            // regression guard against a cache that returns garbage/inverted on hit.
+            Assert.IsTrue(SusComponent.TypeOverridesUpdated(typeof(OverridesUpdatedComponent)));
+            Assert.IsTrue(SusComponent.TypeOverridesUpdated(typeof(OverridesUpdatedComponent)));
+            Assert.IsFalse(SusComponent.TypeOverridesUpdated(typeof(DoesNotOverrideUpdatedComponent)));
+            Assert.IsFalse(SusComponent.TypeOverridesUpdated(typeof(DoesNotOverrideUpdatedComponent)));
         }
 
         #endregion
