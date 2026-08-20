@@ -18,9 +18,9 @@ namespace Sharq.Core.Runtime.Tests
     /// (direct read), but the bound Label.text / CSS class is stuck one generation behind
     /// FOREVER, even after many real frames with nothing left to schedule.
     ///
-    /// Live repro this mirrors: sus-game BattleUnitWorldBar.Mounted()'s WatchEffect(ApplyVisual)
-    /// sets HpText.Value; Build()'s BindText(HpCounterLabel, () =&gt; HpText.Value) reads it on
-    /// the same instance (BattleUnitWorldBarContractTests, T-1115/T-1204).
+    /// Live repro this mirrors: a downstream component whose Mounted() WatchEffect(ApplyVisual)
+    /// sets a derived display Prop that the same instance's Build()-time BindText reads
+    /// (caught by its behavior-contract tests, T-1115/T-1204).
     /// </summary>
     public class SteadyStateBindCascadeTests : UIDocumentTestHelper
     {

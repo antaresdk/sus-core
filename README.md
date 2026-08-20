@@ -17,7 +17,7 @@
 **Tests & releases:** 378 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-core/releases) <!-- sus:ok -->
 
 <!-- sus:gen ver pkg=sus-core -->
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.21`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.22`)
 <!-- /sus:gen -->
 
 ---
@@ -84,7 +84,7 @@ Samples from this package (ThemeShowcase + Comp) — design tokens and compositi
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.21
+https://github.com/antaresdk/sus-core.git#v1.0.22
 ```
 <!-- /sus:gen -->
 

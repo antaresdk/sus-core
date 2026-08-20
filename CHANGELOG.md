@@ -7,6 +7,25 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.22] - 2026-08-20
+
+### Fixed
+- Steady-state bind-cascade desync: when a bind action run from `ApplyAllBindUpdates` synchronously wrote a
+  derived `Prop<T>` that another `Bind*`/`WatchEffect` on the same component reads, the re-entrant scheduler
+  re-arm was silently dropped by UITK and the bound text/class stayed one generation behind permanently.
+  `ApplyAllBindUpdates` now drains re-queued bind actions within the same dispatch (bounded by
+  `MaxSteadyStateFlushIterations = 100`, warns instead of hanging on a real Prop cycle) (T-1204).
+- `SusMotion`: a forever-`Repeat` motion now stops and unregisters when its target leaves the panel
+  (`DetachFromPanelEvent`) instead of ticking a dead `VisualElement`; `ActiveByTarget` also gets a
+  play-mode-restart reset like the other statics (T-1103).
+
+### Changed
+- Perf: `(Type, propName)` reflection accessors for `SetChildProp`/`BindChildProp` are cached instead of
+  `GetField`/`GetProperty` on every prop-bind change (T-1101).
+- Perf: `Updated()` is scheduled (`Every(16)`) only for component types that actually override it — removes a
+  60 Hz no-op tick on every `SusComponent` (T-1102).
+- Docs: 04-slots.md — expanded "Styling the slot container" section (T-906).
+
 ## [1.0.21] - 2026-08-19
 
 ### Added
