@@ -8,12 +8,12 @@ namespace Sharq.Core.Editor.Tests
     /// <summary>
     /// Tests for SusComponent.LoadCompanionStyleSheets()'s base-type-chain fallback (T-1273).
     ///
-    /// Tier-B C# subclasses of a Sharq visual-root component (e.g. lumenfall's LfScoreboard :
-    /// SusTable, LfNavButton : SusButton) have no .sharq of their own, so no companion USS file
-    /// exists under their exact type name. Before this fix, LoadCompanionStyleSheets() resolved
-    /// the companion filename from the polymorphic GetType().Name only — for such a subclass that
-    /// silently found nothing, and the base's ENTIRE companion stylesheet never attached (found
-    /// live for LfScoreboard/LfNavButton while fixing T-1243). The fix walks up the base-type
+    /// Tier-B C# subclasses of a Sharq visual-root component (e.g. a downstream
+    /// MyScoreboard : SusTable, MyNavButton : SusButton) have no .sharq of their own, so no
+    /// companion USS file exists under their exact type name. Before this fix,
+    /// LoadCompanionStyleSheets() resolved the companion filename from the polymorphic
+    /// GetType().Name only — for such a subclass that silently found nothing, and the base's
+    /// ENTIRE companion stylesheet never attached (found live while fixing T-1243). The fix walks up the base-type
     /// chain (stopping at SusComponent) when the exact-name lookup finds nothing, so the subclass
     /// inherits its nearest styled ancestor's companion sheet(s) automatically.
     ///

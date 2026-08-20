@@ -7,6 +7,20 @@ All notable changes to this package are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.23] - 2026-08-20
+
+### Fixed
+- `Prop<T>` reentrant self-trigger: subscriber notification (`Changed` / `propertyChanged` / `invalidated`)
+  now runs with dependency tracking suspended, so a watch handler that reads `Value` synchronously during a
+  prop write is no longer misattributed to whichever `WatchEffect` happened to be tracking on the caller's
+  stack — the caller's next write no longer re-fires its own still-executing flush (previously bounded only
+  by `MaxSteadyStateFlushIterations = 100`). New `Peek()` escape hatch reads `Value` without registering a
+  dependency, for read-modify-write accumulator helpers (T-1302, T-1206).
+- Companion-USS lookup falls back up the base-type chain: a Tier-B C# subclass of a Sharq visual-root
+  component with no `.sharq` of its own (e.g. `MySkinScoreboard : SusTable`) inherits its nearest styled
+  ancestor's companion `.g.uss` sheet(s) instead of silently losing them; the resolved owner type is cached
+  per most-derived type, and hot-reload removal keys off the same resolved owner (T-1273).
+
 ## [1.0.22] - 2026-08-20
 
 ### Fixed
