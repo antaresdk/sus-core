@@ -1,5 +1,9 @@
 # 6. Adaptive layout (breakpoints)
 
+The payoff: one `.sharq` screen ships on desktop and mobile without a separate build. Point a
+screen at the breakpoint axis below and its tokens reflow the layout for a narrow panel — instead
+of hand-rebuilding the screen for mobile.
+
 Screen-size adaptation uses **one** axis: `SusBreakpointService`.
 
 There is no High/Low resolution service (`SusResolutionService` was removed) and no
