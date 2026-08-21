@@ -196,8 +196,8 @@ namespace Sharq.Core.Editor.Diagnostics
             {
                 if (string.IsNullOrEmpty(m.id) || string.IsNullOrEmpty(m.dir)) continue;
 
-                var packageName = PackageIdPrefix + m.id;
-                if (!installedUpmPackageNames.Contains(packageName)) continue;
+                var packageName = ResolveUpmPackageName(m);
+                if (string.IsNullOrEmpty(packageName) || !installedUpmPackageNames.Contains(packageName)) continue;
 
                 issues.Add(SusValidationIssue.Error("SetDoctor.UpmCollision",
                     $"Both the UPM package '{packageName}' (Packages/) and the classic module " +
@@ -208,6 +208,20 @@ namespace Sharq.Core.Editor.Diagnostics
                     "keep the classic folder and remove the UPM package."));
             }
             return issues;
+        }
+
+        /// <summary>UPM package name a module collides with: the <c>package</c> field of its
+        /// own <c>sus-module.json</c> (the set packer writes it for every module) — the only
+        /// correct source for a skin module, whose <c>id</c> is <c>skin</c> while its package is
+        /// <c>com.sharq-it.sus.skin.&lt;name&gt;</c> (ARCH-SKIN §4.1 two-forms contract, T-1334);
+        /// falls back to <c>com.sharq-it.sus.&lt;id&gt;</c> for manifests that predate the field
+        /// (core/router/kit/game, where the two happen to coincide).</summary>
+        internal static string ResolveUpmPackageName(SusModuleManifest m)
+        {
+            if (m == null) return null;
+            var explicitName = m.package?.Trim();
+            if (!string.IsNullOrEmpty(explicitName)) return explicitName;
+            return string.IsNullOrEmpty(m.id) ? null : PackageIdPrefix + m.id;
         }
 
         /// <summary>States (2)+(4a): splits every actual path under the set root that ISN'T

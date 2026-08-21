@@ -21,6 +21,9 @@ namespace Sharq.Core.Editor.Tests
         private const string Root = "Sharq";
 
         private static SusModuleManifest MakeModule(string id, string dir, string version, params string[] extraPaths)
+            => MakeModuleWithPackage(id, dir, version, "com.sharq-it.sus." + id, extraPaths);
+
+        private static SusModuleManifest MakeModuleWithPackage(string id, string dir, string version, string package, params string[] extraPaths)
         {
             var paths = new List<string> { $"{Root}/{dir}", $"{Root}/{dir}/sus-module.json" };
             paths.AddRange(extraPaths);
@@ -28,7 +31,7 @@ namespace Sharq.Core.Editor.Tests
             return new SusModuleManifest
             {
                 schema = SusModuleManifest.Schema, id = id, dir = dir, root = Root,
-                package = "com.sharq-it.sus." + id, version = version, sha = "deadbeef",
+                package = package, version = version, sha = "deadbeef",
                 paths = paths.ToArray(),
             };
         }
@@ -48,6 +51,61 @@ namespace Sharq.Core.Editor.Tests
         }
 
         // ─── DetectUpmCollisions ───────────────────────────────────────────
+
+        [Test]
+        public void DetectUpmCollisions_SkinModule_PackageNotDerivableFromId_ReportsError()
+        {
+            // T-1334: a skin module's id is "skin" but its UPM package is
+            // com.sharq-it.sus.skin.<name> — "com.sharq-it.sus." + id never matches, so the
+            // two-forms collision (ARCH-SKIN §4.1: UPM package ships Cs* types, classic set
+            // generates the same types into Assembly-CSharp -> CS0433) used to go unreported.
+            var skin = MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi");
+            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.skin.cleanscifi" };
+
+            var issues = SusSetDoctor.DetectUpmCollisions(new[] { skin }, upm);
+
+            Assert.AreEqual(1, issues.Count);
+            Assert.AreEqual("SetDoctor.UpmCollision", issues[0].Category);
+            Assert.AreEqual(SusValidationSeverity.Error, issues[0].Severity);
+            StringAssert.Contains("com.sharq-it.sus.skin.cleanscifi", issues[0].Message);
+            StringAssert.Contains("Sharq/Skins/CleanSciFi", issues[0].Message);
+            StringAssert.DoesNotContain("'com.sharq-it.sus.skin'", issues[0].Message);
+        }
+
+        [Test]
+        public void DetectUpmCollisions_SkinModule_IdDerivedNameInstalled_NoFalseFinding()
+        {
+            // The reverse: a UPM package literally named "com.sharq-it.sus.skin" is NOT this
+            // module's package once the manifest says which one it is.
+            var skin = MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi");
+            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.skin" };
+
+            Assert.IsEmpty(SusSetDoctor.DetectUpmCollisions(new[] { skin }, upm));
+        }
+
+        [Test]
+        public void DetectUpmCollisions_LegacyManifestWithoutPackage_FallsBackToIdDerivedName()
+        {
+            var legacy = MakeModuleWithPackage("core", "Core", "1.0.14", null);
+            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.core" };
+
+            var issues = SusSetDoctor.DetectUpmCollisions(new[] { legacy }, upm);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("com.sharq-it.sus.core", issues[0].Message);
+        }
+
+        [Test]
+        public void ResolveUpmPackageName_PrefersManifestPackage_FallsBackToId()
+        {
+            Assert.AreEqual("com.sharq-it.sus.skin.cleanscifi",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi")));
+            Assert.AreEqual("com.sharq-it.sus.kit",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("kit", "Kit", "1.0.16", null)));
+            Assert.AreEqual("com.sharq-it.sus.kit",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("kit", "Kit", "1.0.16", "  ")));
+            Assert.IsNull(SusSetDoctor.ResolveUpmPackageName(null));
+        }
 
         [Test]
         public void DetectUpmCollisions_ModulePresentAndUpmInstalled_ReportsError()
