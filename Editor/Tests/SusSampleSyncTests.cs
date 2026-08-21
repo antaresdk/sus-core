@@ -105,6 +105,23 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void SyncTree_UnityScenes_EolOnlyDifference_IsUnchanged()
+        {
+            // T-1515: `.unity` is force-synced, but it was compared BYTE-wise while the
+            // workspace source is LF and the copy Unity writes back is CRLF — so an identical
+            // scene was rewritten on every Refresh, and every rewrite handed the human Unity's
+            // «open scene modified externally» modal. Same text ⇒ no copy at all.
+            W(_src, "Storybook.unity", "a\nb\nc\n");
+            W(_dst, "Storybook.unity", "a\r\nb\r\nc\r\n");
+
+            var r = SusSampleSync.SyncTree(_src, _dst);
+
+            CollectionAssert.DoesNotContain(r.Copied, "Storybook.unity");
+            CollectionAssert.Contains(r.Unchanged, "Storybook.unity");
+            Assert.AreEqual("a\r\nb\r\nc\r\n", R(_dst, "Storybook.unity"), "copy left untouched");
+        }
+
+        [Test]
         public void SyncTree_LockedDestination_ReportedNotThrown()
         {
             W(_src, "A.cs", "1");

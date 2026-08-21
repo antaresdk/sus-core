@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
+using UnityEditor.SceneManagement;
 
 namespace Sharq.Core
 {
@@ -258,7 +259,12 @@ namespace Sharq.Core
 
         static bool SameContent(string a, string b, string rel)
         {
-            if (IsCode(rel))
+            // Force-synced YAML (.unity) is text too, and it drifts in EOL exactly like code:
+            // workspace `Samples~` is LF in git, the copy Unity writes back is CRLF. A byte
+            // compare therefore reported "different" on a scene that was identical, so every
+            // Refresh rewrote the open scene and handed the human Unity's modal
+            // «The open scene(s) have been modified externally» — every single time (T-1515).
+            if (IsCode(rel) || IsForceSync(rel))
                 return NormalizeText(File.ReadAllText(a)) == NormalizeText(File.ReadAllText(b));
             var ba = File.ReadAllBytes(a);
             var bb = File.ReadAllBytes(b);
@@ -268,6 +274,70 @@ namespace Sharq.Core
         }
 
         static string NormalizeText(string s) => s.Replace("\r\n", "\n").Replace('\r', '\n');
+
+        /// <summary>
+        /// A force-synced scene that is OPEN in the editor is what raises Unity's modal
+        /// «The open scene(s) have been modified externally → Reload/Ignore» (T-1515). The
+        /// Refresh menus are one-click / agent actions, so they must resolve that themselves
+        /// instead of parking a dialog in front of the human. An empty sync never gets here at
+        /// all — <see cref="SameContent"/> now leaves an identical scene untouched.
+        ///
+        /// A scene with UNSAVED changes is NOT reopened: the package version already won on
+        /// disk (force-sync, T-948) and reopening would silently drop the human's edits. That
+        /// case gets a named warning and stays the human's call.
+        /// </summary>
+        /// <returns>How many open scenes were reloaded from disk.</returns>
+        public static int ReloadCopiedOpenScenes(SyncResult result, string destDir, string logTag)
+        {
+            if (result == null || result.Copied.Count == 0) return 0;
+
+            // Collect first, act after: OpenScene mutates the open-scene list we would be
+            // iterating.
+            var targets = new List<string>();
+            var dirty = new List<string>();
+            var openCount = EditorSceneManager.sceneCount;
+            foreach (var rel in result.Copied)
+            {
+                if (!IsForceSync(rel)) continue;
+                var abs = Path.GetFullPath(Path.Combine(destDir, rel));
+                for (var i = 0; i < openCount; i++)
+                {
+                    var scene = EditorSceneManager.GetSceneAt(i);
+                    if (!scene.IsValid() || string.IsNullOrEmpty(scene.path)) continue;
+                    if (!string.Equals(Path.GetFullPath(scene.path), abs, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                    if (scene.isDirty) dirty.Add(rel);
+                    else targets.Add(scene.path);
+                }
+            }
+
+            foreach (var rel in dirty)
+            {
+                Debug.LogWarning(
+                    $"[{logTag}] {rel} was refreshed from the package while the open scene has UNSAVED"
+                    + " changes — not reloading it for you (that would drop them). Save your work"
+                    + " elsewhere, then reopen the scene to pick up the package version.");
+            }
+
+            // A multi-scene setup is the human's arrangement — reopening Single would tear it
+            // down, and there is no additive reload that keeps the order. Say so instead.
+            if (targets.Count > 0 && openCount > 1)
+            {
+                Debug.LogWarning(
+                    $"[{logTag}] refreshed {string.Join(", ", targets)} under a multi-scene setup"
+                    + " — reopen it yourself; reloading here would close the other open scenes.");
+                return 0;
+            }
+
+            var reloaded = 0;
+            foreach (var path in targets)
+            {
+                EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
+                reloaded++;
+                Debug.Log($"[{logTag}] Reloaded open scene {path} after sync (no external-change dialog).");
+            }
+            return reloaded;
+        }
 
         static bool DefaultCopy(string src, string dest)
         {
