@@ -213,7 +213,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <summary>UPM package name a module collides with: the <c>package</c> field of its
         /// own <c>sus-module.json</c> (the set packer writes it for every module) — the only
         /// correct source for a skin module, whose <c>id</c> is <c>skin</c> while its package is
-        /// <c>com.sharq-it.sus.skin.&lt;name&gt;</c> (ARCH-SKIN §4.1 two-forms contract, T-1334);
+        /// <c>com.sharq-it.sus.&lt;family&gt;.&lt;name&gt;</c> (ARCH-SKIN §4.1 two-forms contract, T-1334);
         /// falls back to <c>com.sharq-it.sus.&lt;id&gt;</c> for manifests that predate the field
         /// (core/router/kit/game, where the two happen to coincide).</summary>
         internal static string ResolveUpmPackageName(SusModuleManifest m)

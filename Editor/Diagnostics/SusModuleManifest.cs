@@ -19,7 +19,7 @@ namespace Sharq.Core.Editor.Diagnostics
         public string schema;
         /// <summary>Manifest key, e.g. "core", "router", "kit", "game", "skin". For the first
         /// four <c>"com.sharq-it.sus." + id</c> happens to equal the UPM package name; a skin
-        /// module's id is <c>skin</c> while its package is <c>com.sharq-it.sus.skin.&lt;name&gt;</c>
+        /// module's id is <c>skin</c> while its package is <c>com.sharq-it.sus.&lt;family&gt;.&lt;name&gt;</c>
         /// — always resolve the package through <see cref="package"/> (T-1334).</summary>
         public string id;
         /// <summary>Folder name under the set root, e.g. "Core".</summary>
@@ -27,7 +27,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <summary>Set root folder name under Assets/, e.g. "Sharq" (ARCH-PACK-CLASSIC.md §2.1 D1).</summary>
         public string root;
         /// <summary>UPM package name of the same module (<c>com.sharq-it.sus.core</c>,
-        /// <c>com.sharq-it.sus.skin.cleanscifi</c>, …) — the source of truth for the UPM+classic
+        /// <c>com.sharq-it.sus.&lt;family&gt;.&lt;name&gt;</c>, …) — the source of truth for the UPM+classic
         /// collision check; may be null in manifests written before the field existed.</summary>
         public string package;
         public string version;

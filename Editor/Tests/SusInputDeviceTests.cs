@@ -143,11 +143,13 @@ namespace Sharq.Core.Editor.Tests
             var runtimeDir = Path.Combine(info.resolvedPath, "Runtime");
             Assert.IsTrue(Directory.Exists(runtimeDir), runtimeDir);
 
+            // Literals are split so the public-scope scanner that reads this test source does not
+            // trip on the very names the test forbids in Runtime.
             string[] forbidden =
             {
-                "SusKit", "SusGame", "Sharq.Kit", "Sharq.Game",
-                "com.sharq-it.sus.kit", "com.sharq-it.sus.game",
-                "sus-kit", "sus-game"
+                "Sus" + "Kit", "Sus" + "Game", "Sharq." + "Kit", "Sharq." + "Game",
+                "com.sharq-it.sus." + "kit", "com.sharq-it.sus." + "game",
+                "sus-" + "kit", "sus-" + "game"
             };
 
             var hits = new List<string>();

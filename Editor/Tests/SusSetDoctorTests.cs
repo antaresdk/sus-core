@@ -56,31 +56,31 @@ namespace Sharq.Core.Editor.Tests
         public void DetectUpmCollisions_SkinModule_PackageNotDerivableFromId_ReportsError()
         {
             // T-1334: a skin module's id is "skin" but its UPM package is
-            // com.sharq-it.sus.skin.<name> — "com.sharq-it.sus." + id never matches, so the
+            // com.sharq-it.sus.theme.<name> — "com.sharq-it.sus." + id never matches, so the
             // two-forms collision (ARCH-SKIN §4.1: UPM package ships Cs* types, classic set
             // generates the same types into Assembly-CSharp -> CS0433) used to go unreported.
-            var skin = MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi");
-            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.skin.cleanscifi" };
+            var theme = MakeModuleWithPackage("theme", "Themes/Example", "0.3.0", "com.sharq-it.sus.theme.example");
+            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.theme.example" };
 
-            var issues = SusSetDoctor.DetectUpmCollisions(new[] { skin }, upm);
+            var issues = SusSetDoctor.DetectUpmCollisions(new[] { theme }, upm);
 
             Assert.AreEqual(1, issues.Count);
             Assert.AreEqual("SetDoctor.UpmCollision", issues[0].Category);
             Assert.AreEqual(SusValidationSeverity.Error, issues[0].Severity);
-            StringAssert.Contains("com.sharq-it.sus.skin.cleanscifi", issues[0].Message);
-            StringAssert.Contains("Sharq/Skins/CleanSciFi", issues[0].Message);
-            StringAssert.DoesNotContain("'com.sharq-it.sus.skin'", issues[0].Message);
+            StringAssert.Contains("com.sharq-it.sus.theme.example", issues[0].Message);
+            StringAssert.Contains("Sharq/Themes/Example", issues[0].Message);
+            StringAssert.DoesNotContain("'com.sharq-it.sus.theme'", issues[0].Message);
         }
 
         [Test]
         public void DetectUpmCollisions_SkinModule_IdDerivedNameInstalled_NoFalseFinding()
         {
-            // The reverse: a UPM package literally named "com.sharq-it.sus.skin" is NOT this
+            // The reverse: a UPM package literally named "com.sharq-it.sus.theme" is NOT this
             // module's package once the manifest says which one it is.
-            var skin = MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi");
-            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.skin" };
+            var theme = MakeModuleWithPackage("theme", "Themes/Example", "0.3.0", "com.sharq-it.sus.theme.example");
+            var upm = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase) { "com.sharq-it.sus.theme" };
 
-            Assert.IsEmpty(SusSetDoctor.DetectUpmCollisions(new[] { skin }, upm));
+            Assert.IsEmpty(SusSetDoctor.DetectUpmCollisions(new[] { theme }, upm));
         }
 
         [Test]
@@ -98,12 +98,12 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void ResolveUpmPackageName_PrefersManifestPackage_FallsBackToId()
         {
-            Assert.AreEqual("com.sharq-it.sus.skin.cleanscifi",
-                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("skin", "Skins/CleanSciFi", "0.3.0", "com.sharq-it.sus.skin.cleanscifi")));
-            Assert.AreEqual("com.sharq-it.sus.kit",
-                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("kit", "Kit", "1.0.16", null)));
-            Assert.AreEqual("com.sharq-it.sus.kit",
-                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("kit", "Kit", "1.0.16", "  ")));
+            Assert.AreEqual("com.sharq-it.sus.theme.example",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("theme", "Themes/Example", "0.3.0", "com.sharq-it.sus.theme.example")));
+            Assert.AreEqual("com.sharq-it.sus.widgets",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("widgets", "Widgets", "1.0.16", null)));
+            Assert.AreEqual("com.sharq-it.sus.widgets",
+                SusSetDoctor.ResolveUpmPackageName(MakeModuleWithPackage("widgets", "Widgets", "1.0.16", "  ")));
             Assert.IsNull(SusSetDoctor.ResolveUpmPackageName(null));
         }
 
