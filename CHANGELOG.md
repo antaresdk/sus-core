@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+## [1.0.24] - 2026-08-21
+
+### Added
+- `SusInputDevice` + `SusInputGlyph` (with `ISusInputGlyphProvider`, `SusInputActionId`,
+  `SusInputDeviceKind`): last-active input device policy (pointer / keyboard / gamepad / touch)
+  and glyph resolution for prompts; idempotent `EnsureInstalled` from `SusBootstrap` after
+  `EnsureEventSystem`; Edit/Play tests (T-1398).
+- `SusTouchMin` + shared `--sus-touch-min` design token — one source for the touch-target
+  minimum consumed by kit and game (T-1267).
+
+### Changed
+- `SusComponent` ctor/dev-audit hooks extracted into the `SusComponent.Audits.cs` partial;
+  unused `BuildStarter`/`BuildHomeScreen` SetupWizard templates (`Starter~` path) dropped (T-1111).
+- Sharq codegen: AOT-safe `v-for` key emit through a `GetItemMember` reflection helper (no
+  `dynamic`); an unknown UITK `@event` now emits `#error` instead of `EventBase<EventBase>` (T-1106).
+- `SusSampleSync.SyncTree` force-syncs `.unity` scenes (T-948).
+- Shipped-code comments swept of internal ticket references and rephrased as behavior
+  comments (T-1113).
+- Docs: README + DESIGN_TOKENS §1.4 "restyle without C#" (T-1235), responsive lead with the
+  desktop+mobile payoff (T-1230), DESIGN_TOKENS load wording / VectorImage capitalisation (T-1378).
+
 All notable changes to this package are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
