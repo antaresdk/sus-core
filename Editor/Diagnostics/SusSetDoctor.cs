@@ -142,13 +142,14 @@ namespace Sharq.Core.Editor.Diagnostics
 
             var assetsAbs = Path.GetFullPath("Assets");
             var actualPaths = CollectActualPaths(assetsAbs, root);
+            var generatedZones = SusSharqGenManifest.ResolveGeneratedZones(assetsAbs, root, presentModules);
 
             var installedUpm = new HashSet<string>(
                 PackageInfo.GetAllRegisteredPackages().Select(p => p.name),
                 StringComparer.OrdinalIgnoreCase);
             issues.AddRange(DetectUpmCollisions(presentModules, installedUpm));
 
-            issues.AddRange(ClassifyStrayPaths(root, presentModules, presentDescriptors, actualPaths));
+            issues.AddRange(ClassifyStrayPaths(root, presentModules, presentDescriptors, actualPaths, generatedZones));
             issues.AddRange(DetectModuleManifestMissing(root, presentDescriptors, presentModules, actualPaths));
             issues.AddRange(DetectIncompleteSets(root, presentDescriptors, presentModules, actualPaths));
 
@@ -226,18 +227,20 @@ namespace Sharq.Core.Editor.Diagnostics
 
         /// <summary>States (2)+(4a): splits every actual path under the set root that ISN'T
         /// explicitly known (not in any present module's own <c>paths</c>, not in any present
-        /// set descriptor's <c>sharedPaths</c>) into <c>SetDoctor.Residual</c> (attributable to a
-        /// present module's own subtree — <c>&lt;root&gt;/&lt;dir&gt;/**</c> or
-        /// <c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c> — the ONLY case that gets a "delete"
-        /// hint) or <c>SetDoctor.Unattributed</c> (everything else: a purchaser's own file, or
-        /// the remnant of a module whose OWN manifest was itself removed — never a "delete"
-        /// hint, §5.5 point 5). Collapsed to the shallowest offending ancestor so a whole stray
-        /// folder is reported once, not file-by-file.</summary>
+        /// set descriptor's <c>sharedPaths</c>, not under a present module's own generated zone
+        /// — <paramref name="generatedZones"/>, D8/T-1489) into <c>SetDoctor.Residual</c>
+        /// (attributable to a present module's own subtree —
+        /// <c>&lt;root&gt;/&lt;dir&gt;/**</c> or <c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c> —
+        /// the ONLY case that gets a "delete" hint) or <c>SetDoctor.Unattributed</c> (everything
+        /// else: a purchaser's own file, or the remnant of a module whose OWN manifest was
+        /// itself removed — never a "delete" hint, §5.5 point 5). Collapsed to the shallowest
+        /// offending ancestor so a whole stray folder is reported once, not file-by-file.</summary>
         internal static List<SusValidationIssue> ClassifyStrayPaths(
             string root,
             IReadOnlyList<SusModuleManifest> presentModules,
             IReadOnlyList<SusSetManifest> presentDescriptors,
-            IEnumerable<string> actualPaths)
+            IEnumerable<string> actualPaths,
+            IReadOnlyList<string> generatedZones = null)
         {
             var known = new HashSet<string>(StringComparer.Ordinal);
             foreach (var m in presentModules)
@@ -246,12 +249,14 @@ namespace Sharq.Core.Editor.Diagnostics
             foreach (var d in presentDescriptors)
                 foreach (var p in d.sharedPaths ?? Array.Empty<string>())
                     known.Add(p);
+            var zones = generatedZones ?? Array.Empty<string>();
 
             var stray = new List<string>();
             foreach (var p in actualPaths)
             {
                 if (string.Equals(p, root, StringComparison.Ordinal)) continue; // root itself — always valid
                 if (known.Contains(p)) continue;
+                if (IsUnderAnyZone(p, zones)) continue; // D8: purchaser's own Generate output
                 stray.Add(p);
             }
             var collapsed = CollapseToAncestors(stray);
@@ -279,6 +284,29 @@ namespace Sharq.Core.Editor.Diagnostics
             if (unattributed.Count > 0)
                 issues.Add(BuildUnattributedIssue(root, unattributed));
             return issues;
+        }
+
+        /// <summary>True when <paramref name="path"/> IS a generated zone or lives under one
+        /// (D8/T-1489: <c>&lt;root&gt;/&lt;dir&gt;/&lt;generated&gt;</c> and everything below,
+        /// including the zone folder itself — the purchaser's own Generate output, never a
+        /// residual — AND the intermediate directories BETWEEN the module's own dir and the
+        /// zone (e.g. <c>&lt;root&gt;/&lt;dir&gt;/Runtime</c> above
+        /// <c>&lt;root&gt;/&lt;dir&gt;/Runtime/Generated</c>): those aren't in <c>paths</c>
+        /// either when the packer's exclude cuts the whole subtree, so without this they'd
+        /// collapse to their own stray "shallowest ancestor" and get flagged instead of the
+        /// leaf, per §5.5 algorithm step 3 "вместе с промежуточными каталогами до
+        /// &lt;root&gt;/&lt;dir&gt;").</summary>
+        private static bool IsUnderAnyZone(string path, IReadOnlyList<string> zones)
+        {
+            foreach (var z in zones)
+            {
+                if (string.IsNullOrEmpty(z)) continue;
+                if (string.Equals(path, z, StringComparison.Ordinal) ||
+                    path.StartsWith(z + "/", StringComparison.Ordinal) || // inside the zone
+                    z.StartsWith(path + "/", StringComparison.Ordinal))  // an ancestor of the zone
+                    return true;
+            }
+            return false;
         }
 
         private static List<string> CollapseToAncestors(List<string> paths)
@@ -622,16 +650,34 @@ namespace Sharq.Core.Editor.Diagnostics
                 var assetPath = AssetDatabase.GUIDToAssetPath(guid);
                 if (!string.Equals(Path.GetFileName(assetPath), ModuleManifestFileName, StringComparison.OrdinalIgnoreCase))
                     continue;
-                var parts = assetPath.Split('/');
-                if (parts.Length < 4) continue; // not "Assets/<root>/<dir>/sus-module.json" — can't be ours
-                var actualRoot = parts[parts.Length - 3];
-                var actualDir = parts[parts.Length - 2];
+                if (!TryParseModulePath(assetPath, out var actualRoot, out var actualDir)) continue;
                 string json;
                 try { json = File.ReadAllText(assetPath); }
                 catch (IOException) { continue; } // transient (mid-import) — next trigger retries
                 results.Add((assetPath, actualRoot, actualDir, SusModuleManifest.Parse(json)));
             }
             return results;
+        }
+
+        /// <summary>Splits a <c>sus-module.json</c> asset path into the root/dir its LOCATION
+        /// implies — <c>"Assets/&lt;root&gt;/&lt;dir&gt;/sus-module.json"</c> where
+        /// <c>&lt;dir&gt;</c> may itself contain slashes (a skin module's dir is nested two
+        /// levels deep, e.g. <c>Assets/Sharq/Themes/Example/sus-module.json</c> → root
+        /// <c>"Sharq"</c>, dir <c>"Themes/Example"</c>, T-1488 — the old <c>parts[len-3]</c>
+        /// arithmetic assumed a single-segment dir and misread the second segment as the root,
+        /// producing a false <c>SetDoctor.Relocated</c> on every skin-set install). Returns
+        /// false for anything shorter than <c>Assets/&lt;root&gt;/&lt;dir&gt;/sus-module.json</c>
+        /// (needs at least one dir segment) — the caller skips those, they can't be ours.</summary>
+        internal static bool TryParseModulePath(string assetPath, out string actualRoot, out string actualDir)
+        {
+            actualRoot = null;
+            actualDir = null;
+            if (string.IsNullOrEmpty(assetPath)) return false;
+            var parts = assetPath.Split('/');
+            if (parts.Length < 4) return false; // not "Assets/<root>/<dir...>/sus-module.json"
+            actualRoot = parts[1];
+            actualDir = string.Join("/", parts, 2, parts.Length - 3);
+            return true;
         }
 
         /// <summary>Every <c>sus-set.&lt;set&gt;.json</c> in the project, with the root the

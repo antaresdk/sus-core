@@ -411,6 +411,51 @@ namespace Sharq.Core.Editor.Tests
             Assert.IsEmpty(SusSetDoctor.DetectVersionMismatches(new[] { kit }, new Dictionary<string, string>()));
         }
 
+        // ─── TryParseModulePath (T-1488: multi-segment dir, e.g. a skin module) ────
+
+        [Test]
+        public void TryParseModulePath_SingleSegmentDir_ReturnsRootAndDir()
+        {
+            var ok = SusSetDoctor.TryParseModulePath("Assets/Sharq/Kit/sus-module.json", out var root, out var dir);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual("Sharq", root);
+            Assert.AreEqual("Kit", dir);
+        }
+
+        [Test]
+        public void TryParseModulePath_MultiSegmentDir_JoinsIntermediateSegmentsIntoDir()
+        {
+            // Real case (T-1488): a skin module nests two levels under the set root —
+            // Assets/Sharq/Themes/Example/sus-module.json — root must stay "Sharq", not the
+            // "Skins" the old parts[len-3] arithmetic misread as the root.
+            var ok = SusSetDoctor.TryParseModulePath("Assets/Sharq/Themes/Example/sus-module.json", out var root, out var dir);
+
+            Assert.IsTrue(ok);
+            Assert.AreEqual("Sharq", root);
+            Assert.AreEqual("Themes/Example", dir);
+        }
+
+        [Test]
+        public void TryParseModulePath_TooShort_ReturnsFalse()
+        {
+            var ok = SusSetDoctor.TryParseModulePath("Assets/sus-module.json", out var root, out var dir);
+
+            Assert.IsFalse(ok);
+            Assert.IsNull(root);
+            Assert.IsNull(dir);
+        }
+
+        [Test]
+        public void DetectRelocatedModules_MultiSegmentDirMatchesActual_NoFalseRelocated()
+        {
+            // T-1488 end-to-end: a skin module's manifest declares root "Sharq" / dir
+            // "Themes/Example" and IS actually found there — must not be flagged.
+            var skin = MakeModuleWithPackage("skin", "Themes/Example", "0.2.0", "com.sharq-it.sus.theme.example");
+
+            Assert.IsEmpty(SusSetDoctor.DetectRelocatedModules(new[] { (skin, "Sharq", "Themes/Example") }));
+        }
+
         // ─── DetectRelocatedModules / DetectRelocatedDescriptors ───────────────
 
         [Test]
@@ -772,6 +817,81 @@ namespace Sharq.Core.Editor.Tests
         public void CollectActualPaths_RootMissing_ReturnsEmpty()
         {
             Assert.IsEmpty(SusSetDoctor.CollectActualPaths(_root, "Sharq"));
+        }
+
+        // ─── SusSharqGenManifest.ResolveGeneratedZones (D8/T-1489) ─────────────
+
+        [Test]
+        public void ResolveGeneratedZones_NoDescriptor_ReturnsEmpty()
+        {
+            var kitDir = Path.Combine(_root, "Sharq", "Kit");
+            Directory.CreateDirectory(kitDir);
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+
+            var zones = SusSharqGenManifest.ResolveGeneratedZones(_root, "Sharq", new[] { kit });
+
+            Assert.IsEmpty(zones);
+        }
+
+        [Test]
+        public void ResolveGeneratedZones_DescriptorPresent_ReturnsGeneratedFolderAsZone()
+        {
+            var kitDir = Path.Combine(_root, "Sharq", "Kit");
+            Directory.CreateDirectory(kitDir);
+            File.WriteAllText(Path.Combine(kitDir, SusSharqGenManifest.FileName),
+                "{\"generated\":\"Runtime/Generated\"}");
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+
+            var zones = SusSharqGenManifest.ResolveGeneratedZones(_root, "Sharq", new[] { kit });
+
+            CollectionAssert.AreEquivalent(new[] { "Sharq/Kit/Runtime/Generated" }, zones);
+        }
+
+        [Test]
+        public void ResolveGeneratedZones_MalformedDescriptorJson_SkipsThatModule()
+        {
+            var kitDir = Path.Combine(_root, "Sharq", "Kit");
+            Directory.CreateDirectory(kitDir);
+            File.WriteAllText(Path.Combine(kitDir, SusSharqGenManifest.FileName), "{not json");
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+
+            Assert.IsEmpty(SusSharqGenManifest.ResolveGeneratedZones(_root, "Sharq", new[] { kit }));
+        }
+
+        // ─── ClassifyStrayPaths + generatedZones (D8/T-1489) ───────────────────
+
+        [Test]
+        public void ClassifyStrayPaths_PathUnderGeneratedZone_NoResidual()
+        {
+            // A purchaser's own Generate wrote Sharq/Kit/Runtime/Generated/CsFoo.g.cs after
+            // import — it's in neither the module's paths nor sharedPaths, but IS under the
+            // module's declared generated zone, so it must not become SetDoctor.Residual.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            var actual = kit.paths.Concat(new[]
+            {
+                $"{Root}/Kit/Runtime", $"{Root}/Kit/Runtime/Generated",
+                $"{Root}/Kit/Runtime/Generated/CsFoo.g.cs",
+            });
+            var zones = new[] { $"{Root}/Kit/Runtime/Generated" };
+
+            var issues = SusSetDoctor.ClassifyStrayPaths(Root, new[] { kit }, new SusSetManifest[0], actual, zones);
+
+            Assert.IsEmpty(issues);
+        }
+
+        [Test]
+        public void ClassifyStrayPaths_NoGeneratedZonesGiven_ResidualBehaviourUnchanged()
+        {
+            // Negative case from the D8 plan: a module WITHOUT a sharq.gen.json (no zone to
+            // resolve, generatedZones stays null/empty) must classify exactly as it did before
+            // T-1489 — a stray file under its subtree is still SetDoctor.Residual.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            var actual = kit.paths.Concat(new[] { $"{Root}/Kit/OldFile.cs" });
+
+            var issues = SusSetDoctor.ClassifyStrayPaths(Root, new[] { kit }, new SusSetManifest[0], actual);
+
+            Assert.AreEqual(1, issues.Count);
+            Assert.AreEqual("SetDoctor.Residual", issues[0].Category);
         }
     }
 }
