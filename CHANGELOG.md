@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.0.26] - 2026-08-21
+
+### Fixed
+- Set Doctor `FindModuleManifests` misread a skin module nested two levels under the set root as
+  the set root itself, false-flagging `SetDoctor.Relocated` on every game-set + skin-set install
+  (T-1488). A module shipping without its packer-excluded `Generated/` folder no longer gets a
+  false `SetDoctor.Residual` delete hint once the purchaser's own Generate writes it back
+  (T-1489, ARCH-PACK-CLASSIC.md 5.5 D8).
+- Sample sync compared `.unity` scenes byte-wise, so an LF workspace copy vs. the CRLF copy Unity
+  writes back looked different on every Refresh and re-triggered Unity's "modified externally"
+  modal even with no real change; comparison is now EOL-normalized like code, and
+  `SusSampleSync.ReloadCopiedOpenScenes` reopens an open scene that really changed instead of
+  leaving the modal for the human (T-1515).
+
 ## [1.0.25] - 2026-08-21
 
 ### Changed
