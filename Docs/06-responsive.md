@@ -1,8 +1,10 @@
 # 6. Adaptive layout (breakpoints)
 
-The payoff: one `.sharq` screen ships on desktop and mobile without a separate build. Point a
-screen at the breakpoint axis below and its tokens reflow the layout for a narrow panel — instead
-of hand-rebuilding the screen for mobile.
+The payoff: mock the screen once (Figma, or Pixso for China teams), put custom styles on Unity
+tokens / themes, and one `.sharq` reflows for desktop and mobile — no second full layout for
+another device class, UI ready on every Unity build target you already ship. Point a screen at the
+breakpoint axis below and its tokens reflow the layout for a narrow panel — instead of
+hand-rebuilding the screen for mobile.
 
 Screen-size adaptation uses **one** axis: `SusBreakpointService`.
 
