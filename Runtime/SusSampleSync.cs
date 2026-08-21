@@ -313,7 +313,7 @@ namespace Sharq.Core
 
             foreach (var rel in dirty)
             {
-                Debug.LogWarning(
+                SusLog.Warn(
                     $"[{logTag}] {rel} was refreshed from the package while the open scene has UNSAVED"
                     + " changes — not reloading it for you (that would drop them). Save your work"
                     + " elsewhere, then reopen the scene to pick up the package version.");
@@ -323,7 +323,7 @@ namespace Sharq.Core
             // down, and there is no additive reload that keeps the order. Say so instead.
             if (targets.Count > 0 && openCount > 1)
             {
-                Debug.LogWarning(
+                SusLog.Warn(
                     $"[{logTag}] refreshed {string.Join(", ", targets)} under a multi-scene setup"
                     + " — reopen it yourself; reloading here would close the other open scenes.");
                 return 0;
@@ -334,7 +334,7 @@ namespace Sharq.Core
             {
                 EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
                 reloaded++;
-                Debug.Log($"[{logTag}] Reloaded open scene {path} after sync (no external-change dialog).");
+                SusLog.Info($"[{logTag}] Reloaded open scene {path} after sync (no external-change dialog).");
             }
             return reloaded;
         }
