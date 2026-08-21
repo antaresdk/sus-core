@@ -1,0 +1,22 @@
+{
+  "global": {
+    "primary": {
+      "value": "#FF00AA",
+      "type": "color"
+    },
+    "space": {
+      "16": {
+        "value": "20px",
+        "type": "dimension"
+      }
+    },
+    "radius": {
+      "md": {
+        "value": "10px",
+        "type": "dimension"
+      }
+    }
+  },
+  "$themes": [],
+  "$metadata": { "tokenSetOrder": ["global"] }
+}

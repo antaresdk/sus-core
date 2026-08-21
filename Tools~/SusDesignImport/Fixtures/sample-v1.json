@@ -1,0 +1,34 @@
+{
+  "$schema": "sus-design/v1",
+  "source": { "tool": "pixso", "file": "fixture-mvp.json" },
+  "tokens": {
+    "color": {
+      "primary": { "$type": "color", "$value": "#0066FF" },
+      "primary.hover": { "$type": "color", "$value": "#66A3FF" },
+      "bg.surface": { "$type": "color", "$value": "#1A1A1E" },
+      "text.primary": { "$type": "color", "$value": "#F2F2F2" },
+      "error": { "$type": "color", "$value": "#FF4D4F" }
+    },
+    "dimension": {
+      "space.16": { "$type": "dimension", "$value": "16px" },
+      "space.24": { "$type": "dimension", "$value": "24px" },
+      "radius.md": { "$type": "dimension", "$value": "8px" },
+      "radius.lg": { "$type": "dimension", "$value": "12px" }
+    },
+    "typography": {
+      "fontSize.body": { "$type": "dimension", "$value": "14px" }
+    }
+  },
+  "modes": {
+    "mobile": {
+      "appliesTo": "breakpoint-sm",
+      "tokens": {
+        "dimension": {
+          "space.16": { "$type": "dimension", "$value": "12px" }
+        }
+      }
+    }
+  },
+  "components": [],
+  "assets": []
+}
