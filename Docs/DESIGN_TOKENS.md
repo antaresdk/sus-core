@@ -128,7 +128,7 @@ sus-core/Runtime/Resources/SusRuntime/
 
 `_font.uss` defines `:root { -unity-font: url("Fonts/Montserrat/Montserrat-Regular.ttf"); }` and CSS variables `--font-family-regular`, `--font-family-medium`, `--font-family-bold`, `--font-family-black`, `--font-family-italic`, `--font-family-light`.
 
-`SusBootstrap.Mount<T>()` automatically downloads `Resources/SusRuntime/_font.uss` with every mount.
+`SusBootstrap.Mount<T>()` automatically loads `Resources/SusRuntime/_font.uss` with every mount.
 
 ### 2.2 Semantic fonts (shipped)
 
@@ -982,7 +982,7 @@ In special cases (self-target, container-target - see rule `sharq-css-scoping.md
 
 ### B.3 `backgroundImage` re-assert pattern
 
-UI Toolkit Known Issue: `VectorImage` Sometimes it doesn't render on the first frame. Proven pattern (from old `SizedIcon`):
+UI Toolkit Known Issue: `VectorImage` sometimes doesn't render on the first frame. Proven pattern (from old `SizedIcon`):
 
 ```csharp
 el.style.backgroundImage = new StyleBackground(vec);
