@@ -16,7 +16,7 @@
 
 ## Content
 
-1. [General architecture](#1-general-architecture)
+1. [General architecture](#1-general-architecture) (incl. [restyle without C#](#1-4-restyle-without-editing-c))
 2. [Fonts](#2-fonts)
 3. [Colors: three-layer token system](#3-colors-three-layer-token-system)
 4. [Icons: Phosphor Icons](#4-icons-phosphor-icons)
@@ -80,6 +80,27 @@ Theme is switched by adding/removing `.theme-dark` / `.theme-light` on the casca
 **In SUS this is simplified** — Dark/Light only via `.theme-*` classes; screen-size adaptation
 is **breakpoints only** (`SusBreakpointService` + `.breakpoint-*` token overrides). See
 [06-responsive.md](./06-responsive.md).
+
+### 1.4 Restyle without editing C#
+
+The token cascade is not only an internal hygiene rule — it is the supported way to make
+controls look like *your* game **without editing C#**:
+
+1. **Tokens (`--sus-*`)** — override semantic tokens (or the L1/L2 values they delegate to) on
+   the cascade root. Every consumer of those tokens recolors together: one sheet change, whole UI.
+2. **Classes** — add a project USS rule on a component or element class for a one-off look
+   (button, panel, row) without forking the component script.
+3. **States as classes** — hover / active / disabled / selected (and similar) are driven by USS
+   classes or UITK pseudo-classes. C# only toggles membership
+   (`AddToClassList` / `RemoveFromClassList` or the Sharq equivalent). Restyling a state is the
+   same job as restyling the base: change the sheet, not the script.
+
+**Policy vs debt.** Look-and-feel that buyers need to override belongs in USS. Geometry and
+motion that must follow runtime props may stay in C#. UITK inline appearance writes from C#
+(`.style.backgroundColor`, `.style.color`, fonts, radii, and similar) **beat any selector** —
+a known remainder of those call sites still exists and is being migrated into USS/classes. Do
+not treat those call sites as the theming API; prefer tokens and classes. Named exceptions
+(motion tweens, font service, drag ghosts, and similar) are intentional and documented in code.
 
 ---
 

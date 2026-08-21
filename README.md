@@ -80,6 +80,14 @@ Samples from this package (ThemeShowcase + Comp) — design tokens and compositi
 
 ---
 
+## Restyle without editing C#
+
+Appearance is a USS concern, not a C# concern. Semantic tokens (`--sus-*`) recolor the whole cascade at once; a project class overrides a single control; visual states are class toggles (`AddToClassList` / `RemoveFromClassList`), so they restyle with the same sheets. For controls that follow this policy you should not need to edit generated or hand-written C# to make the UI look like your game.
+
+Inline UITK writes to appearance properties from C# (colors, fonts, radii, and similar) still win over any selector — a small known remainder of those call sites is being moved into USS. Prefer tokens and classes; treat `.style.<appearance> = …` in C# as a last resort, not the theming API. See [Design tokens](./Docs/DESIGN_TOKENS.md).
+
+---
+
 ## Installation
 
 <!-- sus:gen urls -->
