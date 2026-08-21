@@ -9,17 +9,17 @@ using UnityEngine;
 namespace Sharq.Core
 {
     /// <summary>
-    /// Editor-only sample-tree sync (T-507). UPM copies a package sample into
+    /// Editor-only sample-tree sync. UPM copies a package sample into
     /// <c>Assets/Samples/&lt;displayName&gt;/&lt;version&gt;/&lt;sample&gt;</c> once at import and never
     /// again; the package "Refresh … From Package" menus used to re-copy a HARD-CODED list of
     /// file names, so every file outside that list (new stories, QA fixtures, tests, a new
     /// sample file) silently never reached the copy the showcase drivers and live tests run
-    /// against — three times in a row (T-519, T-576, T-507).
+    /// against — three times in a row.
     ///
     /// This helper syncs the WHOLE tree recursively and verifies a copy against its source:
     /// <list type="bullet">
     /// <item>code/text files (<see cref="CodeExtensions"/>) are compared as EOL-normalized text
-    ///   (workspace <c>Samples~</c> is LF, PackageCache pins are often CRLF — R39 / T-782);</item>
+    /// (workspace <c>Samples~</c> is LF, PackageCache pins are often CRLF — R39);</item>
     /// <item>serialized Unity assets (<c>.unity</c>, <c>.asset</c>, <c>.prefab</c>, …) are copied
     ///   only when the copy lacks them — the editor rewrites their YAML under its own version,
     ///   overwriting an open scene from disk is never what "Refresh" means (R39 S3 soft);</item>
@@ -27,7 +27,7 @@ namespace Sharq.Core
     ///   GUIDs stay stable, nothing is re-imported for no reason;</item>
     /// <item>files present in the copy but gone from the source are deleted (with their
     ///   <c>.meta</c>), except local drivers matching <see cref="DefaultSkipLocal"/>
-    ///   (<c>*ShotAll.cs</c> live in the copy ON PURPOSE — T-070).</item>
+    /// (<c>*ShotAll.cs</c> live in the copy ON PURPOSE —).</item>
     /// </list>
     /// Lives in the runtime assembly under <c>UNITY_EDITOR</c> so that both package Editor menus
     /// and PlayMode tests / drivers (which have no editor asmdef reference) can call
@@ -199,7 +199,7 @@ namespace Sharq.Core
             sb.Append($"[SusSampleSync] sample copy is STALE vs package source — {drift.Count} file(s): ");
             sb.Append(string.Join(", ", drift.GetRange(0, Math.Min(drift.Count, 6))));
             if (drift.Count > 6) sb.Append(" …");
-            sb.Append($". Copy: {dir} · source: {srcDir}. Refresh first: {menuRoute} (R39, T-507) — shooting/testing a stale copy silently reports the OLD UI.");
+            sb.Append($". Copy: {dir} · source: {srcDir}. Refresh first: {menuRoute} (R39) — shooting/testing a stale copy silently reports the OLD UI.");
             return sb.ToString();
         }
 

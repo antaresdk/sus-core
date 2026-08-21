@@ -87,7 +87,7 @@ namespace Sharq.Core
 
             // A curated set (CoreIconProvider's ~127 names) commonly ships only the Regular
             // weight for a given glyph — a component/story requesting Bold/Fill/etc. must not
-            // silently lose the icon when the base glyph exists (T-591: SusToggle/SusChip/
+            // silently lose the icon when the base glyph exists (SusToggle/SusChip/
             // SusAlert request Weight=Fill for "toggle-right"/"x-circle", which this set only
             // has at Regular). Degrade to Regular before giving up.
             if (img == null && weight != SusIconWeight.Regular)

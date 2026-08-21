@@ -29,12 +29,12 @@ namespace Sharq.Core
         /// that starts hidden (falsy prop at Mounted) and is later revealed — e.g. a leading
         /// caption Label bound to a Prop set after construction via a Bind() helper — would jump
         /// from its authored position (first child) to last child, landing after siblings that
-        /// should visually follow it (T-421, 2026-08-13: SusWedgeSlider label rendered BELOW the
+        /// should visually follow it (2026-08-13: SusWedgeSlider label rendered BELOW the
         /// control instead of above). Fix: remember the sibling index at removal time and
         /// <see cref="VisualElement.Insert"/> back at that index (clamped to current child count)
         /// on re-show.
         ///
-        /// KNOWN LIMITATION (T-541, 2026-08-13): when TWO+ siblings under the same parent both
+        /// KNOWN LIMITATION (2026-08-13): when TWO+ siblings under the same parent both
         /// start hidden and are revealed in the same reactive flush (e.g. a component with two
         /// v-if Labels both "" at construction, both set by the caller right after), each captures
         /// "index 0" against an already-emptied parent, and whichever re-inserts SECOND lands at
@@ -42,7 +42,7 @@ namespace Sharq.Core
         /// Title/Text visual order swapped). A placeholder-based fix that preserves the vacated
         /// slot was tried and reverted — it changes child COUNT while hidden (a real, if inert,
         /// VisualElement stays in the tree), which breaks any child-count-based logic elsewhere
-        /// (e.g. "container has 0 children → show empty state") and the T-421 regression test's
+        /// (e.g. "container has 0 children → show empty state") and the regression test's
         /// index assertions, for a class of bug that has exactly one known instance so far. Fixed
         /// at the component level instead where it occurs (v-show instead of v-if for plain-Label
         /// siblings with no mount/unmount lifecycle needs — SusAlert). If this pattern recurs

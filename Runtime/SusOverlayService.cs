@@ -43,8 +43,8 @@ namespace Sharq.Core
             public object Owner;                  // non-null = grouped floating (e.g. a menu)
             public List<FloatingState> Children;  // linked floatings that track this parent
             public bool MatchAnchorWidth;         // popup API (Select/Dropdown) — clone anchor width every resync
-            public EventCallback<GeometryChangedEvent> AnchorGeometryCb;  // T-407: anchor moved/resized → resync
-            public EventCallback<GeometryChangedEvent> PanelGeometryCb;   // T-407: panel resized → resync
+            public EventCallback<GeometryChangedEvent> AnchorGeometryCb; // anchor moved/resized → resync
+            public EventCallback<GeometryChangedEvent> PanelGeometryCb; // panel resized → resync
         }
 
         private static readonly List<FloatingState> _floatings = new();
@@ -123,7 +123,7 @@ namespace Sharq.Core
 
             anchor.RegisterCallback<DetachFromPanelEvent>(OnFloatingAnchorDetached);
 
-            // T-407: the very first Show() call happens synchronously (often before UI Toolkit
+            // the very first Show() call happens synchronously (often before UI Toolkit
             // has resolved a layout pass on a just-mounted anchor/popup — worldBound/resolvedStyle
             // are stale or zero at that instant). GeometryChangedEvent fires whenever the anchor's
             // OWN resolved rect changes — including the first real layout pass and every later
@@ -273,7 +273,7 @@ namespace Sharq.Core
 
             // Popup API (Select/Dropdown): re-clone the anchor width on every resync, not just
             // at Show()-time — a GeometryChangedEvent means the anchor's rect (and therefore its
-            // width) may have just changed (T-407: panel resize left the popup at a stale width).
+            // width) may have just changed (panel resize left the popup at a stale width).
             if (state.MatchAnchorWidth)
             {
                 var w = state.Anchor.resolvedStyle.width;
@@ -367,7 +367,7 @@ namespace Sharq.Core
             // Reparenting caused SusScrollView (inside popup) to Attach/Detach on every
             // open/close and tripped RemountLoopAudit during rapid toggles.
             // matchAnchorWidth: true — Select/Dropdown popups must track the trigger's width
-            // for the whole open lifetime (T-407), not just the first Show() call.
+            // for the whole open lifetime, not just the first Show() call.
             ShowFloating(popup, anchor, OverlayCategory.Dropdown,
                 onClose: onClose,
                 closeOthers: true,
@@ -417,9 +417,9 @@ namespace Sharq.Core
                 var fw = floating.resolvedStyle.width > 0 ? floating.resolvedStyle.width : 200f;
                 var fh = floating.resolvedStyle.height > 0 ? floating.resolvedStyle.height : 48f;
 
-                // T-407: flip ABOVE the anchor only when there's genuinely no room below AND
+                // flip ABOVE the anchor only when there's genuinely no room below AND
                 // there IS room above — never just clamp downward (that used to slide the popup
-                // up over the anchor/header without actually flipping past it, T-407 case
+                // up over the anchor/header without actually flipping past it case
                 // kit-dropdown.png: popup ended up overlapping the Storybook header).
                 if (top + fh > ph)
                 {

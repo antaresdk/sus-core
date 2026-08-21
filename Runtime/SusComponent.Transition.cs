@@ -28,7 +28,7 @@ namespace Sharq.Core
             IVisualElementScheduledItem leaveJob = null;
             bool? lastShown = null;
 
-            // T-541 (2026-08-13): "no animation before the first paint" cannot be a
+            // (2026-08-13): "no animation before the first paint" cannot be a
             // one-shot latch on the FIRST call of this ReactiveEffect — Build() always
             // runs this effect once, synchronously, during the constructor (getter()
             // still reading the Prop's DEFAULT value, since callers set the real value
@@ -116,7 +116,7 @@ namespace Sharq.Core
                 leaveJob = el.schedule.Execute(() =>
                 {
                     ClearPhaseClasses();
-                    // T-492: guard against a re-Enter() racing this delayed removal. Pause() above
+                    // guard against a re-Enter() racing this delayed removal. Pause() above
                     // cancels the PREVIOUS job when Leave() is called again, but it does not protect
                     // against THIS job's own timer having already fired (UITK scheduler dispatch is
                     // in-flight) by the moment a later Enter() re-adds `el` — that Enter() cannot
@@ -148,14 +148,14 @@ namespace Sharq.Core
                     // default: an element that starts v-if=false was never shown, so there
                     // is nothing to animate OUT of; symmetrically, a value that only ever
                     // reaches its true/false state before anyone could see the OTHER state
-                    // has nothing to animate FROM either — T-541). Without this, the
+                    // has nothing to animate FROM either). Without this, the
                     // generator's Add-then-bind emission order (element is already parented
                     // when this effect first runs) made a closed-by-default panel play a
                     // 200ms+ Leave() — fully opaque (.sus-transition-leave-from = opacity:1)
                     // until the delayed removal fired — so collapsed content was fully
                     // visible/readable at mount, and a fast screenshot (or a click landing
                     // mid-leave) raced the pending removal job. Reflect the starting state
-                    // synchronously instead (T-415, 2026-08-13 — SusExpansionPanel body
+                    // synchronously instead (2026-08-13 — SusExpansionPanel body
                     // visible while collapsed / expand looked inert).
                     ClearPhaseClasses();
                     if (show)

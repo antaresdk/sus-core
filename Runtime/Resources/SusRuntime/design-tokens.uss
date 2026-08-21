@@ -95,7 +95,7 @@
     --sus-radius-xl:   var(--base-radius-xl);
     --sus-radius-full: var(--base-radius-full);
 
-    /* ── Touch target floor (T-1267 / ARCH-INVENTORY-LAYOUT §7.1 / ASHEN-REACH §4.3) ──
+    /* ── Touch target floor (ARCH-INVENTORY-LAYOUT §7.1 / ASHEN-REACH §4.3) ──
        Owner threshold "≥44" is SCREEN px. C# computes TouchMinPt = ceil(44 / spp) and
        lifts the value via .sus-touch-min--{48|56|64|88} (UITK cannot write custom props
        from C#). Consumers read var(--sus-touch-min), never a bare 44px literal. */

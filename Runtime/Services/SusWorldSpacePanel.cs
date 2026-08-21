@@ -150,7 +150,7 @@ namespace Sharq.Core
 
         /// <summary>
         /// Switches this panel's PanelSettings to WorldSpace render mode on the FIRST attach
-        /// (T-645) — an always-on empty WorldSpace panel was found to spam the Unity engine's
+        /// — an always-on empty WorldSpace panel was found to spam the Unity engine's
         /// internal "Access version should be odd when acquiring lock" assert continuously in
         /// Play mode on 6000.3.17f1, and <see cref="SusBootstrap.EnsureWorldSpacePanel"/> creates
         /// this panel unconditionally for every <c>SusApp</c> whether or not it ever mounts

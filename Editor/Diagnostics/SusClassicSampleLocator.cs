@@ -4,8 +4,7 @@ using System.IO;
 namespace Sharq.Core.Editor.Diagnostics
 {
     /// <summary>
-    /// Shared classic-set (Asset Store) detection for per-module sample Setup menus (T-532,
-    /// T-557).
+    /// Shared classic-set (Asset Store) detection for per-module sample Setup menus.
     ///
     /// A UPM install and a classic-set install put a module's sample at two structurally
     /// different places: <c>Assets/Samples/&lt;displayName&gt;/&lt;version&gt;/&lt;sample&gt;</c>
@@ -13,8 +12,8 @@ namespace Sharq.Core.Editor.Diagnostics
     /// (ARCH-PACK-CLASSIC.md §2.1/§3.T2-samples S2). Each Setup menu already knows how to find the
     /// UPM shape; this class adds the classic one.
     ///
-    /// Since T-556/D7 this reads the asking module's OWN <c>sus-module.json</c> directly (by
-    /// module id) instead of going through a shared <c>sus-set.json</c>'s module list (T-532's
+    /// Since D7 this reads the asking module's OWN <c>sus-module.json</c> directly (by
+    /// module id) instead of going through a shared <c>sus-set.json</c>'s module list (the
     /// original approach): the old approach broke exactly the scenario D7 exists to fix — after
     /// importing kit-set on top of game-set, the single shared manifest no longer mentioned
     /// "game" at all, so this locator (and Set Doctor) lost track of the Game sample even though

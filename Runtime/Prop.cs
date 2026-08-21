@@ -30,7 +30,7 @@ namespace Sharq.Core
                 var old = _value;
                 _value = value;
 
-                // T-1302/T-1206: notify subscribers with tracking SUSPENDED. Without this,
+                // notify subscribers with tracking SUSPENDED. Without this,
                 // a Prop.Value GET performed synchronously by a subscriber's handler — e.g.
                 // SusTooltip's Watch(Params, (_, _) => RebuildParams()) reading Params.Value
                 // to rebuild rows — gets attributed to whichever effect happens to be
@@ -48,8 +48,8 @@ namespace Sharq.Core
                 // notification we are already dispatching. That is a genuine infinite
                 // self-cycle (bounded only by SusComponent.MaxSteadyStateFlushIterations),
                 // not benign cascade noise — confirmed live via SusStatusEffect/blk-status
-                // (17x warning flood, T-1302) and BattleUnitWorldBar (~90+ iterations on
-                // every mount, T-1206), and it survived fixing SetParam's OWN read via
+                // (17x warning flood) and BattleUnitWorldBar (~90+ iterations on
+                // every mount), and it survived fixing SetParam's OWN read via
                 // Peek() alone, because RebuildParams' nested read reproduced the same
                 // mis-tracking through a different call path. Vue/Solid avoid this whole
                 // class by pausing tracking around trigger/effect notification; mirroring
@@ -80,7 +80,7 @@ namespace Sharq.Core
         /// to compute the NEXT value that will immediately be written back to this SAME Prop
         /// (e.g. <c>SusTooltip.SetParam</c>: copy the existing list, add/replace one entry,
         /// write the new list) — inside a method that may itself be called from within another
-        /// component's <c>WatchEffect</c>/<c>ReactiveEffect</c> (T-1302/T-1206, 2026-08-20).
+        /// component's <c>WatchEffect</c>/<c>ReactiveEffect</c> (2026-08-20).
         /// <see cref="DependencyTracker"/> is thread-global and keys off whichever effect is
         /// CURRENTLY tracking, not off which component owns this Prop: a plain <c>Value</c> get
         /// inside such a method makes the CALLER's effect depend on this Prop even though the

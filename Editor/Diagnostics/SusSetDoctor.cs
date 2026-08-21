@@ -12,7 +12,7 @@ using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 namespace Sharq.Core.Editor.Diagnostics
 {
     /// <summary>
-    /// SUS Set Doctor v2 (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5, T-556/T-557) — detects several
+    /// SUS Set Doctor v2 (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5) — detects several
     /// states a classic (.unitypackage) purchaser can silently end up in, because Unity's asset
     /// import only ADDS files, it never deletes or reconciles them:
     ///
@@ -26,18 +26,18 @@ namespace Sharq.Core.Editor.Diagnostics
     ///     updated (or manually replaced) while others were not.
     ///  4. <b>Unattributed files</b>, <b>missing module manifests</b>, <b>incomplete sets</b> and
     ///     <b>relocated folders</b> — see the "правило атрибуции" below.
-    ///  5. <b>Root file provenance</b> (<see cref="DetectRootFileProvenance"/>, T-561) — the
+    /// 5. <b>Root file provenance</b> (<see cref="DetectRootFileProvenance"/>) — the
     ///     generated <c>README.txt</c>/<c>LICENSE.txt</c>/<c>Third-Party Notices.txt</c> share ONE
     ///     path per set root; re-importing a smaller set on top of an already-installed larger one
     ///     silently overwrites them with the smaller set's content (e.g. Complete's demo-art
     ///     notices quietly dropped out of the combined Third-Party Notices.txt after a Kit
     ///     re-import).
     ///
-    /// <b>Правило атрибуции (§2.3 D7).</b> Before T-556 a single shared
+    /// <b>Правило атрибуции (§2.3 D7).</b> Before a single shared
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> was overwritten by WHICHEVER set was imported
     /// last, so its "everything under the root" semantics made the sibling set's own modules
     /// look like residue of an old version — Set Doctor would tell a Complete owner who
-    /// re-imported Kit on top to delete their own Game module (T-550). Since T-556 each module
+    /// re-imported Kit on top to delete their own Game module. Since each module
     /// owns its own manifest (<see cref="SusModuleManifest"/>, at
     /// <c>Assets/&lt;root&gt;/&lt;Module&gt;/sus-module.json</c>) that ships and is overwritten
     /// together with the module's own files — it structurally cannot go stale relative to a
@@ -76,7 +76,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <summary>Generated root files whose CONTENT is shared/overwritable per set root (they
         /// are listed in a set descriptor's <c>sharedPaths</c>, not owned by any one module) —
         /// mirrors the equivalent list in the set packaging tool that generates these files
-        /// (§5.5 point 10 / risk R11, T-561).</summary>
+        /// (§5.5 point 10 / risk R11).</summary>
         internal static readonly string[] RootFileNames = { "README.txt", "LICENSE.txt", "Third-Party Notices.txt" };
 
         private static readonly Regex ChangelogVersionHeading =
@@ -89,7 +89,7 @@ namespace Sharq.Core.Editor.Diagnostics
             new(@"^Generated for:\s*(?<set>\S+)\s+v(?<version>.+)$", RegexOptions.Compiled);
 
         /// <summary>True for a per-SET descriptor filename, i.e. <c>sus-set.&lt;set&gt;.json</c>
-        /// (the pre-T-556 single <c>sus-set.json</c> does NOT match — that name is never written
+        /// (the old single <c>sus-set.json</c> does NOT match — that name is never written
         /// again, §2.3 D7 п.3 / инвариант I15(4), and there are zero live purchasers on the old
         /// format to stay compatible with, R12).</summary>
         internal static bool IsSetDescriptorFileName(string fileName)
@@ -181,10 +181,10 @@ namespace Sharq.Core.Editor.Diagnostics
 
         /// <summary>State (1): a module is both a registered UPM package AND present as a
         /// classic asset folder at the same time. Only needs the modules we actually found a
-        /// manifest for — since T-556, a module's own <c>sus-module.json</c> survives on disk
+        /// manifest for — since a module's own <c>sus-module.json</c> survives on disk
         /// regardless of which sibling set was imported on top (it lives under that module's own
         /// folder, which a sibling set's packer never touches), so this no longer needs a
-        /// separate "present module folders" disk scan the way the pre-T-556 single-manifest
+        /// separate "present module folders" disk scan the way the old single-manifest
         /// version did (that scan existed only to work around a manifest that could forget a
         /// module entirely — see the class doc's правило атрибуции).</summary>
         internal static List<SusValidationIssue> DetectUpmCollisions(
@@ -214,7 +214,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// explicitly known (not in any present module's own <c>paths</c>, not in any present
         /// set descriptor's <c>sharedPaths</c>) into <c>SetDoctor.Residual</c> (attributable to a
         /// present module's own subtree — <c>&lt;root&gt;/&lt;dir&gt;/**</c> or
-        /// <c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c>, T-534 — the ONLY case that gets a "delete"
+        /// <c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c> — the ONLY case that gets a "delete"
         /// hint) or <c>SetDoctor.Unattributed</c> (everything else: a purchaser's own file, or
         /// the remnant of a module whose OWN manifest was itself removed — never a "delete"
         /// hint, §5.5 point 5). Collapsed to the shallowest offending ancestor so a whole stray
@@ -474,7 +474,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
         /// <summary>Parses the packer's deterministic provenance marker from the LAST non-empty
         /// line of a generated root file's text. Returns null when there is no such line (the
-        /// file is hand-edited, foreign, or from a version of the packer before T-561) — silence,
+        /// file is hand-edited, foreign, or from a version of the packer before) — silence,
         /// not a false positive, when there is no signal to compare against.</summary>
         internal static (string set, string version)? ParseRootFileProvenanceMarker(string text)
         {

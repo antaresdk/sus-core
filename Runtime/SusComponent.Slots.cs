@@ -87,7 +87,7 @@ namespace Sharq.Core
             map[propName] = value;
         }
 
-        /// <summary>USS class present on every slot container (T-530).</summary>
+        /// <summary>USS class present on every slot container.</summary>
         public const string SlotContainerClass = "sus-slot";
 
         /// <summary>
@@ -101,8 +101,8 @@ namespace Sharq.Core
         /// Returns the container element where slot content should be projected.
         /// Created lazily — first call per slot name creates a VisualElement
         /// placeholder that will receive projected content.
-        /// The container carries the stable classes <c>sus-slot sus-slot--&lt;name&gt;</c>
-        /// (T-530): a <c>&lt;slot&gt;</c> compiles to this extra element nested INSIDE the
+        /// The container carries the stable classes <c>sus-slot sus-slot--&lt;name&gt;</c>:
+        /// a <c>&lt;slot&gt;</c> compiles to this extra element nested INSIDE the
         /// author's wrapper, so a row-direction wrapper lays out only the container, not the
         /// projected children. Component USS targets the container explicitly:
         /// <c>.my-wrapper &gt; .sus-slot { flex-direction: row; }</c>. The container itself

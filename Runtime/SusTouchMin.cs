@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 namespace Sharq.Core
 {
     /// <summary>
-    /// Shared touch-target floor (T-1267): owner threshold is ≥ 44 <b>screen</b> px, so
+    /// Shared touch-target floor: owner threshold is ≥ 44 <b>screen</b> px, so
     /// panel points = <c>ceil(44 / scaledPixelsPerPoint)</c>. USS consumers read
     /// <c>var(--sus-touch-min)</c>; UITK cannot set custom properties from C#, so
     /// <see cref="ApplyTierClass"/> lifts the value via <c>.sus-touch-min--*</c> classes

@@ -66,7 +66,7 @@ namespace Sharq.Core.Diagnostics
             if (el.resolvedStyle.display == DisplayStyle.None) sb.Append(",\"hidden\":true");
             if (!el.visible) sb.Append(",\"invisible\":true");
             if (el.pickingMode == PickingMode.Position) sb.Append(",\"pickable\":true");
-            // R36 layer A / D-028 (T-654): source texture size + scale mode — bbox alone cannot
+            // R36 layer A / D-028: source texture size + scale mode — bbox alone cannot
             // detect stretch (stretched pixels look like a differently shaped image).
             TryAppendImageMeta(el, sb);
             sb.Append('}');
@@ -215,7 +215,7 @@ namespace Sharq.Core.Diagnostics
         // ── Scroll (synthetic UX probe) ─────────────────────────
 
         /// <summary>
-        /// Synthetic scroll for UX / MCP probes (T-040). Modes:
+        /// Synthetic scroll for UX / MCP probes. Modes:
         /// <list type="bullet">
         /// <item><c>offset</c> — set <see cref="ScrollView.scrollOffset"/> absolutely (<c>x</c>/<c>y</c>)
         /// and/or relatively (<c>dx</c>/<c>dy</c>). Default when unspecified.</item>
@@ -290,7 +290,7 @@ namespace Sharq.Core.Diagnostics
                 };
                 using (var evt = WheelEvent.GetPooled(sys))
                 {
-                    // Handlers require target set before SendEvent (AGENT_NEWS T-055 pattern).
+                    // Handlers require target set before SendEvent (AGENT_NEWS pattern).
                     evt.target = resolved;
                     resolved.SendEvent(evt);
                 }
@@ -415,7 +415,7 @@ namespace Sharq.Core.Diagnostics
         /// <summary>
         /// True when the element's own single-line text measures wider than its content box
         /// (single-line only — Label/Button; multiline TextField content is not single-line
-        /// truncation and is skipped). Feeds R36 slice G3 (T-459) via the geometry sidecar.
+        /// truncation and is skipped). Feeds R36 slice G3 via the geometry sidecar.
         /// </summary>
         private static bool IsTextClipped(VisualElement el, string text)
         {
@@ -429,7 +429,7 @@ namespace Sharq.Core.Diagnostics
 
         /// <summary>
         /// Appends <c>"image":{src,w,h,scaleMode}</c> when the node paints a background image
-        /// (T-654 / D-028). <c>w</c>/<c>h</c> are source texture pixels — not the element bbox.
+        /// (D-028). <c>w</c>/<c>h</c> are source texture pixels — not the element bbox.
         /// Sidecar writers (ShowcaseShotCapture) embed <see cref="GetTreeJson"/> verbatim.
         /// </summary>
         private static bool TryAppendImageMeta(VisualElement el, StringBuilder sb)

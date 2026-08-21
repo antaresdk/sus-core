@@ -48,7 +48,7 @@ namespace Sharq.Core
         /// inline parent to move into the host, which re-triggers the "closing" path
         /// mid-relocation and undoes the open before it ever finishes — reproduced
         /// empirically as silent display:None / no reparent, or the UI Toolkit "already
-        /// being modified" error depending on internal timing (T-407 case 8, qa-4 2026-08-16).
+        /// being modified" error depending on internal timing (case 8, qa-4 2026-08-16).
         /// No amount of deferring the CALLER's open (schedule delay, GeometryChangedEvent)
         /// fixes this — the reentrancy happens one level down, inside AddToOverlay's own
         /// RemoveFromHierarchy(), regardless of when MountSelfInOverlay itself runs.
@@ -58,7 +58,7 @@ namespace Sharq.Core
         /// <summary>
         /// Tells <see cref="SusComponent.OnDetachFromPanelHandler"/> to skip
         /// <c>DisposeAllBindings()</c> while relocating — see <see cref="SusComponent.IsRelocating"/>
-        /// for the full rationale (T-493).
+        /// for the full rationale.
         /// </summary>
         protected override bool IsRelocating => IsRelocatingToOverlay;
 
@@ -70,7 +70,7 @@ namespace Sharq.Core
         protected bool MountSelfInOverlay(bool dismissOnClickOutside = false, Action onDismiss = null)
         {
             // Capture restore parent whenever we leave a non-host ancestor.
-            // Previously only set when _selfHost was null — second open lost restore (T-251).
+            // Previously only set when _selfHost was null — second open lost restore.
             if (parent != null && parent is not OverlayHost)
                 _selfOriginalParent = parent;
 
@@ -121,7 +121,7 @@ namespace Sharq.Core
                 }
                 if (_selfOriginalParent != null)
                 {
-                    // T-499: this branch also runs when the HOST initiated the removal
+                    // this branch also runs when the HOST initiated the removal
                     // (OverlayHost.RemoveFromOverlay/ClearAll called directly, not through
                     // this component's own Close()/Model=false path) — that path never sets
                     // IsRelocatingToOverlay before detaching, so the DetachFromPanelEvent
@@ -132,8 +132,8 @@ namespace Sharq.Core
                     // mutates the visual tree while UIR is still walking it and corrupts its
                     // internal bookkeeping (UpdateLocalFlipsWinding NullRef + repeated
                     // RepaintPanels assertion failures — reproduced live via ClearAll() on a
-                    // still-open SusModal, T-499). Defer exactly like the "stale DOM" branch
-                    // below already does for the identical underlying reason (T-251) — safe
+                    // still-open SusModal). Defer exactly like the "stale DOM" branch
+                    // below already does for the identical underlying reason — safe
                     // because the next real frame is guaranteed to be outside any active
                     // traversal. A plain Close() click (IsRelocatingToOverlay never involved,
                     // no reentrancy) is delayed by one frame too, which every existing test
@@ -149,7 +149,7 @@ namespace Sharq.Core
             }
             else if (parent is OverlayHost && _selfOriginalParent != null)
             {
-                // Stale DOM on host without stack entry (T-251). Defer restore — Unmounted
+                // Stale DOM on host without stack entry. Defer restore — Unmounted
                 // may run inside DetachFromPanel where hierarchy mutation is illegal.
                 var restore = _selfOriginalParent;
                 _selfOriginalParent = null;

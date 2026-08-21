@@ -203,16 +203,16 @@ namespace Sharq.Core
             _bindScheduleItem.ExecuteLater(0);
         }
 
-        /// <summary>Safety bound for the re-entrant drain loop below — see T-1204 remarks.
+        /// <summary>Safety bound for the re-entrant drain loop below — see remarks.
         /// A real WatchEffect-writes-derived-Prop chain settles in 1-2 iterations; this only
         /// exists to turn an actual A-writes-B-writes-A cycle into a logged warning instead
         /// of an infinite loop.</summary>
         private const int MaxSteadyStateFlushIterations = 100;
 
         /// <remarks>
-        /// T-1204 (2026-08-20): this used to be a single snapshot-and-clear pass. That silently
-        /// dropped updates in the STEADY-STATE case (same failure class T-587 fixed for the
-        /// attach-time path, but T-587's fix did not cover this one): when a bind action run
+        /// (2026-08-20): this used to be a single snapshot-and-clear pass. That silently
+        /// dropped updates in the STEADY-STATE case (same failure class fixed for the
+        /// attach-time path, but that fix did not cover this one): when a bind action run
         /// from this loop synchronously writes a Prop that ANOTHER Bind*/WatchEffect on the SAME
         /// component reads — e.g. <c>Mounted()</c>'s <c>WatchEffect(ApplyVisual)</c> sets a
         /// derived <c>HpText</c> Prop that <c>Build()</c>'s <c>BindText(HpCounterLabel, () =&gt;
@@ -221,7 +221,7 @@ namespace Sharq.Core
         /// scheduled item's dispatch (<c>_bindScheduleItem</c>'s <c>Execute</c> callback is on
         /// the stack right now), so that nested call's <c>_bindScheduleItem.ExecuteLater(0)</c>
         /// is a reentrant re-arm of the SAME scheduled item while UITK's scheduler is mid-
-        /// dispatch for it — and per T-587, Unity's scheduler silently drops that re-arm. The
+        /// dispatch for it — and per Unity's scheduler silently drops that re-arm. The
         /// action lands (harmlessly) back in <c>_pendingBindActions</c> for "next time", but
         /// there never IS a next time: nothing else ever re-triggers that scheduled item again,
         /// so the bound Label.text is stuck one generation behind forever.
@@ -263,7 +263,7 @@ namespace Sharq.Core
         /// arrived while detached never ran (schedule was a no-op — see <see cref="ScheduleBindUpdate"/>).
         /// </summary>
         /// <remarks>
-        /// T-587 (2026-08-17): this used to defer the catch-up via
+        /// (2026-08-17): this used to defer the catch-up via
         /// <c>schedule.Execute(ApplyAllBindUpdates).ExecuteLater(0)</c>, i.e. it queued a NEW
         /// one-shot scheduled item on <c>this</c> element's panel scheduler instead of just
         /// running the pending actions directly. That is harmless for a single component
@@ -286,13 +286,13 @@ namespace Sharq.Core
         /// PreAttachBindFlushTests.TwoSiblings_PlainHost_PropsSetBeforeAdd_BothApplyOnSharedAttachBatch
         /// / ThreeSiblings_SusComponentHost_PropsSetBeforeAdd_AllApplyOnSharedAttachBatch.
         /// </remarks>
-        // ─── T-726: bounded re-entrant flush (trampoline) ──────────────────
+        // ─── bounded re-entrant flush (trampoline) ──────────────────
         // A bind action applied by ApplyAllBindUpdates() can itself perform a structural
         // change (BindVisibility re-Insert, a WatchEffect that Add()s a freshly-built
         // child) that attaches MORE elements to an already-on-panel parent — and UITK
         // dispatches THAT attach synchronously, nested inside the very call we are in.
         // If that nested element ALSO has a pending flush (very common: freshly-built
-        // reactive content, props set before Add — exactly the T-587 pattern), calling
+        // reactive content, props set before Add — exactly the pattern), calling
         // ApplyAllBindUpdates() directly here would recurse the SAME small chain of
         // frames (OnAttachToPanelHandler → FlushPendingBindUpdatesOnAttach →
         // ApplyAllBindUpdates → action) once per nesting level. For a static handful of
@@ -300,7 +300,7 @@ namespace Sharq.Core
         // deep in one synchronous mount (GameFlow app boot building the whole initial
         // route tree) it compounds into a deep, repeating call pattern — harmless on
         // Mono's generous Editor stack, but exactly the shape of the WebGL wasm
-        // "RangeError: Maximum call stack size exceeded" from T-726 (small wasm stack,
+        // "RangeError: Maximum call stack size exceeded" from (small wasm stack,
         // interpreted invoke_iii/invoke_ii trampolines burn more stack per managed
         // frame than native Mono).
         //
@@ -312,7 +312,7 @@ namespace Sharq.Core
         // stays O(1) regardless of how many levels re-enter, instead of O(depth).
         //
         // Deliberately NOT falling back to schedule.Execute(...).ExecuteLater(0) for the
-        // deferred case — that is the exact mechanism T-587 removed (reentrant
+        // deferred case — that is the exact mechanism removed (reentrant
         // registration on the panel's scheduler while it is mid-dispatch silently drops
         // some one-shot items). The queue below is plain, private, and drained by a
         // normal loop, so it carries none of that race.
@@ -325,7 +325,7 @@ namespace Sharq.Core
         /// stack frame on top of an in-progress flush and were queued instead). A deep
         /// synchronous reveal cascade drives this above 0 — proving the guard actually
         /// intercepted nesting, not just that nesting never happens to occur. Regression
-        /// tests reset this to 0 and assert on it (see T-726).</summary>
+        /// tests reset this to 0 and assert on it (see).</summary>
         internal static int DebugInterceptedReentrantFlushCount;
 #endif
 
@@ -410,7 +410,7 @@ namespace Sharq.Core
         /// <c>Watch()</c>/<c>WatchEffect()</c> registered in <c>Created()</c> (which runs once, in
         /// the constructor) gets permanently unsubscribed the first time an overlay-hosted component
         /// (Modal/Toast) opens, silently breaking all future reactivity to that Prop (e.g. SusModal's
-        /// <c>Watch(Model, ...)</c> never firing again after the first open — T-493).
+        /// <c>Watch(Model,...)</c> never firing again after the first open).
         /// </summary>
         protected virtual bool IsRelocating => false;
 
@@ -595,12 +595,12 @@ namespace Sharq.Core
 
         /// <summary>
         /// Caches, per most-derived component type, which type in its base-type chain actually
-        /// owns the companion stylesheet(s) found on disk (T-1273). A Tier-B C# subclass with no
+        /// owns the companion stylesheet(s) found on disk. A Tier-B C# subclass with no
         /// .sharq of its own (e.g. LfScoreboard : SusTable, LfNavButton : SusButton) has nothing
         /// under its OWN name — without this fallback its base's entire companion stylesheet
         /// silently never attaches. Caching avoids repeating the failing exact-name lookup (and
         /// the walk up the chain) on every construction of the same derived type — same pattern
-        /// as <see cref="s_updatedOverrideCache"/> (T-1102) / prop-accessor cache (T-1101).
+        /// as <see cref="s_updatedOverrideCache"/> / prop-accessor cache.
         /// </summary>
         private static readonly Dictionary<Type, Type> s_companionOwnerTypeCache = new Dictionary<Type, Type>();
 
@@ -619,7 +619,7 @@ namespace Sharq.Core
         /// case, and unchanged behavior for any type that has its own companion sheet). When that
         /// yields nothing at all, walks up the base-type chain (stopping at <see cref="SusComponent"/>)
         /// so a Tier-B subclass with no .sharq of its own inherits its nearest styled ancestor's
-        /// companion stylesheet(s) instead of silently getting none (T-1273).
+        /// companion stylesheet(s) instead of silently getting none.
         /// </summary>
         private void LoadCompanionStyleSheets(ICollection<string> onlySuffixes)
         {
@@ -714,7 +714,7 @@ namespace Sharq.Core
         /// </summary>
         public void RemoveCompanionStyleSheets(System.Collections.Generic.ICollection<string> onlySuffixes = null)
         {
-            // Tier-B subclasses (T-1273) load companion sheets under an ANCESTOR type's name
+            // Tier-B subclasses load companion sheets under an ANCESTOR type's name
             // (e.g. LfScoreboard loads "SusTable.g.uss"); remove by the resolved owner type so
             // hot-reload actually strips the sheets that were actually added, not zero of them.
             var mostDerived = GetType();
@@ -903,13 +903,13 @@ namespace Sharq.Core
 
         private IVisualElementScheduledItem _updateItem;
 
-        // T-1102: Updated() is a no-op virtual by default (SusComponent.Lifecycle.cs). Scheduling
+        // Updated() is a no-op virtual by default (SusComponent.Lifecycle.cs). Scheduling
         // an Every(16) tick for it on EVERY component — most of which never override it — burns
         // 60Hz calls that do nothing. Cache per-type whether Updated() is actually overridden
         // anywhere in the hierarchy and skip scheduling entirely when it is not.
         private static readonly Dictionary<Type, bool> s_updatedOverrideCache = new Dictionary<Type, bool>();
 
-        // internal (not private): SusComponentUpdateSchedulingTests (T-1102) verifies the
+        // internal (not private): SusComponentUpdateSchedulingTests verifies the
         // override-detection directly without needing a live panel attach/detach cycle.
         internal static bool TypeOverridesUpdated(Type type)
         {
@@ -1022,7 +1022,7 @@ namespace Sharq.Core
 #endif
             BeforeUnmounted();
             _updateItem?.Pause();
-            // T-493: skip during a same-panel relocation (see IsRelocating) — this detach is not
+            // skip during a same-panel relocation (see IsRelocating) — this detach is not
             // a real unmount, and disposing bindings here would permanently kill Watch()/WatchEffect()
             // set up once in Created() (e.g. SusModal's Model watcher stops reacting after first open).
             if (!IsRelocating)
@@ -1052,7 +1052,7 @@ namespace Sharq.Core
         /// <summary>
         /// Cached descriptor for a (child type, prop name) pair resolved once by
         /// <see cref="SetChildProp"/> — avoids re-running <c>GetField</c>/<c>GetProperty</c>
-        /// reflection lookups on every prop-bind change (T-1101, R-A2/P0-2).
+        /// reflection lookups on every prop-bind change (R-A2/P0-2).
         /// </summary>
         private sealed class ChildPropAccessor
         {
@@ -1162,7 +1162,7 @@ namespace Sharq.Core
         /// For plain types: direct property/field assignment.
         ///
         /// The (child type, propName) accessor is resolved via reflection once and cached
-        /// (T-1101) — repeat calls (every reactive re-apply of a :prop bind) skip GetField/
+        /// — repeat calls (every reactive re-apply of a :prop bind) skip GetField/
         /// GetProperty entirely.
         /// </summary>
         public static void SetChildProp(VisualElement child, string propName, object value)

@@ -6,7 +6,7 @@ namespace Sharq.Core.Editor.Diagnostics
     /// <summary>
     /// Parsed <c>sus-set.&lt;set&gt;.json</c> — the per-SET identity descriptor a classic
     /// .unitypackage ships at <c>Assets/&lt;root&gt;/sus-set.&lt;set&gt;.json</c>
-    /// (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5, T-556/T-557). Unlike the pre-T-556
+    /// (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5). Unlike the old
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> this replaces, its name is per-set (so two sets can
     /// be installed side by side without one overwriting the other's descriptor) and it carries
     /// NO module paths and NO module versions — those live in each module's own
@@ -40,7 +40,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <summary>
         /// Parses <c>sus-set.&lt;set&gt;.json</c> contents. Returns null (never throws) on
         /// malformed JSON, an unrecognized <see cref="schema"/>, or a structurally incomplete
-        /// manifest — a foreign/corrupted/pre-T-556/future-schema file must never break Set
+        /// manifest — a foreign/corrupted/old-format/future-schema file must never break Set
         /// Doctor or domain reload; the caller reports it as a soft finding instead.
         /// </summary>
         public static SusSetManifest Parse(string json)

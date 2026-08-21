@@ -14,7 +14,7 @@ namespace Sharq.Core.Editor.Diagnostics
     /// touches a module manifest (<c>sus-module.json</c>) or a set descriptor
     /// (<c>sus-set.&lt;set&gt;.json</c>), or changes which Sharq UPM packages are registered —
     /// the events that can introduce the UPM/classic collision (ARCH-PACK-CLASSIC.md §2.2) or
-    /// change what Doctor knows is present (§2.3 D7 / T-557).
+    /// change what Doctor knows is present (§2.3 D7).
     ///
     /// Package-registration changes are detected via <c>PackageInfo.GetAllRegisteredPackages()</c>
     /// name diffing (cheap, in-memory, no filesystem walk) rather than by scanning imported asset
@@ -65,7 +65,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <summary>True when a changed asset path is a module manifest OR a set descriptor —
         /// the cheap, filesystem-only half of the re-check trigger (the other half is the UPM
         /// package-name diff in <see cref="CurrentSusPackageNames"/>). Both names matter since
-        /// T-556/D7: a module manifest changing can flip Residual/UpmCollision/VersionMismatch
+        /// D7: a module manifest changing can flip Residual/UpmCollision/VersionMismatch
         /// findings on its own module, a set descriptor changing can flip
         /// ModuleManifestMissing/IncompleteSet findings that read its <c>modules</c> list.</summary>
         internal static bool IsManifestPath(string assetPath)

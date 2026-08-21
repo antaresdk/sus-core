@@ -101,7 +101,7 @@ namespace Sharq.Core
             new Dictionary<VisualElement, SusMotion>();
 
 #if UNITY_EDITOR
-        // With Domain Reload disabled ActiveByTarget survives leaving Play Mode (T-1103): it would
+        // With Domain Reload disabled ActiveByTarget survives leaving Play Mode: it would
         // keep VisualElement references from the destroyed panel of the previous session pinned
         // alive via a static dictionary, and a forever-Repeat motion (Play() with Repeat<=0) never
         // reaches CompleteInternal() on its own — its schedule.Execute(Tick).Every(16) item and
@@ -339,7 +339,7 @@ namespace Sharq.Core
             _playing = true;
             ActiveByTarget[_target] = this;
 
-            // T-1103: a target that detaches mid-play (element removed/pooled) must not keep a
+            // a target that detaches mid-play (element removed/pooled) must not keep a
             // forever-Repeat motion ticking forever on it — stop and unregister on detach.
             if (!_detachRegistered)
             {
@@ -376,7 +376,7 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// T-1103: target left the panel while this motion was playing. A forever-Repeat chain
+        /// target left the panel while this motion was playing. A forever-Repeat chain
         /// (Repeat &lt;= 0) never calls CompleteInternal() on its own, so without this the
         /// schedule item keeps ticking a detached element and ActiveByTarget pins it alive.
         /// </summary>

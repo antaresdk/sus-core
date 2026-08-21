@@ -25,7 +25,7 @@
     flex-grow: 1;
 }
 
-/* ── Slot container (T-530) ───────────────────────────────────
+/* ── Slot container ───────────────────────────────────
    <slot> / <slot name="x"> compiles to a VisualElement created by
    SusComponent.GetSlotContainer(): classes `sus-slot sus-slot--<name>`,
    nested INSIDE the author's wrapper element. UI Toolkit lays it out

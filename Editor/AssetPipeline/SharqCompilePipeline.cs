@@ -136,7 +136,7 @@ namespace Sharq.Core.Editor
         /// <summary>
         /// Writes via a sibling temp file then replaces the target, so readers never see a
         /// partial file. Retries / falls back to overwrite-copy when Unity holds the asset
-        /// open (Windows sharing violation / EBUSY on tracked Resources companions — T-886).
+        /// open (Windows sharing violation / EBUSY on tracked Resources companions —).
         /// </summary>
         private static void AtomicWrite(string path, string content)
         {

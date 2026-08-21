@@ -6,7 +6,7 @@ namespace Sharq.Core.Editor.Diagnostics
     /// <summary>
     /// Parsed <c>sus-module.json</c> — the per-MODULE machine manifest a classic .unitypackage
     /// ships at <c>Assets/&lt;root&gt;/&lt;Module&gt;/sus-module.json</c>
-    /// (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5, T-556/T-557). Replaces the pre-T-556 single
+    /// (ARCH-PACK-CLASSIC.md §2.3 D7 / §5.5). Replaces the pre- single
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> as the source of truth for "what paths does this
     /// module own, at what version" — content does NOT depend on which set shipped it, so this
     /// file is byte-identical between kit-set and game-set for shared modules (core/router/kit).
@@ -29,7 +29,7 @@ namespace Sharq.Core.Editor.Diagnostics
         public string sha;
         /// <summary>Every filesystem entry (folders and files, forward-slash, relative to
         /// Assets/) this module owns — its own subtree (<c>&lt;root&gt;/&lt;dir&gt;/**</c>) AND
-        /// its samples subtree (<c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c>, T-534) — plus this
+        /// its samples subtree (<c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c>) — plus this
         /// manifest file's own path. The source of truth for residual-file attribution
         /// (§5.5 "правило атрибуции").</summary>
         public string[] paths;
