@@ -78,12 +78,30 @@ namespace Sharq.Core.Editor.Tests
 
             var r = SusSampleSync.SyncTree(_src, _dst);
 
-            Assert.AreEqual("scene-src", R(_dst, "Storybook.unity"), "missing serialized asset is seeded");
+            Assert.AreEqual("scene-src", R(_dst, "Storybook.unity"), "missing scene is seeded");
             Assert.AreEqual("panel-editor-rewritten", R(_dst, "Panel.asset"), "existing serialized asset is the editor's (R39 S3 soft)");
             Assert.AreEqual("a\r\nb\r\n", R(_dst, "Same.cs"), "CRLF vs LF is the same text (T-782) — not rewritten");
             CollectionAssert.Contains(r.Unchanged, "Same.cs");
             CollectionAssert.Contains(r.SoftKept, "Panel.asset");
             CollectionAssert.Contains(r.Copied, "Storybook.unity");
+        }
+
+        [Test]
+        public void SyncTree_UnityScenes_ForceSyncedWhenStale()
+        {
+            // T-948: soft-kept Storybook.unity left UIDocument disabled / stylesheet null in the
+            // sus-dev copy; Refresh must overwrite scenes from Samples~.
+            W(_src, "Storybook.unity", "scene-src-enabled");
+            W(_dst, "Storybook.unity", "scene-copy-disabled");
+            W(_src, "Panel.asset", "panel-src");
+            W(_dst, "Panel.asset", "panel-editor");
+
+            var r = SusSampleSync.SyncTree(_src, _dst);
+
+            Assert.AreEqual("scene-src-enabled", R(_dst, "Storybook.unity"), ".unity is force-synced (T-948)");
+            Assert.AreEqual("panel-editor", R(_dst, "Panel.asset"), ".asset stays soft-kept");
+            CollectionAssert.Contains(r.Copied, "Storybook.unity");
+            CollectionAssert.Contains(r.SoftKept, "Panel.asset");
         }
 
         [Test]
@@ -108,15 +126,21 @@ namespace Sharq.Core.Editor.Tests
             W(_src, "NewStory.cs", "new");
             W(_src, "Panel.asset", "p1");
             W(_src, "Stories.cs.meta", "m1");
+            W(_src, "Storybook.unity", "scene-src");
             W(_dst, "Stories.cs", "v1");
             W(_dst, "Panel.asset", "p2");
+            W(_dst, "Storybook.unity", "scene-stale");
             W(_dst, "StorybookShotAll.cs", "local");
 
             var drift = SusSampleSync.Verify(_src, _dst);
-            CollectionAssert.AreEquivalent(new[] { "S1 stale: Stories.cs", "S2 absent: NewStory.cs" }, drift);
+            CollectionAssert.AreEquivalent(
+                new[] { "S1 stale: Stories.cs", "S2 absent: NewStory.cs", "S1 stale: Storybook.unity" },
+                drift);
 
             SusSampleSync.SyncTree(_src, _dst);
             Assert.IsEmpty(SusSampleSync.Verify(_src, _dst), "after a sync the copy is fresh");
+            Assert.AreEqual("scene-src", R(_dst, "Storybook.unity"));
+            Assert.AreEqual("p2", R(_dst, "Panel.asset"), ".asset still soft-kept through SyncTree");
         }
 
         [Test]

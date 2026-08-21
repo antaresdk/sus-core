@@ -20,9 +20,11 @@ namespace Sharq.Core
     /// <list type="bullet">
     /// <item>code/text files (<see cref="CodeExtensions"/>) are compared as EOL-normalized text
     /// (workspace <c>Samples~</c> is LF, PackageCache pins are often CRLF — R39);</item>
-    /// <item>serialized Unity assets (<c>.unity</c>, <c>.asset</c>, <c>.prefab</c>, …) are copied
-    ///   only when the copy lacks them — the editor rewrites their YAML under its own version,
-    ///   overwriting an open scene from disk is never what "Refresh" means (R39 S3 soft);</item>
+    /// <item>sample scenes (<c>.unity</c>, see <see cref="ForceSyncExtensions"/>) are force-synced
+    ///   when content differs — UIDocument enable / StyleSheet refs in Storybook.unity are package
+    ///   contract (T-948); soft-keeping them left ShotAll shooting empty frames;</item>
+    /// <item>other serialized assets (<c>.asset</c>, <c>.prefab</c>, …) are copied only when the
+    ///   copy lacks them — the editor rewrites their YAML under its own version (R39 S3 soft);</item>
     /// <item><c>.meta</c> files are copied only for files that are new in the copy — existing
     ///   GUIDs stay stable, nothing is re-imported for no reason;</item>
     /// <item>files present in the copy but gone from the source are deleted (with their
@@ -35,10 +37,21 @@ namespace Sharq.Core
     /// </summary>
     public static class SusSampleSync
     {
-        /// <summary>Compared as normalized text; everything else is a serialized asset (soft).</summary>
+        /// <summary>Compared as normalized text; everything else is a serialized asset (soft),
+        /// except <see cref="ForceSyncExtensions"/>.</summary>
         public static readonly HashSet<string> CodeExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".cs", ".uss", ".uxml", ".asmdef", ".asmref", ".json", ".sharq", ".txt", ".md", ".tss",
+        };
+
+        /// <summary>
+        /// Serialized YAML that Refresh must still overwrite when it drifts (T-948). Scenes carry
+        /// UIDocument <c>m_Enabled</c> and sample StyleSheet refs — leaving a stale copy soft-kept
+        /// makes ShotAll emit empty frames while R39 stays silent (S3 soft on <c>.unity</c>).
+        /// </summary>
+        public static readonly HashSet<string> ForceSyncExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".unity",
         };
 
         /// <summary>Local driver files that live only in the copy and must survive a sync.</summary>
@@ -89,9 +102,9 @@ namespace Sharq.Core
 
                 var dest = Path.Combine(destDir, rel);
                 var destExists = File.Exists(dest);
-                if (destExists && !IsCode(rel))
+                if (destExists && !IsCode(rel) && !IsForceSync(rel))
                 {
-                    // Serialized asset already in the copy — the editor owns its YAML.
+                    // Serialized asset already in the copy — the editor owns its YAML (R39 S3).
                     result.SoftKept.Add(rel);
                     continue;
                 }
@@ -153,9 +166,10 @@ namespace Sharq.Core
 
         /// <summary>
         /// Compares a copy with its source the way the workspace sample-sync gate (R39) does: code/text
-        /// files as EOL-normalized text (S1 stale), missing source files (S2 absent). Serialized
-        /// assets, <c>.meta</c> and local drivers are not judged. Returns relative paths prefixed
-        /// with <c>S1 </c> / <c>S2 </c>; empty when the copy is fresh.
+        /// files as EOL-normalized text (S1 stale), missing source files (S2 absent), plus force-synced
+        /// scenes (<see cref="ForceSyncExtensions"/>, T-948). Other serialized assets, <c>.meta</c> and
+        /// local drivers are not judged. Returns relative paths prefixed with <c>S1 </c> / <c>S2 </c>;
+        /// empty when the copy is fresh.
         /// </summary>
         public static List<string> Verify(string srcDir, string destDir, string[] skipLocalPatterns = null)
         {
@@ -166,7 +180,7 @@ namespace Sharq.Core
             foreach (var abs in Directory.GetFiles(srcDir, "*", SearchOption.AllDirectories))
             {
                 var rel = Rel(srcDir, abs);
-                if (IsMeta(rel) || !IsCode(rel)) continue;
+                if (IsMeta(rel) || (!IsCode(rel) && !IsForceSync(rel))) continue;
                 var dest = Path.Combine(destDir, rel);
                 if (!File.Exists(dest)) drift.Add("S2 absent: " + rel);
                 else if (!SameContent(abs, dest, rel)) drift.Add("S1 stale: " + rel);
@@ -239,6 +253,7 @@ namespace Sharq.Core
 
         static bool IsMeta(string rel) => rel.EndsWith(".meta", StringComparison.OrdinalIgnoreCase);
         static bool IsCode(string rel) => !IsMeta(rel) && CodeExtensions.Contains(Path.GetExtension(rel));
+        static bool IsForceSync(string rel) => !IsMeta(rel) && ForceSyncExtensions.Contains(Path.GetExtension(rel));
         static string Rel(string root, string abs) => Path.GetRelativePath(root, abs).Replace('\\', '/');
 
         static bool SameContent(string a, string b, string rel)
