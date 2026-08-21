@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 
 namespace Sharq.Core.Editor.Tests
 {
-    /// <summary>T-1423/T-1424 / ARCH-DESIGN-IMPORT §7.1a–b — parser, map, emit override USS + breakpoints.</summary>
+    /// <summary>T-1423/T-1424/T-1425 / ARCH-DESIGN-IMPORT §7.1a–c — parser, modes, Editor preview/diff.</summary>
     public class SusDesignImportTests
     {
         static string FixturesDir
@@ -254,7 +254,6 @@ namespace Sharq.Core.Editor.Tests
                 var uss = File.ReadAllText(ussPath, Encoding.UTF8);
                 StringAssert.Contains("--sus-primary:", uss);
                 StringAssert.Contains(".breakpoint-sm {", uss);
-                // second import identical USS
                 var result2 = DesignImporter.Import(ReadFixture("sample-v1.json"), opts);
                 Assert.IsTrue(DesignImporter.UssEquals(uss, File.ReadAllText(ussPath, Encoding.UTF8)));
                 Assert.IsTrue(result2.Ok);
@@ -263,6 +262,111 @@ namespace Sharq.Core.Editor.Tests
             {
                 if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
             }
+        }
+
+        [Test]
+        public void Diff_Unified_ShowsInsertAndDelete()
+        {
+            var diff = DesignDiff.Unified(
+                "line-a\nshared\n",
+                "line-b\nshared\n",
+                "a/old.uss",
+                "b/new.uss");
+            StringAssert.Contains("--- a/old.uss", diff);
+            StringAssert.Contains("+++ b/new.uss", diff);
+            StringAssert.Contains("-line-a", diff);
+            StringAssert.Contains("+line-b", diff);
+            StringAssert.Contains(" shared", diff);
+        }
+
+        [Test]
+        public void Diff_Unified_EmptyWhenEqual()
+        {
+            Assert.AreEqual(string.Empty, DesignDiff.Unified("a\nb\n", "a\nb\n"));
+            Assert.AreEqual(string.Empty, DesignDiff.Unified("a\r\nb\r\n", "a\nb\n"));
+        }
+
+        [Test]
+        public void Preview_Create_ShowsPlusLines_And_ApplyWrites()
+        {
+            var tmp = Path.Combine(Path.GetTempPath(), "sus-design-preview-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var opts = new ImportOptions
+                {
+                    OutDir = tmp,
+                    AliasMapPath = AliasMapPath,
+                    TimestampUtc = new DateTime(2026, 8, 21, 0, 0, 0, DateTimeKind.Utc)
+                };
+                var preview = DesignImportPreview.Preview(ReadFixture("sample-v1.json"), opts);
+                Assert.IsTrue(preview.Ok, string.Join("; ", preview.Import.Errors));
+                Assert.IsFalse(preview.HasExisting);
+                Assert.IsFalse(preview.Unchanged);
+                StringAssert.Contains("--- ", preview.UnifiedDiff);
+                StringAssert.Contains("+++ ", preview.UnifiedDiff);
+                StringAssert.Contains("+", preview.UnifiedDiff);
+                StringAssert.Contains("--sus-primary:", preview.UnifiedDiff);
+
+                var applied = DesignImportPreview.Apply(ReadFixture("sample-v1.json"), opts);
+                Assert.IsTrue(applied.Ok, string.Join("; ", applied.Errors));
+                Assert.IsTrue(File.Exists(Path.Combine(tmp, "imported-tokens.uss")));
+
+                // Second preview: unchanged
+                var again = DesignImportPreview.Preview(ReadFixture("sample-v1.json"), opts);
+                Assert.IsTrue(again.Ok);
+                Assert.IsTrue(again.HasExisting);
+                Assert.IsTrue(again.Unchanged);
+                Assert.AreEqual(string.Empty, again.UnifiedDiff);
+            }
+            finally
+            {
+                if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
+            }
+        }
+
+        [Test]
+        public void Preview_Update_ShowsDiffAgainstExisting()
+        {
+            var tmp = Path.Combine(Path.GetTempPath(), "sus-design-preview2-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(tmp);
+                File.WriteAllText(
+                    Path.Combine(tmp, "imported-tokens.uss"),
+                    ":root {\n    --sus-primary: rgb(0, 0, 0);\n}\n",
+                    Encoding.UTF8);
+
+                var opts = new ImportOptions
+                {
+                    OutDir = tmp,
+                    AliasMapPath = AliasMapPath,
+                    TimestampUtc = new DateTime(2026, 8, 21, 0, 0, 0, DateTimeKind.Utc)
+                };
+                var preview = DesignImportPreview.Preview(ReadFixture("sample-v1.json"), opts);
+                Assert.IsTrue(preview.Ok, string.Join("; ", preview.Import.Errors));
+                Assert.IsTrue(preview.HasExisting);
+                Assert.IsFalse(preview.Unchanged);
+                StringAssert.Contains("-", preview.UnifiedDiff);
+                StringAssert.Contains("+", preview.UnifiedDiff);
+            }
+            finally
+            {
+                if (Directory.Exists(tmp)) Directory.Delete(tmp, true);
+            }
+        }
+
+        [Test]
+        public void Apply_RefusesDesignTokensFileName()
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+            {
+                DesignImportPreview.Apply("{}", new ImportOptions
+                {
+                    OutDir = Path.GetTempPath(),
+                    UssFileName = "design-tokens.uss",
+                    DryRun = false
+                });
+            });
         }
     }
 }

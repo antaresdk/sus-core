@@ -387,6 +387,8 @@ namespace Sharq.Core.Editor.Inspector
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Theme Editor", GUILayout.Height(24)))
                 SusThemeEditorWindow.Open();
+            if (GUILayout.Button("Import Design Tokens…", GUILayout.Height(24)))
+                DesignImport.SusDesignImportWindow.Open();
             using (new EditorGUI.DisabledScope(!EditorApplication.isPlaying))
             {
                 if (GUILayout.Button("Copy UI tree", GUILayout.Height(24)))

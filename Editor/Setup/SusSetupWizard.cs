@@ -103,8 +103,21 @@ namespace Sharq.Core.Editor
             DrawOptions();
             EditorGUILayout.Space(10);
             DrawRunButton();
+            EditorGUILayout.Space(12);
+            DrawDesignImport();
 
             EditorGUILayout.EndScrollView();
+        }
+
+        void DrawDesignImport()
+        {
+            EditorGUILayout.LabelField("Design tokens", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "Import a Pixso/Figma-like JSON into an override USS sheet " +
+                "(does not patch shipped design-tokens.uss).",
+                MessageType.None);
+            if (GUILayout.Button("Import Design Tokens…", GUILayout.Height(26)))
+                DesignImport.SusDesignImportWindow.Open();
         }
 
         private void DrawEnvironment()
