@@ -36,7 +36,7 @@ namespace Sharq.Core.Editor.DesignImport
             var map = AliasMap.LoadDefault(options.AliasMapPath);
 
             // Ghost names appearing as token paths or values that look like --sus-*
-            foreach (var t in doc.Tokens)
+            foreach (var t in EnumerateAllTokens(doc))
             {
                 CheckGhost(t.Path, map, result);
                 CheckGhost(t.Value, map, result);
@@ -137,8 +137,57 @@ namespace Sharq.Core.Editor.DesignImport
                 }
             }
 
+            // Modes → .breakpoint-* blocks (SusBreakpointService class names; ARCH D4 / §7.1b)
+            foreach (var mode in doc.Modes)
+            {
+                if (string.IsNullOrEmpty(mode.AppliesTo))
+                {
+                    if (mode.Tokens.Count > 0)
+                        result.Skipped.Add($"mode:{mode.Name} (no-appliesTo)");
+                    continue;
+                }
+                if (!IsAllowedBreakpoint(mode.AppliesTo))
+                {
+                    result.Skipped.Add($"mode:{mode.Name} (bad-appliesTo:{mode.AppliesTo})");
+                    continue;
+                }
+
+                var block = new MappedModeBlock
+                {
+                    ModeName = mode.Name,
+                    AppliesTo = mode.AppliesTo
+                };
+
+                foreach (var t in mode.Tokens)
+                {
+                    if (TryMapToken(t, map, options, out var mapped, out var skipReason))
+                    {
+                        block.Tokens.Add(mapped);
+                    }
+                    else
+                    {
+                        result.Skipped.Add($"mode:{mode.Name}/{t.Path} ({skipReason})");
+                        if (skipReason == "unknown" && options.EmitUnknown)
+                        {
+                            var appVar = "--app-" + SanitizeAppName(t.Path);
+                            block.Tokens.Add(new MappedToken
+                            {
+                                AliasPath = t.Path,
+                                CssVar = appVar,
+                                Value = t.Value,
+                                IsDownstream = false
+                            });
+                            result.Warnings.Add($"emit-unknown mode {mode.Name}: {t.Path} → {appVar}");
+                        }
+                    }
+                }
+
+                if (block.Tokens.Count > 0)
+                    result.ModeBlocks.Add(block);
+            }
+
             var r22 = new List<string>();
-            result.Uss = UssEmitter.Emit(result.Mapped, r22);
+            result.Uss = UssEmitter.Emit(result.Mapped, result.ModeBlocks, r22);
             if (r22.Count > 0)
             {
                 result.Ok = false;
@@ -161,6 +210,27 @@ namespace Sharq.Core.Editor.DesignImport
 
             result.Ok = result.Errors.Count == 0;
             return result;
+        }
+
+        static IEnumerable<DesignToken> EnumerateAllTokens(DesignDocument doc)
+        {
+            foreach (var t in doc.Tokens) yield return t;
+            foreach (var mode in doc.Modes)
+            {
+                foreach (var t in mode.Tokens)
+                    yield return t;
+            }
+        }
+
+        static bool IsAllowedBreakpoint(string appliesTo)
+        {
+            if (string.IsNullOrEmpty(appliesTo)) return false;
+            var s = appliesTo.Trim().TrimStart('.');
+            return s.Equals("breakpoint-sm", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("breakpoint-md", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("breakpoint-lg", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("breakpoint-xl", StringComparison.OrdinalIgnoreCase)
+                   || s.Equals("breakpoint-2xl", StringComparison.OrdinalIgnoreCase);
         }
 
         public static string MapList(ImportOptions options = null)
@@ -289,6 +359,10 @@ namespace Sharq.Core.Editor.DesignImport
         {
             var ordered = result.Mapped.OrderBy(x => x.CssVar, StringComparer.Ordinal).ToList();
             var skipped = result.Skipped.OrderBy(x => x, StringComparer.Ordinal).ToList();
+            var modes = (result.ModeBlocks ?? new List<MappedModeBlock>())
+                .OrderBy(b => b.AppliesTo, StringComparer.Ordinal)
+                .ThenBy(b => b.ModeName, StringComparer.Ordinal)
+                .ToList();
             var sb = new StringBuilder();
             sb.AppendLine("{");
             sb.AppendLine("  \"$schema\": \"sus-design-meta/v1\",");
@@ -308,6 +382,32 @@ namespace Sharq.Core.Editor.DesignImport
                 sb.Append(DesignJson.Escape(m.Value));
                 sb.Append("\" }");
                 sb.AppendLine(i < ordered.Count - 1 ? "," : "");
+            }
+            sb.AppendLine("  ],");
+            sb.AppendLine("  \"modes\": [");
+            for (var i = 0; i < modes.Count; i++)
+            {
+                var b = modes[i];
+                var toks = b.Tokens.OrderBy(t => t.CssVar, StringComparer.Ordinal).ToList();
+                sb.Append("    { \"name\": \"");
+                sb.Append(DesignJson.Escape(b.ModeName));
+                sb.Append("\", \"appliesTo\": \"");
+                sb.Append(DesignJson.Escape(b.AppliesTo));
+                sb.Append("\", \"mapped\": [");
+                for (var j = 0; j < toks.Count; j++)
+                {
+                    var m = toks[j];
+                    sb.Append("{ \"alias\": \"");
+                    sb.Append(DesignJson.Escape(m.AliasPath));
+                    sb.Append("\", \"css\": \"");
+                    sb.Append(DesignJson.Escape(m.CssVar));
+                    sb.Append("\", \"value\": \"");
+                    sb.Append(DesignJson.Escape(m.Value));
+                    sb.Append("\" }");
+                    if (j < toks.Count - 1) sb.Append(", ");
+                }
+                sb.Append("] }");
+                sb.AppendLine(i < modes.Count - 1 ? "," : "");
             }
             sb.AppendLine("  ],");
             sb.AppendLine("  \"skipped\": [");

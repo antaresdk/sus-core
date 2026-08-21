@@ -20,6 +20,13 @@
     }
   },
   "modes": {
+    "desktop": {
+      "tokens": {
+        "dimension": {
+          "space.16": { "$type": "dimension", "$value": "16px" }
+        }
+      }
+    },
     "mobile": {
       "appliesTo": "breakpoint-sm",
       "tokens": {

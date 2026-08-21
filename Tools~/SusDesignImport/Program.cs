@@ -182,13 +182,14 @@ static class Program
     static void PrintHelp()
     {
         Console.WriteLine(
-@"SusDesignImport — design tokens → override USS (ARCH-DESIGN-IMPORT §7.1a)
+@"SusDesignImport — design tokens → override USS (ARCH-DESIGN-IMPORT §7.1a–b)
 
   design import <file.json> [--out <dir>] [--dry-run] [--downstream] [--emit-unknown] [--alias-map <path>]
   design validate <file.json> [--downstream] [--emit-unknown]
   design map --list [--downstream]
 
 Does NOT patch design-tokens.uss. Writes imported-tokens.uss + .sus-design-meta.json under --out.
+Modes (mobile/desktop) emit .breakpoint-sm|md|… blocks compatible with SusBreakpointService.
 ");
     }
 }

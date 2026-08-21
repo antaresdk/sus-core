@@ -71,21 +71,27 @@ namespace Sharq.Core.Editor.DesignImport
                     if (modeObj == null) continue;
                     var mode = new DesignMode { Name = kv.Key };
                     var applies = modeObj.GetString("appliesTo");
+                    // ARCH D4: default mobile → breakpoint-sm. Desktop/base lives in :root
+                    // (base tokens); desktop without appliesTo is skipped at emit time.
                     if (string.IsNullOrEmpty(applies) &&
                         kv.Key.Equals("mobile", StringComparison.OrdinalIgnoreCase))
                         applies = "breakpoint-sm";
-                    if (string.IsNullOrEmpty(applies))
-                        applies = "breakpoint-sm";
-                    if (!AllowedBreakpoints.Contains(applies))
+                    if (string.IsNullOrEmpty(applies) &&
+                        kv.Key.Equals("desktop", StringComparison.OrdinalIgnoreCase))
                     {
-                        doc.Warnings.Add($"mode '{kv.Key}': unknown appliesTo '{applies}' (kept, phase 1b)");
+                        doc.Warnings.Add(
+                            $"mode 'desktop' has no appliesTo — base :root tokens are desktop; breakpoint block skipped");
+                        applies = "";
                     }
-                    mode.AppliesTo = applies;
+                    if (!string.IsNullOrEmpty(applies) && !AllowedBreakpoints.Contains(applies))
+                    {
+                        doc.Warnings.Add(
+                            $"mode '{kv.Key}': unknown appliesTo '{applies}' (must be breakpoint-sm…2xl); emit skipped");
+                    }
+                    mode.AppliesTo = applies ?? "";
                     if (modeObj.TryGet("tokens", out var mt) && mt.AsObject() != null)
                         FlattenTokenGroups(mt.AsObject(), "", mode.Tokens);
                     doc.Modes.Add(mode);
-                    doc.Warnings.Add(
-                        $"mode '{kv.Key}' parsed but breakpoint emit is phase 1b — tokens recorded only");
                 }
             }
 

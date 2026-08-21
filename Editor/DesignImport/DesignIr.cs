@@ -43,12 +43,24 @@ namespace Sharq.Core.Editor.DesignImport
         public bool IsDownstream { get; set; }
     }
 
+    /// <summary>
+    /// Mode overrides mapped to a SusBreakpointService USS class (.breakpoint-sm …).
+    /// </summary>
+    public sealed class MappedModeBlock
+    {
+        public string ModeName { get; set; } = "";
+        /// <summary>Canonical class without leading dot, e.g. breakpoint-sm.</summary>
+        public string AppliesTo { get; set; } = "breakpoint-sm";
+        public List<MappedToken> Tokens { get; set; } = new List<MappedToken>();
+    }
+
     public sealed class ImportResult
     {
         public bool Ok { get; set; }
         public string Uss { get; set; } = "";
         public string MetaJson { get; set; } = "";
         public List<MappedToken> Mapped { get; set; } = new List<MappedToken>();
+        public List<MappedModeBlock> ModeBlocks { get; set; } = new List<MappedModeBlock>();
         public List<string> Skipped { get; set; } = new List<string>();
         public List<string> Errors { get; set; } = new List<string>();
         public List<string> Warnings { get; set; } = new List<string>();
