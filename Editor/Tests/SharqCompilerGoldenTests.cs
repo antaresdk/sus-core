@@ -194,8 +194,32 @@ namespace Sharq.Core.Editor.Tests
             var code = Gen(sharq);
 
             StringAssert.Contains("BindList(", code);
-            StringAssert.Contains("((dynamic)row).Key", code);
+            // R-B2 / T-1106: IL2CPP/AOT — reflection helper, not ((dynamic)row).Key
+            StringAssert.Contains("GetItemMember(row, \"Key\")", code);
+            StringAssert.DoesNotContain("((dynamic)", code);
             StringAssert.DoesNotContain("BindListFor", code);
+        }
+
+        [Test]
+        public void Event_KnownClick_GeneratesRegisterCallback()
+        {
+            const string sharq =
+                "<template><ui:VisualElement><ui:Button @click=\"OnGo\" /></ui:VisualElement></template>";
+            var code = Gen(sharq);
+            StringAssert.Contains("RegisterCallback<UnityEngine.UIElements.ClickEvent>", code);
+            StringAssert.DoesNotContain("#error", code);
+            StringAssert.DoesNotContain("EventBase<UnityEngine.UIElements.EventBase>", code);
+        }
+
+        [Test]
+        public void Event_Unknown_EmitsCompilerErrorDirective()
+        {
+            const string sharq =
+                "<template><ui:VisualElement><ui:Label @pointerdown=\"OnPtr\" /></ui:VisualElement></template>";
+            var code = Gen(sharq);
+            StringAssert.Contains("#error Sharq: unknown @event 'pointerdown'", code);
+            StringAssert.DoesNotContain("EventBase<UnityEngine.UIElements.EventBase>", code);
+            StringAssert.DoesNotContain("RegisterCallback<", code);
         }
 
         // ─────────────────────────────────────────────────────────────

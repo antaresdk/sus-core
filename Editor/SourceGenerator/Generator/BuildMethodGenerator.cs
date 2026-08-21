@@ -874,13 +874,21 @@ public partial class {className} : {b}
             if (!string.IsNullOrEmpty(keyExpr))
             {
                 // Key selector: Func<T, object> (typed) / Func<object, object> (untyped).
+                // Untyped must NOT use ((dynamic)item).X — System.Dynamic fails under IL2CPP/AOT.
+                // Emit GetItemMember reflection helper instead (cached accessors on SusComponent).
                 string keyLambda;
                 if (keyExpr == itemVar)
                     keyLambda = $"{itemVar} => {itemVar}";
                 else if (keyExpr.StartsWith(itemVar + "."))
-                    keyLambda = isTyped
-                        ? $"{itemVar} => {keyExpr}"
-                        : $"{itemVar} => ((dynamic){itemVar}).{keyExpr.Substring(itemVar.Length + 1)}";
+                {
+                    if (isTyped)
+                        keyLambda = $"{itemVar} => {keyExpr}";
+                    else
+                    {
+                        var memberPath = keyExpr.Substring(itemVar.Length + 1);
+                        keyLambda = $"{itemVar} => GetItemMember({itemVar}, \"{EscapeCSharpString(memberPath)}\")";
+                    }
+                }
                 else
                     keyLambda = $"{itemVar} => {keyExpr}";
                 sb.AppendLine();
@@ -1229,16 +1237,22 @@ public partial class {className} : {b}
             return styleClass;
         }
 
-        private static string MapEventType(string eventName)
+        /// <summary>
+        /// Maps a template <c>@event</c> name to a UITK event type.
+        /// Unknown names must NOT silently fall back to <c>EventBase&lt;EventBase&gt;</c>
+        /// (that type is invalid and produces opaque compile failures).
+        /// </summary>
+        private static bool TryMapEventType(string eventName, out string eventType)
         {
-            return eventName.ToLowerInvariant() switch
+            eventType = eventName.ToLowerInvariant() switch
             {
                 "click" => "UnityEngine.UIElements.ClickEvent",
                 "mouseenter" => "UnityEngine.UIElements.MouseEnterEvent",
                 "mouseleave" => "UnityEngine.UIElements.MouseLeaveEvent",
                 "change" => "UnityEngine.UIElements.ChangeEvent<string>",
-                _ => $"UnityEngine.UIElements.EventBase<UnityEngine.UIElements.EventBase>"
+                _ => null
             };
+            return eventType != null;
         }
 
         // ─── Event modifiers ─────────────────────────────────────────
@@ -1302,8 +1316,15 @@ public partial class {className} : {b}
                 return;
             }
 
-            // UITK events (existing logic)
-            var eventType = MapEventType(eventName);
+            // UITK events — unknown @event → #error (compiler diagnostic), not a bogus type.
+            if (!TryMapEventType(eventName, out var eventType))
+            {
+                sb.AppendLine(
+                    $"{indent}#error Sharq: unknown @event '{EscapeCSharpString(eventName)}' on UITK element. " +
+                    "Supported: click, mouseenter, mouseleave, change. " +
+                    "For custom component events use On()/Off(), or extend the Sharq event map.");
+                return;
+            }
 
             if (!stop && !once)
             {

@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core
@@ -12,6 +14,72 @@ namespace Sharq.Core
     /// </summary>
     public abstract partial class SusComponent
     {
+        // IL2CPP/AOT-safe member read for untyped v-for :key (no System.Dynamic / Microsoft.CSharp).
+        private static readonly ConcurrentDictionary<(Type type, string path), Func<object, object>> s_itemMemberGetters =
+            new ConcurrentDictionary<(Type, string), Func<object, object>>();
+
+        /// <summary>
+        /// Reads a (possibly dotted) public/instance member path from an untyped v-for item.
+        /// Emitted by the Sharq generator instead of <c>((dynamic)item).X</c>, which fails under IL2CPP/AOT.
+        /// </summary>
+        protected static object GetItemMember(object item, string memberPath)
+        {
+            if (item == null || string.IsNullOrEmpty(memberPath))
+                return null;
+
+            var type = item.GetType();
+            var getter = s_itemMemberGetters.GetOrAdd((type, memberPath), static key => BuildItemMemberGetter(key.type, key.path));
+            return getter(item);
+        }
+
+        private static Func<object, object> BuildItemMemberGetter(Type rootType, string memberPath)
+        {
+            var parts = memberPath.Split('.');
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+            // Resolve the chain once; invoke cached accessors at runtime (AOT-friendly reflection).
+            MemberInfo[] chain = new MemberInfo[parts.Length];
+            var cursor = rootType;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var part = parts[i];
+                var prop = cursor.GetProperty(part, flags);
+                if (prop != null)
+                {
+                    chain[i] = prop;
+                    cursor = prop.PropertyType;
+                    continue;
+                }
+
+                var field = cursor.GetField(part, flags);
+                if (field != null)
+                {
+                    chain[i] = field;
+                    cursor = field.FieldType;
+                    continue;
+                }
+
+                // Missing member → always null (same as a failed dynamic bind, without crash).
+                return static _ => null;
+            }
+
+            return obj =>
+            {
+                object current = obj;
+                for (int i = 0; i < chain.Length; i++)
+                {
+                    if (current == null) return null;
+                    current = chain[i] switch
+                    {
+                        PropertyInfo p => p.GetValue(current),
+                        FieldInfo f => f.GetValue(current),
+                        _ => null
+                    };
+                }
+                return current;
+            };
+        }
+
         /// <summary>
         /// v-if: add/remove element from visual tree reactively.
         /// Parent AND sibling index are remembered on hide and used to re-insert on show,
