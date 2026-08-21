@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.0.25] - 2026-08-21
+
+### Changed
+- Public-scope hygiene: Set Doctor tests / doc-comments and the input-device R25 guard test use
+  neutral package ids instead of downstream package names (no behaviour change).
+
 ## [1.0.24] - 2026-08-21
 
 ### Added
