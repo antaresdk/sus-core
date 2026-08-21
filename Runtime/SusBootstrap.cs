@@ -94,6 +94,7 @@ namespace Sharq.Core
         /// UI Toolkit requires an EventSystem + input module to process clicks/input.
         /// Idempotent. Public so the <see cref="SusApp"/> facade can guarantee it for
         /// router/manual apps that never go through <see cref="Mount{T}(VisualElement)"/>.
+        /// Also installs <see cref="SusInputDevice"/> (last-device / cursor / hover policy).
         /// </summary>
         public static void EnsureEventSystem()
         {
@@ -102,6 +103,7 @@ namespace Sharq.Core
             {
                 EnsureInputModule(existing.gameObject);
                 s_eventSystemEnsured = true;
+                SusInputDevice.EnsureInstalled();
                 return;
             }
 
@@ -114,11 +116,15 @@ namespace Sharq.Core
             go.AddComponent<UnityEngine.EventSystems.EventSystem>();
             EnsureInputModule(go);
             s_eventSystemEnsured = true;
+            SusInputDevice.EnsureInstalled();
         }
 
         /// <summary>
         /// EventSystem alone is not enough — without a BaseInputModule UITK/uGUI
         /// receive no pointer events (buttons look fine but never click).
+        /// New Input System path (<c>InputSystemUIInputModule</c>) is required for default
+        /// gamepad Navigate/Submit/Cancel into UITK; <see cref="UnityEngine.EventSystems.StandaloneInputModule"/>
+        /// is keyboard/mouse fallback (gamepad support is limited).
         /// </summary>
         static void EnsureInputModule(UnityEngine.GameObject go)
         {
