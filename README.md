@@ -8,6 +8,8 @@
 
 # Sharq UI System Core
 
+English · [简体中文](./README.zh-CN.md)
+
 **SusCore** — foundation of the SUS UI system. Vue-like single-file components for Unity UI Toolkit — reactivity, SFC compiler, directives, slots, scoped CSS, themes, breakpoints, world-space, console.
 
 **License:** [MIT](./LICENSE.md)
