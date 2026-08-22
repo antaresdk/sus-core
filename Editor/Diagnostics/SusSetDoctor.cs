@@ -143,6 +143,8 @@ namespace Sharq.Core.Editor.Diagnostics
             var assetsAbs = Path.GetFullPath("Assets");
             var actualPaths = CollectActualPaths(assetsAbs, root);
             var generatedZones = SusSharqGenManifest.ResolveGeneratedZones(assetsAbs, root, presentModules);
+            var moduleGenInfo = SusSharqGenManifest.ResolveModuleGenInfo(assetsAbs, root, presentModules);
+            issues.AddRange(DetectStaleGenerated(assetsAbs, moduleGenInfo));
 
             var installedUpm = new HashSet<string>(
                 PackageInfo.GetAllRegisteredPackages().Select(p => p.name),
@@ -755,6 +757,109 @@ namespace Sharq.Core.Editor.Diagnostics
                 "installed module or set:\n   " + body,
                 "If these are your own files, leave them where they are. If they're left over from a " +
                 "set whose module manifest was removed, reinstall that set.");
+        }
+
+        /// <summary>The boundary §5.5 D8 documents as sitting outside its own reach (T-1526,
+        /// ARCH-PACK-CLASSIC.md §5.5 D8 last paragraph): T-1489's <c>generatedZones</c> makes
+        /// EVERY path under a module's declared generated zone unconditionally "known" to
+        /// <see cref="ClassifyStrayPaths"/> — that's correct for a purchaser's own fresh
+        /// Generate output, but it also means a genuinely stale generat (<c>CsX.g.cs</c> from a
+        /// component the module no longer ships, e.g. renamed/removed) is now invisible: it
+        /// can't be Residual (it's under the zone, D8 says "known") and it can't be judged from
+        /// <c>paths</c> alone (the whole zone is either all-known or, pre-purchase-Generate,
+        /// entirely absent from disk). The only ground truth left is stem correspondence against
+        /// the module's OWN current <c>.sharq</c> sources (<see
+        /// cref="SusSharqGenManifest.ResolveModuleGenInfo"/>, <c>sources</c> field, T-1489's
+        /// sibling field added here) — a <c>&lt;Stem&gt;.g.cs</c>/<c>&lt;Stem&gt;.g.uss</c> under
+        /// the generated zone, or a companion <c>&lt;Stem&gt;.g.uss</c> copy under the
+        /// <c>resources</c> zone (T-1526's DoD explicitly), whose stem matches no
+        /// <c>&lt;Stem&gt;.sharq</c> anywhere under <c>sources</c> right now.
+        ///
+        /// Warning only, and the hint below NEVER says "reinstall the set" — reinstalling a
+        /// classic set only ADDS files (§5.5's central invariant running through this whole
+        /// class), so it would leave the exact same stale generat behind. Deleting the file and
+        /// re-running Generate is the only fix that actually removes it.</summary>
+        internal static List<SusValidationIssue> DetectStaleGenerated(
+            string assetsAbsPath,
+            IReadOnlyDictionary<SusModuleManifest, SusSharqGenManifest.SusGenModuleInfo> moduleGenInfo)
+        {
+            var issues = new List<SusValidationIssue>();
+            if (moduleGenInfo == null) return issues;
+
+            foreach (var kv in moduleGenInfo)
+            {
+                var owner = kv.Key;
+                var info = kv.Value;
+                var stale = new List<string>();
+
+                CollectStaleGeneratedInZone(assetsAbsPath, info.GeneratedZone, GeneratedZoneSuffixes, info.SourceStems, stale);
+                CollectStaleGeneratedInZone(assetsAbsPath, info.ResourcesZone, ResourcesZoneSuffixes, info.SourceStems, stale);
+
+                if (stale.Count == 0) continue;
+                stale.Sort(StringComparer.Ordinal);
+                issues.Add(BuildStaleGeneratedIssue(owner, stale));
+            }
+            return issues;
+        }
+
+        /// <summary>Suffixes judged in a module's own <c>generated</c> zone: the generat
+        /// C# and its co-located <c>.g.uss</c> (the zone is currently flat and holds a
+        /// <c>.sections.json</c> per stem too, but that file carries no compiled output worth a
+        /// "delete and Generate" hint on its own — its stem is still covered because the .g.cs
+        /// in the same zone already flags the stem).</summary>
+        private static readonly string[] GeneratedZoneSuffixes = { ".g.cs", ".g.uss" };
+
+        /// <summary>Suffixes judged in a module's <c>resources</c> zone: only the runtime
+        /// <c>Resources.Load</c> copy of the compiled stylesheet — DoD п.3: a hand-authored
+        /// PLAIN <c>.uss</c> living alongside it (e.g. shared tokens/breakpoints files that were
+        /// never generated from any <c>.sharq</c>) does not end in <c>.g.uss</c>, so it never
+        /// matches this suffix and can never be flagged — no stem comparison needed to exclude
+        /// it, the suffix filter already does.</summary>
+        private static readonly string[] ResourcesZoneSuffixes = { ".g.uss" };
+
+        private static void CollectStaleGeneratedInZone(
+            string assetsAbsPath, string zoneRelPath, string[] suffixes, HashSet<string> knownStems, List<string> outStale)
+        {
+            if (string.IsNullOrEmpty(zoneRelPath) || knownStems == null) return;
+            var zoneAbs = Path.Combine(assetsAbsPath, zoneRelPath.Replace('/', Path.DirectorySeparatorChar));
+            if (!Directory.Exists(zoneAbs)) return;
+
+            foreach (var file in Directory.EnumerateFiles(zoneAbs, "*", SearchOption.AllDirectories))
+            {
+                var fileName = Path.GetFileName(file);
+                string matchedSuffix = null;
+                foreach (var suf in suffixes)
+                {
+                    if (!fileName.EndsWith(suf, StringComparison.OrdinalIgnoreCase)) continue;
+                    matchedSuffix = suf;
+                    break;
+                }
+                if (matchedSuffix == null) continue; // not a generat file this zone is judged by (DoD п.3)
+
+                var stem = fileName.Substring(0, fileName.Length - matchedSuffix.Length);
+                if (knownStems.Contains(stem)) continue; // has a live .sharq source — not stale
+
+                var relFromZone = Path.GetRelativePath(zoneAbs, file).Replace('\\', '/');
+                outStale.Add($"{zoneRelPath}/{relFromZone}");
+            }
+        }
+
+        private static SusValidationIssue BuildStaleGeneratedIssue(SusModuleManifest owner, List<string> stalePaths)
+        {
+            const int maxListed = 20;
+            var listed = stalePaths.Take(maxListed);
+            var body = string.Join("\n   ", listed);
+            if (stalePaths.Count > maxListed) body += $"\n   ... and {stalePaths.Count - maxListed} more";
+
+            var verb = stalePaths.Count == 1 ? "has" : "have";
+            return SusValidationIssue.Warning("SetDoctor.StaleGenerated",
+                $"{stalePaths.Count} generated file(s) under module '{owner.id}' (v{owner.version}) {verb} " +
+                "no matching .sharq source anymore — likely a component that was renamed or removed from a " +
+                "newer version of this module (Generate output, unlike the rest of an import, is never " +
+                "reconciled automatically):\n   " + body,
+                "Delete the listed file(s), then run Generate again. A classic re-import only ADDS files " +
+                "and never ships Generate output in the first place, so updating the module will not " +
+                "remove them on its own.");
         }
 
         // ─── Output (shared formatting with SusSetupValidator's convention) ──────

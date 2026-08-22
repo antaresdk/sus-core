@@ -893,5 +893,166 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreEqual(1, issues.Count);
             Assert.AreEqual("SetDoctor.Residual", issues[0].Category);
         }
+
+        // ─── DetectStaleGenerated (D8 boundary / T-1526) ────────────────────────
+
+        private void WriteSharqGenDescriptor(string moduleDir, string generated = "Runtime/Generated",
+            string resources = "Runtime/Resources/SusRuntime", string sourcesJsonArray = "\"Components\"")
+        {
+            var dir = Path.Combine(_root, Root, moduleDir);
+            Directory.CreateDirectory(dir);
+            var json = "{\"generated\":\"" + generated + "\"," +
+                        (resources != null ? "\"resources\":\"" + resources + "\"," : "") +
+                        "\"sources\":[" + sourcesJsonArray + "]}";
+            File.WriteAllText(Path.Combine(dir, SusSharqGenManifest.FileName), json);
+        }
+
+        private void WriteFile(string relPath, string content = "x")
+        {
+            var abs = Path.Combine(_root, relPath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(abs));
+            File.WriteAllText(abs, content);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_GCsWithNoMatchingSharq_OneWarningNoReinstallHint()
+        {
+            // DoD (1): a .g.cs whose stem has no .sharq anywhere under sources -> exactly one
+            // StaleGenerated, and the hint must never suggest reinstalling — §5.5's central
+            // invariant is that a classic re-import only ADDS files, so reinstalling would leave
+            // this exact file behind untouched.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusObjective.g.cs"); // stale: no SusObjective.sharq
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            Assert.AreEqual("SetDoctor.StaleGenerated", issues[0].Category);
+            StringAssert.Contains("SusObjective.g.cs", issues[0].Message);
+            StringAssert.DoesNotContain("SusAlert.g.cs", issues[0].Message);
+            StringAssert.DoesNotContain("reinstall", issues[0].FixHint.ToLowerInvariant());
+        }
+
+        [Test]
+        public void DetectStaleGenerated_FullCorrespondence_NoFindings()
+        {
+            // DoD (2): every generat stem has a live .sharq -> zero findings.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.sections.json");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.IsEmpty(issues);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_NonStandardNamedGCs_FlaggedDeliberately()
+        {
+            // DoD (3): a .g.cs whose stem was NEVER a real .sharq component (not "removed", just
+            // never existed) still gets flagged, by the same mechanism as (1) — deliberate
+            // choice, fixed here as a test: Set Doctor has no way to tell "never existed" apart
+            // from "existed, then removed", and both are exactly the condition a purchaser needs
+            // to know about ("this generated file has nothing generating it right now").
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/NotAComponent.g.cs");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("NotAComponent.g.cs", issues[0].Message);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_ResourcesZonePlainUss_NeverFlagged()
+        {
+            // DoD (3), resources-zone half: a hand-authored PLAIN .uss (no ".g." infix — e.g. a
+            // shared tokens/breakpoints file, real case: suskit-tokens.uss next to the generated
+            // per-component .g.uss copies) is excluded by SUFFIX alone before any stem
+            // comparison happens, so it can never false-positive regardless of its name.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/suskit-tokens.uss"); // hand-authored, not generated
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.IsEmpty(issues);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_CompanionUssInResourcesZone_AlsoFlagged()
+        {
+            // T-1526's explicit DoD note: the companion .g.uss copy in the resources zone is
+            // judged by the SAME stem correspondence as the generated zone, independently — here
+            // the .g.cs itself is fine (has a live .sharq) but the resources copy is orphaned
+            // (e.g. a rename where the resources copy step lagged behind the generated zone).
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusOldWidget.g.uss"); // stale companion
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("SusOldWidget.g.uss", issues[0].Message);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_NoSourcesField_Silent()
+        {
+            // DoD (4a): sharq.gen.json present and valid ("generated" parses) but WITHOUT a
+            // "sources" field -> no ground truth to compare against -> the module is skipped
+            // entirely (absent from ResolveModuleGenInfo, same as "no descriptor at all") rather
+            // than either flagged or assumed clean.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            var dir = Path.Combine(_root, Root, "Kit");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, SusSharqGenManifest.FileName), "{\"generated\":\"Runtime/Generated\"}");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAnything.g.cs");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.IsEmpty(issues);
+            Assert.IsFalse(info.ContainsKey(kit));
+        }
+
+        [Test]
+        public void DetectStaleGenerated_MalformedDescriptorJson_Silent()
+        {
+            // DoD (4b): a broken sharq.gen.json -> Parse returns null -> module skipped, silent.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            var dir = Path.Combine(_root, Root, "Kit");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, SusSharqGenManifest.FileName), "{not json");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAnything.g.cs");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.IsEmpty(issues);
+        }
     }
 }

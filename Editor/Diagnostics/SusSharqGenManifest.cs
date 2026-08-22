@@ -31,8 +31,31 @@ namespace Sharq.Core.Editor.Diagnostics
     {
         internal const string FileName = "sharq.gen.json";
 
-        // ─── JSON field (JsonUtility — only what Set Doctor needs) ─────────
+        // ─── JSON fields (JsonUtility — only what Set Doctor needs) ────────
         public string generated;
+
+        /// <summary>Where the generated companion <c>.g.uss</c> is ALSO copied to for runtime
+        /// <c>Resources.Load</c> (e.g. <c>"Runtime/Resources/SusRuntime"</c>) — unlike
+        /// <see cref="generated"/>, this zone ships even for a module whose <c>generated</c>
+        /// zone is excluded from the classic set (skin, §5.5 D8): the purchaser needs the
+        /// compiled stylesheet at runtime immediately, only the regenerable <c>.cs</c> source is
+        /// held back. Used by <see cref="SusSetDoctor.DetectStaleGenerated"/> (T-1526) to judge
+        /// the companion <c>.g.uss</c> copy here by the same sources-stem correspondence as the
+        /// <see cref="generated"/> zone. Optional — null/blank when a module has no such copy
+        /// step (e.g. this manifest's own module has none).</summary>
+        public string resources;
+
+        /// <summary>Directories (relative to the module's own folder, e.g.
+        /// <c>["Components"]</c>) that hold this module's <c>.sharq</c> source files —
+        /// searched recursively. T-1526: the set of stems this yields (one per
+        /// <c>&lt;Stem&gt;.sharq</c> found anywhere under any of these) is the ONLY thing that
+        /// can tell a real component's generated output apart from a stale one — <c>paths</c>
+        /// says nothing (the whole generated zone is either all-known or all-excluded) and the
+        /// zone folder itself doesn't remember which stems used to be valid. Optional — a
+        /// manifest with no <c>sources</c> (or a sources list that resolves to nothing on disk)
+        /// gives <see cref="SusSetDoctor.DetectStaleGenerated"/> no ground truth to compare
+        /// against, so that module is silently skipped rather than guessed at.</summary>
+        public string[] sources;
 
         /// <summary>Parses just enough of a <c>sharq.gen.json</c> to resolve its generated
         /// folder. Returns null (never throws) on malformed JSON or a missing/blank
@@ -89,6 +112,73 @@ namespace Sharq.Core.Editor.Diagnostics
                 zones.Add($"{root}/{m.dir}/{genRel}");
             }
             return zones;
+        }
+
+        /// <summary>Per-module ground truth for <see cref="SusSetDoctor.DetectStaleGenerated"/>
+        /// (T-1526): the module's declared <see cref="generated"/>/<see cref="resources"/> zones
+        /// (Assets-relative, same shape as <see cref="ResolveGeneratedZones"/>) plus the current
+        /// stem set its <see cref="sources"/> dirs actually contain on disk RIGHT NOW. A module
+        /// contributes no entry — the check silently skips it — when its descriptor is absent,
+        /// unparsable, or has no non-blank <c>sources</c> entries: without a real
+        /// <c>.sharq</c> to compare against there is no ground truth, only a guess (DoD п.4).</summary>
+        internal readonly struct SusGenModuleInfo
+        {
+            internal readonly string GeneratedZone;
+            internal readonly string ResourcesZone;
+            internal readonly HashSet<string> SourceStems;
+
+            internal SusGenModuleInfo(string generatedZone, string resourcesZone, HashSet<string> sourceStems)
+            {
+                GeneratedZone = generatedZone;
+                ResourcesZone = resourcesZone;
+                SourceStems = sourceStems;
+            }
+        }
+
+        internal static Dictionary<SusModuleManifest, SusGenModuleInfo> ResolveModuleGenInfo(
+            string assetsAbsPath, string root, IReadOnlyList<SusModuleManifest> presentModules)
+        {
+            var result = new Dictionary<SusModuleManifest, SusGenModuleInfo>();
+            if (string.IsNullOrEmpty(root) || presentModules == null) return result;
+
+            foreach (var m in presentModules)
+            {
+                if (string.IsNullOrEmpty(m?.dir)) continue;
+
+                var descriptorAbs = Path.Combine(assetsAbsPath, root, m.dir, FileName);
+                if (!File.Exists(descriptorAbs)) continue;
+
+                string json;
+                try { json = File.ReadAllText(descriptorAbs); }
+                catch (IOException) { continue; } // transient (mid-import) — next trigger retries
+
+                var gen = Parse(json);
+                if (gen == null) continue;
+                if (gen.sources == null || gen.sources.Length == 0) continue; // DoD п.4: no sources -> silent
+
+                var genRel = gen.generated.Replace('\\', '/').Trim('/');
+                var genZone = string.IsNullOrEmpty(genRel) ? null : $"{root}/{m.dir}/{genRel}";
+
+                string resZone = null;
+                if (!string.IsNullOrEmpty(gen.resources))
+                {
+                    var resRel = gen.resources.Replace('\\', '/').Trim('/');
+                    if (!string.IsNullOrEmpty(resRel)) resZone = $"{root}/{m.dir}/{resRel}";
+                }
+
+                var stems = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var src in gen.sources)
+                {
+                    if (string.IsNullOrEmpty(src)) continue;
+                    var srcAbs = Path.Combine(assetsAbsPath, root, m.dir, src.Replace('/', Path.DirectorySeparatorChar));
+                    if (!Directory.Exists(srcAbs)) continue;
+                    foreach (var f in Directory.EnumerateFiles(srcAbs, "*.sharq", SearchOption.AllDirectories))
+                        stems.Add(Path.GetFileNameWithoutExtension(f));
+                }
+
+                result[m] = new SusGenModuleInfo(genZone, resZone, stems);
+            }
+            return result;
         }
     }
 }
