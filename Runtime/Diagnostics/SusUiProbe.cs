@@ -456,8 +456,21 @@ namespace Sharq.Core.Diagnostics
             if (BackgroundHasSource(resolved))
             {
                 bg = resolved;
-                // Unity 6+: IResolvedStyle.unityBackgroundScaleMode is StyleEnum<ScaleMode>.
+                // T-1493: unityBackgroundScaleMode is obsolete in favour of `background-*` USS
+                // properties (D-028 already migrated SusImg/SusIcon/… to `background-size`, which
+                // silently WINS over this legacy field whenever both are present). The probe still
+                // reads the legacy field on purpose: IResolvedStyle guarantees a concrete resolved
+                // value here (never "unset"), while `backgroundSize` has no clean way to tell
+                // "author left it at the modern default (auto/native-size)" apart from "author
+                // wants stretch" without re-deriving the same ScaleMode/BackgroundSize duality
+                // Unity itself keeps for back-compat. Migrating this diagnostic string would risk
+                // silently changing the `scaleMode` field that committed frames-spec
+                // `docs-canon/assets/shots/*.geometry.json` fixtures and R36/R51 plants compare
+                // byte-for-byte — out of scope for a warning-count fix. Suppressed locally, not
+                // globally, so any NEW obsolete usage elsewhere still warns.
+#pragma warning disable CS0618
                 scaleMode = ScaleModeToKebab(el.resolvedStyle.unityBackgroundScaleMode.value);
+#pragma warning restore CS0618
                 return true;
             }
 
@@ -468,7 +481,11 @@ namespace Sharq.Core.Diagnostics
             bg = styled.value;
             if (!BackgroundHasSource(bg)) return false;
 
+            // T-1493: same rationale as above — IStyle.unityBackgroundScaleMode is obsolete but
+            // intentionally still read here for the detached-tree fallback path.
+#pragma warning disable CS0618
             var modeStyle = el.style.unityBackgroundScaleMode;
+#pragma warning restore CS0618
             if (modeStyle.keyword == StyleKeyword.Undefined || modeStyle.keyword == StyleKeyword.Null)
                 scaleMode = "stretch-to-fill"; // UITK default = stretch (D-028)
             else
