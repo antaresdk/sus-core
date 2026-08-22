@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.UIElements;
 using NUnit.Framework;
 
@@ -64,6 +65,14 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Attach_SwapsBreakpointClassOnRoot()
         {
+            // Attach -> Bind -> RefreshFromRoot() probes the Editor GameView width
+            // (TryGetEditorGameViewWidth), which needs a real graphics device. Under
+            // -batchmode -nographics that logs '[Error] No graphic device is available
+            // to initialize the view.', which Unity's test runner treats as a failure
+            // even though no assertion fires (T-1731). Inconclusive, not a false red.
+            Assume.That(!Application.isBatchMode,
+                "Attach() probes GameView width via TryGetEditorGameViewWidth, which needs a graphics device unavailable in -nographics batchmode");
+
             var root = new VisualElement();
             var svc = SusBreakpointService.Attach(root);
 
