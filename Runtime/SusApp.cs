@@ -62,6 +62,7 @@ namespace Sharq.Core
         private readonly List<string> _customStyles = new();
         private readonly List<ISusIconProvider> _iconProviders = new();
         private readonly List<Action<VisualElement>> _configures = new();
+        private bool _useSafeArea;
         private bool _finalized;
         private SusWorldSpacePanel _worldPanel;
         private WorldMarkerLayer _markerLayer;
@@ -223,6 +224,17 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Applies device safe-area insets as padding on the app root (see <see cref="SusSafeArea"/>).
+        /// Opt-in — desktop/editor have zero insets by default; Storybook/tests substitute
+        /// <see cref="SusSafeArea.Provider"/>. Recalculates on geometry and orientation changes.
+        /// </summary>
+        public SusApp UseSafeArea(bool enabled = true)
+        {
+            _useSafeArea = enabled;
+            return this;
+        }
+
+        /// <summary>
         /// Registers a callback run against the root during finalization, after the cascade
         /// and custom styles but before the theme is applied. Escape hatch for manual UI and
         /// for the sus-router <c>UseRouter</c> extension. Multiple callbacks run in order.
@@ -318,6 +330,10 @@ namespace Sharq.Core
             // Theme LAST: the OverlayHost created during cascade/mount must carry the theme
             // class for var(--thm-*/--sk-*) to resolve on popups/tooltips/modals.
             SusThemeService.Instance.SetTheme(_root, _theme);
+
+            // Safe-area padding on the root (after scaffold/theme so listeners see a live tree).
+            if (_useSafeArea)
+                SusSafeArea.Apply(_root);
 
             return _root;
         }
