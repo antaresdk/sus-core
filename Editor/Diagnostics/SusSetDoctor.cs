@@ -31,7 +31,10 @@ namespace Sharq.Core.Editor.Diagnostics
     ///     path per set root; re-importing a smaller set on top of an already-installed larger one
     ///     silently overwrites them with the smaller set's content (e.g. Complete's demo-art
     ///     notices quietly dropped out of the combined Third-Party Notices.txt after a Kit
-    ///     re-import).
+    ///     re-import). A second branch covers <b>disjoint</b> co-installed sets (no shared
+    ///     modules, no strict nesting either way): last import still wins the three shared
+    ///     paths, so the combined notice loses the other set's attributions —
+    ///     <c>SetDoctor.RootFileProvenanceDisjoint</c> (R33/I15(5)).
     ///
     /// <b>Правило атрибуции (§2.3 D7).</b> Before a single shared
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> was overwritten by WHICHEVER set was imported
@@ -451,9 +454,11 @@ namespace Sharq.Core.Editor.Diagnostics
         /// (<c>Generated for: &lt;set&gt; v&lt;version&gt;</c>, no dates) as the last non-empty
         /// line of each such file; this compares the set it names against every OTHER present
         /// set descriptor and flags it when that other set is a STRICT superset of the
-        /// marker's module list. Never a "delete" hint (§5.5 point 10 explicitly): the files on
-        /// disk are legitimate content of the smaller set, just not the most complete content
-        /// currently available.</summary>
+        /// marker's module list. A separate branch (<c>SetDoctor.RootFileProvenanceDisjoint</c>,
+        /// R33/I15(5)) fires when another present descriptor shares <b>zero</b> modules with the
+        /// marker's set (no nesting either way): last import still overwrites the shared root
+        /// files, so the other set's attributions vanish. Never a "delete" hint (§5.5 point 10 /
+        /// I15(5)): advise reimport of the larger set, or of <b>both</b> disjoint sets.</summary>
         internal static List<SusValidationIssue> DetectRootFileProvenance(
             string root,
             IReadOnlyList<SusSetManifest> presentDescriptors,
@@ -464,9 +469,11 @@ namespace Sharq.Core.Editor.Diagnostics
             if (presentDescriptors == null || presentDescriptors.Count < 2) return issues; // nothing to be a subset OF
 
             // One re-import normally stamps every generated root file with the SAME marker — group
-            // by (markerSet -> supersetSet) so that produces one issue naming all affected files,
-            // not one issue per file.
-            var groups = new Dictionary<(string markerSet, string supersetSet), List<string>>();
+            // by (markerSet -> otherSet) so that produces one issue naming all affected files,
+            // not one issue per file. Nested (strict-superset) and disjoint pairs are separate
+            // categories; a marker that has a present strict superset takes that path only.
+            var nestedGroups = new Dictionary<(string markerSet, string supersetSet), List<string>>();
+            var disjointGroups = new Dictionary<(string markerSet, string otherSet), List<string>>();
             foreach (var kv in rootFileMarkers)
             {
                 var fileName = kv.Key;
@@ -476,18 +483,42 @@ namespace Sharq.Core.Editor.Diagnostics
 
                 var superset = presentDescriptors.FirstOrDefault(d =>
                     !string.Equals(d.set, markerSet, StringComparison.Ordinal) && IsStrictModuleSuperset(d.modules, markerDesc.modules));
-                if (superset == null) continue;
+                if (superset != null)
+                {
+                    var nestedKey = (markerDesc.set, superset.set);
+                    if (!nestedGroups.TryGetValue(nestedKey, out var nestedFiles))
+                        nestedGroups[nestedKey] = nestedFiles = new List<string>();
+                    nestedFiles.Add(fileName);
+                    continue;
+                }
 
-                var key = (markerDesc.set, superset.set);
-                if (!groups.TryGetValue(key, out var files)) groups[key] = files = new List<string>();
-                files.Add(fileName);
+                // No nesting either way: flag every OTHER present descriptor whose modules share
+                // nothing with the marker's set (skin-set ⇄ game-set). Partial overlap without
+                // nesting stays silent — same as T-561 sibling case.
+                foreach (var other in presentDescriptors)
+                {
+                    if (string.Equals(other.set, markerSet, StringComparison.Ordinal)) continue;
+                    if (IsStrictModuleSuperset(markerDesc.modules, other.modules)) continue; // marker is the larger set
+                    if (!AreModulesDisjoint(markerDesc.modules, other.modules)) continue;
+
+                    var disjointKey = (markerDesc.set, other.set);
+                    if (!disjointGroups.TryGetValue(disjointKey, out var disjointFiles))
+                        disjointGroups[disjointKey] = disjointFiles = new List<string>();
+                    disjointFiles.Add(fileName);
+                }
             }
 
-            foreach (var kv in groups)
+            foreach (var kv in nestedGroups)
             {
                 var markerDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.markerSet, StringComparison.Ordinal));
                 var supersetDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.supersetSet, StringComparison.Ordinal));
                 issues.Add(BuildRootFileProvenanceIssue(root, markerDesc, supersetDesc, kv.Value));
+            }
+            foreach (var kv in disjointGroups)
+            {
+                var markerDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.markerSet, StringComparison.Ordinal));
+                var otherDesc = presentDescriptors.First(d => string.Equals(d.set, kv.Key.otherSet, StringComparison.Ordinal));
+                issues.Add(BuildRootFileProvenanceDisjointIssue(root, markerDesc, otherDesc, kv.Value));
             }
             return issues;
         }
@@ -499,6 +530,15 @@ namespace Sharq.Core.Editor.Diagnostics
             if (superset.Count <= subset.Count) return false;
             foreach (var id in subset)
                 if (!superset.Contains(id)) return false;
+            return true;
+        }
+
+        /// <summary>True when the two module-id lists share no id (I15(5) disjoint pair).</summary>
+        private static bool AreModulesDisjoint(IReadOnlyList<string> a, IReadOnlyList<string> b)
+        {
+            var left = new HashSet<string>(a ?? Array.Empty<string>(), StringComparer.Ordinal);
+            foreach (var id in b ?? Array.Empty<string>())
+                if (left.Contains(id)) return false;
             return true;
         }
 
@@ -514,6 +554,24 @@ namespace Sharq.Core.Editor.Diagnostics
                 "content only the larger set adds (e.g. its own demo-art third-party notices) is missing from the " +
                 "combined file(s).",
                 $"Reimport '{supersetDesc.displayName}' to regenerate these files for the full set.");
+        }
+
+        /// <summary>I15(5) / <c>RootFileProvenanceDisjoint</c>: both sets installed, modules
+        /// share nothing, root files describe only the last-imported set. Never suggest delete —
+        /// reimport <b>both</b> so each set's attributions land again.</summary>
+        private static SusValidationIssue BuildRootFileProvenanceDisjointIssue(
+            string root, SusSetManifest markerDesc, SusSetManifest otherDesc, List<string> files)
+        {
+            var sortedFiles = files.OrderBy(f => f, StringComparer.Ordinal).ToList();
+            var fileList = string.Join(", ", sortedFiles.Select(f => $"'{f}'"));
+            var verb = sortedFiles.Count == 1 ? "was" : "were";
+            return SusValidationIssue.Warning("SetDoctor.RootFileProvenanceDisjoint",
+                $"{fileList} in 'Assets/{root}' {verb} generated for '{markerDesc.displayName}' ('{markerDesc.set}'), " +
+                $"but the disjoint installed set '{otherDesc.displayName}' ('{otherDesc.set}') is also present — " +
+                "the sets share no modules, so neither reimport alone restores the other's attributions in the " +
+                "combined root file(s).",
+                $"Reimport both '{markerDesc.displayName}' and '{otherDesc.displayName}' " +
+                "(order does not matter for detection; reimporting only one leaves the other's notices missing).");
         }
 
         /// <summary>Parses the packer's deterministic provenance marker from the LAST non-empty

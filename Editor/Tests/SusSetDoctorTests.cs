@@ -652,7 +652,8 @@ namespace Sharq.Core.Editor.Tests
         public void DetectRootFileProvenance_SiblingSetsNeitherSubset_NoFinding()
         {
             // two unrelated sets sharing some modules but neither a strict superset of the other
-            // — e.g. two hypothetical same-tier sets — must not flag either direction
+            // — e.g. two hypothetical same-tier sets — must not flag either direction (partial
+            // overlap is not I15(5) disjoint; that branch needs zero shared modules)
             var setA = MakeDescriptor("a-set", "kit", "core", "router", "kit");
             var setB = MakeDescriptor("b-set", "game", "core", "router", "game");
             var markers = new Dictionary<string, (string set, string version)>
@@ -661,6 +662,37 @@ namespace Sharq.Core.Editor.Tests
             };
 
             Assert.IsEmpty(SusSetDoctor.DetectRootFileProvenance(Root, new[] { setA, setB }, markers));
+        }
+
+        [Test]
+        public void DetectRootFileProvenance_DisjointDescriptors_ReportsDisjointWarningWithoutDelete()
+        {
+            // T-1279 / R33 I15(5): two co-installed sets share ZERO modules (skin-set ⇄ complete),
+            // so neither is a strict superset. Last import still overwrites the three shared root
+            // files — Doctor must warn with RootFileProvenanceDisjoint and advise reimport of
+            // BOTH sets, never delete.
+            var widgetsSet = MakeDescriptor("widgets-set", "widgets", "core", "widgets");
+            var themeSet = MakeDescriptor("theme-set", "theme", "theme");
+            var descriptors = new[] { widgetsSet, themeSet };
+            var markers = new Dictionary<string, (string set, string version)>
+            {
+                ["README.txt"] = ("theme-set", "0.3.0"),
+                ["Third-Party Notices.txt"] = ("theme-set", "0.3.0"),
+            };
+
+            var issues = SusSetDoctor.DetectRootFileProvenance(Root, descriptors, markers);
+
+            Assert.AreEqual(1, issues.Count);
+            Assert.AreEqual("SetDoctor.RootFileProvenanceDisjoint", issues[0].Category);
+            Assert.AreEqual(SusValidationSeverity.Warning, issues[0].Severity);
+            StringAssert.Contains("RootFileProvenanceDisjoint", issues[0].Category);
+            StringAssert.Contains("theme-set", issues[0].Message);
+            StringAssert.Contains("widgets-set", issues[0].Message);
+            StringAssert.Contains("README.txt", issues[0].Message);
+            StringAssert.Contains("Third-Party Notices.txt", issues[0].Message);
+            StringAssert.Contains("both", (issues[0].FixHint ?? "").ToLowerInvariant());
+            StringAssert.DoesNotContain("delete", (issues[0].FixHint ?? "").ToLowerInvariant());
+            StringAssert.DoesNotContain("delete", issues[0].Message.ToLowerInvariant());
         }
 
         // ─── T-557 DoD (а): kit + game manifests together -> 0 findings ───────
@@ -980,7 +1012,7 @@ namespace Sharq.Core.Editor.Tests
         public void DetectStaleGenerated_ResourcesZonePlainUss_NeverFlagged()
         {
             // DoD (3), resources-zone half: a hand-authored PLAIN .uss (no ".g." infix — e.g. a
-            // shared tokens/breakpoints file, real case: suskit-tokens.uss next to the generated
+            // shared tokens/breakpoints file, real case: shared-tokens.uss next to the generated
             // per-component .g.uss copies) is excluded by SUFFIX alone before any stem
             // comparison happens, so it can never false-positive regardless of its name.
             var kit = MakeModule("kit", "Kit", "1.0.16");
@@ -989,7 +1021,7 @@ namespace Sharq.Core.Editor.Tests
             WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
             WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.uss");
             WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
-            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/suskit-tokens.uss"); // hand-authored, not generated
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/shared-tokens.uss"); // hand-authored, not generated
 
             var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
             var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
