@@ -58,11 +58,16 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"children\":{el.childCount},");
             sb.Append($"\"w\":{F(wb.width)},\"h\":{F(wb.height)},\"x\":{F(wb.x)},\"y\":{F(wb.y)}");
             var text = GetElementText(el);
+            var textClipped = false;
             if (!string.IsNullOrEmpty(text))
             {
                 sb.Append($",\"text\":{Q(Truncate(text, 80))}");
-                if (IsTextClipped(el, text)) sb.Append(",\"truncated\":true");
+                textClipped = IsTextClipped(el, text);
             }
+            // Depth-cut (T-1975): node is emitted but children are not walked.
+            // Same flag as text ellipsis — consumers treat either as truncated.
+            var depthCut = depth >= maxDepth && el.childCount > 0;
+            if (textClipped || depthCut) sb.Append(",\"truncated\":true");
             if (el.resolvedStyle.display == DisplayStyle.None) sb.Append(",\"hidden\":true");
             if (!el.visible) sb.Append(",\"invisible\":true");
             if (el.pickingMode == PickingMode.Position) sb.Append(",\"pickable\":true");
