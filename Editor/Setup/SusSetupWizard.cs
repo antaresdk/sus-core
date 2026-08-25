@@ -12,7 +12,7 @@ namespace Sharq.Core.Editor
 {
     /// <summary>
     /// One-click project onboarding for SUS (integration roadmap 2.1).
-    /// Menu: <c>Tools → SUS → Setup Project</c>.
+    /// Menu: <c>Window → SUS → Setup Project</c>.
     ///
     /// Automates the manual steps a new project used to need:
     ///   1. Environment check   — Unity ≥ 6000, packages core/router, UI Toolkit

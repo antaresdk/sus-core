@@ -43,7 +43,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
     /// <summary>
     /// Diagnostics for SUS setup — checks config, generated files, PanelSettings,
-    /// package availability. Run via <c>Tools → SUS → Validate Setup</c>.
+    /// package availability. Run via <c>Window → SUS → Validate Setup</c>.
     /// </summary>
     public static class SusSetupValidator
     {
@@ -147,7 +147,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
             if (!string.IsNullOrEmpty(sharqDir) && !Directory.Exists(sharqDir))
                 issues.Add(SusValidationIssue.Error("Config", $"SharqDirectory does not exist: '{sharqDir}'",
-                    "Create a folder of Sharq files or run Tools → SUS → Setup Project"));
+                    "Create a folder of Sharq files or run Window → SUS → Setup Project"));
 
             if (!string.IsNullOrEmpty(genDir) && !Directory.Exists(genDir))
                 issues.Add(SusValidationIssue.Warning("Config", $"GeneratedDirectory does not exist: '{genDir}'",

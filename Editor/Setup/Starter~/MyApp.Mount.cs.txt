@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 /// <summary>
-/// SUS application entry point (copied by Tools → SUS → Setup Project).
+/// SUS application entry point (copied by Window → SUS → Setup Project).
 /// Attach to a GameObject that has a UIDocument.
 /// Uses <c>Sharq.Core.SusApp</c> explicitly to avoid clashing with legacy global SusApp types.
 /// </summary>

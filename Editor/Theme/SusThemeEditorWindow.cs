@@ -12,7 +12,7 @@ namespace Sharq.Core.Editor
 {
     /// <summary>
     /// Theme authoring tool over the EXISTING plain-text token USS (roadmap 4.4).
-    /// Menu: <c>Tools → SUS → Theme Editor</c>.
+    /// Menu: <c>Window → SUS → Theme Editor</c>.
     ///
     /// Design constraint (explicit): it introduces NO new format. It reads/edits the
     /// existing <c>_palette.uss</c> (L1 <c>--base-*</c>) and <c>_theme.uss</c> (L2
