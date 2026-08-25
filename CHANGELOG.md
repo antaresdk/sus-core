@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- Set Doctor `RootFileProvenanceDisjoint`: when two co-installed classic sets share no modules
+  (neither is a strict nesting of the other), last import still overwrites the shared root
+  `README.txt` / `LICENSE.txt` / `Third-Party Notices.txt` — warn and advise reimporting both
+  sets, never delete (T-1279, R33/I15(5)).
+
 ## [1.0.26] - 2026-08-21
 
 ### Fixed
