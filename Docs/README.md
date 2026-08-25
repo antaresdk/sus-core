@@ -23,7 +23,7 @@
 | 13 | [Built-in audits (Debug / QA)](./13-audits.md) | ClickAudit, BoundsAudit, CallbackAudit, OverlayAudit, StateAudit, LifecycleAudit, … |
 | 18 | [MCP / AI probe](./18-mcp.md) | SusUiProbe JSON facade (tree/props/health), MCP phases |
 | 17 | [Dev console](./17-console.md) | SusConsoleService, hotkey `~`, OverlayCategory.Console |
-| — | [Design tokens](./DESIGN_TOKENS.md) | Stub → eng canon `internal-docs/ui/theme/DESIGN_TOKENS.md` (+ plan) |
+| — | [Design tokens](./DESIGN_TOKENS.md) | Fonts, colors, icons, themes |
 
 ## Quick start
 
@@ -59,14 +59,14 @@ public class AppEntry : MonoBehaviour
 - **I want to run an example** → [12-examples.md](./12-examples.md)
 - **I want to know about built-in audits (Debug/QA)** → [13-audits.md](./13-audits.md)
 - **I want to configure the compiler** → [10-configuration.md](./10-configuration.md)
-- **I want themes / tokens / icons** → [DESIGN_TOKENS.md](./DESIGN_TOKENS.md) (stub → `internal-docs/ui/theme/`)
+- **I want themes / tokens / icons** → [DESIGN_TOKENS.md](./DESIGN_TOKENS.md) (fonts, colors, icons, themes)
 - **I want the in-game console** → [17-console.md](./17-console.md)
 
 ## Related documents
 
 - [sus-router](https://github.com/antaresdk/sus-router) — navigation and modals (MIT, open-core companion) <!-- sus:ok repo link, no version -->
 - [Integration from scratch](./00-integration.md) - installation and first screen
-- [Design tokens](./DESIGN_TOKENS.md) - stub → eng theming canon
+- [Design tokens](./DESIGN_TOKENS.md) - fonts, colors, icons, themes
 - [OverlayHost and portals](./07-overlayhost.md) - overlays: tooltips, popups, modals
 
 - [Integration known issues](./SUS_INTEGRATION_KNOWN_ISSUES.md) — resolved-issue log from consumer integration
