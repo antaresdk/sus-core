@@ -1,5 +1,13 @@
 # 11. API Reference
 
+## Public type names
+
+`Sus*` is the product API (Runtime and buyer-facing Editor types you call after `using Sharq.Core`).
+`Sharq*` is the `.sharq` compiler and pipeline (parser, interpreter, importers). Product interfaces
+use `ISus*`. Unprefixed public types are a closed grandfathered set (reactive primitives, host and
+layer nouns, companions of those APIs). Do not add new unprefixed public types; new product types
+are `Sus*` / `ISus*`, new compiler types are `Sharq*`.
+
 ## SusApp — fluent bootstrap
 
 Documented application entry point. Thin fluent builder over `SusBootstrap` that guarantees

@@ -84,7 +84,8 @@ public class AppEntry : MonoBehaviour
 ```
 
 **Lower-level alternative** — `SusBootstrap.Mount<T>` (loads the token cascade, but **does not**
-apply `SusDefault.tss` or set a theme — call `SusBootstrap.ApplyDefaultTSS(uiDocument)` and
+apply `SusDefault.tss`, set a theme, or build the layer scaffold (`ScreenHost` / `OverlayHost`)
+— call `SusBootstrap.ApplyDefaultTSS(uiDocument)` and
 `SusThemeService.Instance.SetTheme(root, SusTheme.Dark)` yourself if you need them):
 
 ```csharp

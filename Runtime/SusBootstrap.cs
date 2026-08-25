@@ -4,17 +4,16 @@ using UnityEngine.UIElements;
 namespace Sharq.Core
 {
     /// <summary>
-    /// Bootstrap entry point for SUS applications.
-    /// Analogue of Vue's createApp(App).mount('#app').
-    ///
-    /// Usage (from any MonoBehaviour):
+    /// Low-level helpers: design-token cascade, overlay host, and mount into an existing
+    /// <see cref="VisualElement"/>. The documented application entry is <see cref="SusApp"/>:
     /// <code>
-    /// public class MainMenuEntry : MonoBehaviour
-    /// {
-    ///     public UIDocument uiDocument;
-    ///     void Start() => SusBootstrap.Mount&lt;MainMenuScreen&gt;(uiDocument);
-    /// }
+    /// SusApp.Create(uiDocument).Mount&lt;HomeScreen&gt;();
     /// </code>
+    ///
+    /// <see cref="Mount{T}(VisualElement)"/> does not build the <see cref="ScreenHost"/> /
+    /// <see cref="OverlayHost"/> scaffold and does not apply panel TSS (<c>SusDefault.tss</c>)
+    /// or theme. Use <c>Mount</c> for tests, multi-panel hosts, and other advanced cases
+    /// that already own the tree.
     /// </summary>
     public static class SusBootstrap
     {
@@ -179,27 +178,20 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Creates a root component of type T and mounts it into the given container.
-        /// Automatically loads the design-token cascade onto the container (strict order):
-        ///   1. _palette      — L1 --base-* raw palette (needed by _theme)
-        ///   2. _font         — font families (needed by design-tokens)
-        ///   3. _theme        — L2 --thm-* theme aliases (.theme-dark/.theme-light live here)
-        ///   4. design-tokens — L3 --sus-* semantic tokens
-        ///   5. _icon         — icon utilities (needs --sus-*)
-        ///   6. registered extras — L4/L5 downstream package tokens+styles
-        ///      (downstream UI packages register via RegisterCascadeStyleSheet)
-        /// _palette + _font are ALSO applied at panel level via SusDefault.tss (with _global);
-        /// they are duplicated here because var() doesn't reliably cross panel TSS → container USS.
-        /// Theme variant switched via SusThemeService.Instance.SetTheme(root, theme).
-        /// Returns the created component for further configuration.
-        /// </summary>
-        /// <summary>
-        /// Optional fail-fast hook when <see cref="Mount{T}(VisualElement)"/> finds an existing
-        /// instance of <typeparamref name="T"/> already under the container (duplicate creation).
-        /// Wired by battle client to <c>BattleFailFast</c>.
+        /// Optional host fail-fast when a duplicate <c>T</c> is already under the container.
+        /// Invoked by <see cref="Mount{T}(VisualElement)"/> on duplicate creation.
         /// </summary>
         public static System.Action<string, string> OnDuplicateMount;
 
+        /// <summary>
+        /// Loads the design-token cascade on <paramref name="container"/> and adds a new
+        /// <typeparamref name="T"/> as a child. Does not apply <c>SusDefault.tss</c>, does not
+        /// set a theme, and does not create the <see cref="ScreenHost"/> /
+        /// <see cref="OverlayHost"/> scaffold. Prefer
+        /// <c>SusApp.Create(uiDocument).Mount&lt;T&gt;()</c> for application entry.
+        /// See also <see cref="MountInto{T}"/> when the cascade root is not the mount target
+        /// (used by <see cref="SusApp"/>).
+        /// </summary>
         public static T Mount<T>(VisualElement container) where T : SusComponent, new()
             => MountInto<T>(container, container);
 
@@ -346,8 +338,8 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Mounts into a UIDocument's rootVisualElement.
-        /// Convenience overload.
+        /// Convenience overload with the same low-level contract as
+        /// <see cref="Mount{T}(VisualElement)"/>.
         /// </summary>
         public static T Mount<T>(UIDocument uiDocument) where T : SusComponent, new()
         {
