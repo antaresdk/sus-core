@@ -331,6 +331,62 @@ Running the wizard again does not erase edited files (only missing ones are crea
 
 ---
 
+## Editor setup — `.sharq` syntax highlighting
+
+`.sharq` is not C# / XML / CSS by itself. Without an editor extension the file looks like
+plain text. SusCore ships a VS Code / Cursor extension at
+**`Tools~/vscode-sharq/`** inside the package (Unity never imports `Tools~` as assets).
+
+What it highlights:
+
+| Block | Language | Sharq extras |
+|---|---|---|
+| `<template>` | XML | `v-if` / `v-else` / `v-for` / `v-show`, `:prop`, `@event`, `$MainElement` |
+| `<script>` | C# | `$using Namespace;` |
+| `<style>` | CSS | USS `-unity-*`, design tokens `--sus-*` |
+
+### Install into VS Code or Cursor
+
+**A. Copy the folder** (no Node / Marketplace required):
+
+1. Find the package on disk — Package Manager → SusCore → path, or a git checkout of
+   `sus-core`. Open `Tools~/vscode-sharq/`.
+2. Copy that folder to:
+   - Windows VS Code: `%USERPROFILE%\.vscode\extensions\sharq-it.sharq-language-0.1.0`
+   - macOS / Linux VS Code: `~/.vscode/extensions/sharq-it.sharq-language-0.1.0`
+   - Cursor: `%USERPROFILE%\.cursor\extensions\sharq-it.sharq-language-0.1.0`
+     (or `~/.cursor/extensions/…`)
+3. Restart the editor and open a `.sharq` — status bar language should read **Sharq**.
+
+**B. Install from VSIX:**
+
+The same folder includes `sharq-language-0.1.0.vsix`. In the editor:
+**Extensions → … → Install from VSIX…** → select that file → reload.
+
+To rebuild the VSIX later:
+
+```bash
+npm i -g @vscode/vsce
+cd <path-to-sus-core>/Tools~/vscode-sharq
+vsce package --allow-missing-repository
+```
+
+Starter example to open after install:
+`Editor/Setup/Starter~/HomeScreen.sharq` (also copied into your project by **Setup Project**).
+
+### Rider / JetBrains
+
+No first-class JetBrains plugin yet. Point Rider’s TextMate / TextMate Bundles support at
+`Tools~/vscode-sharq/syntaxes/sharq.tmLanguage.json` (same scopes as VS Code). That is the
+supported interim path.
+
+### Marketplace (optional)
+
+A VS Code Marketplace listing under publisher `sharq-it` is optional and separate from this
+package drop. Local copy / VSIX above is enough for day-to-day editing.
+
+---
+
 ## Further
 
 - [Quick start](./01-quickstart.md) — more about `.sharq`, compositions, props
