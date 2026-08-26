@@ -147,7 +147,9 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreEqual(1, _panel.Count);
 
             Object.DestroyImmediate(target);
-            yield return new WaitForEndOfFrame();
+            // LateUpdate cleans dead targets — poll Count (T-1123: no WaitForEndOfFrame)
+            for (int i = 0; i < 30 && _panel.Count != 0; i++)
+                yield return null;
             Assert.AreEqual(0, _panel.Count, "Dead target should be auto-detached");
         }
 
@@ -161,7 +163,8 @@ namespace Sharq.Core.Runtime.Tests
             var target = new GameObject("Target");
             target.transform.position = new Vector3(5, 0, 10);
             _panel.AttachElement(new VisualElement(), target.transform);
-            yield return new WaitForEndOfFrame();
+            yield return null;
+            yield return null;
             Assert.AreEqual(1, _panel.Count);
             Object.DestroyImmediate(target);
         }
@@ -175,7 +178,8 @@ namespace Sharq.Core.Runtime.Tests
             var target = new GameObject("Target");
             target.transform.position = new Vector3(0, 0, 20);
             _panel.AttachElement(new VisualElement(), target.transform);
-            yield return new WaitForEndOfFrame();
+            yield return null;
+            yield return null;
             Assert.AreEqual(1, _panel.Count);
             Object.DestroyImmediate(target);
         }
@@ -224,7 +228,8 @@ namespace Sharq.Core.Runtime.Tests
             var target = new GameObject("Target");
             target.transform.position = Vector3.forward * 5;
             _svc.Bind(new VisualElement(), target.transform);
-            yield return new WaitForEndOfFrame();
+            yield return null;
+            yield return null;
             _svc.TickPositions();
             Assert.AreEqual(1, _panel.Count);
             Object.DestroyImmediate(target);

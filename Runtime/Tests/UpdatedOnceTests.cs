@@ -9,7 +9,7 @@ namespace Sharq.Core.Runtime.Tests
 {
     /// <summary>
     /// Verify that Updated() fires once per frame and correctly pauses on detach.
-    /// Uses WaitForSeconds to let UITK panel scheduler tick in PlayMode.
+    /// Frame-count / condition polls (T-1123) — no WaitForSeconds (flaky under batch load).
     /// </summary>
     public class UpdatedOnceTests : UIDocumentTestHelper
     {
@@ -34,10 +34,10 @@ namespace Sharq.Core.Runtime.Tests
         {
             var comp = new TestComp();
             Root.Add(comp);
-            // schedule.Execute().Every(16) needs real time for UITK panel to tick
-            yield return new WaitForSeconds(0.1f);
+            // schedule.Execute().Every(16) is time-based — wall-clock poll (T-1123)
+            yield return WaitUntil(() => comp.UpdateCount >= 2, timeoutSeconds: 0.5f);
 
-            Assert.GreaterOrEqual(comp.UpdateCount, 2, "Updated should fire at least twice after 100ms");
+            Assert.GreaterOrEqual(comp.UpdateCount, 2, "Updated should fire at least twice");
         }
 
         [UnityTest]
@@ -45,11 +45,14 @@ namespace Sharq.Core.Runtime.Tests
         {
             var comp = new TestComp();
             Root.Add(comp);
-            yield return new WaitForSeconds(0.05f);
+            yield return WaitUntil(() => comp.UpdateCount >= 1, timeoutSeconds: 0.5f);
             int countBeforeDetach = comp.UpdateCount;
 
             comp.RemoveFromHierarchy();
-            yield return new WaitForSeconds(0.05f);
+            // hold wall-clock while detached so a flaky scheduler tick would have time to fire
+            float holdUntil = Time.realtimeSinceStartup + 0.15f;
+            while (Time.realtimeSinceStartup < holdUntil)
+                yield return new WaitForSecondsRealtime(0.016f);
 
             Assert.AreEqual(countBeforeDetach, comp.UpdateCount,
                 "Updated should not fire after detach");
@@ -60,13 +63,13 @@ namespace Sharq.Core.Runtime.Tests
         {
             var comp = new TestComp();
             Root.Add(comp);
-            yield return new WaitForSeconds(0.05f);
+            yield return WaitUntil(() => comp.UpdateCount >= 1, timeoutSeconds: 0.5f);
             comp.RemoveFromHierarchy();
-            yield return new WaitForSeconds(0.05f);
+            yield return WaitFrames(5);
             int countAfterDetach = comp.UpdateCount;
 
             Root.Add(comp);
-            yield return new WaitForSeconds(0.05f);
+            yield return WaitUntil(() => comp.UpdateCount > countAfterDetach, timeoutSeconds: 0.5f);
 
             Assert.Greater(comp.UpdateCount, countAfterDetach,
                 "Updated should resume after reattach");
@@ -90,7 +93,10 @@ namespace Sharq.Core.Runtime.Tests
         {
             var comp = new NoUpdateOverrideComp();
             Root.Add(comp);
-            yield return new WaitForSeconds(0.1f);
+            // Give the mount path time to (not) schedule — condition-poll hold, not fixed WaitForSeconds
+            float holdUntil = Time.realtimeSinceStartup + 0.15f;
+            while (Time.realtimeSinceStartup < holdUntil)
+                yield return new WaitForSecondsRealtime(0.016f);
 
             var updateItem = s_updateItemField.GetValue(comp);
             Assert.IsNull(updateItem,
@@ -107,7 +113,7 @@ namespace Sharq.Core.Runtime.Tests
             var nonOverriding = new NoUpdateOverrideComp();
             Root.Add(overriding);
             Root.Add(nonOverriding);
-            yield return new WaitForSeconds(0.1f);
+            yield return WaitUntil(() => overriding.UpdateCount >= 2, timeoutSeconds: 0.5f);
 
             Assert.GreaterOrEqual(overriding.UpdateCount, 2);
             Assert.IsNull(s_updateItemField.GetValue(nonOverriding));

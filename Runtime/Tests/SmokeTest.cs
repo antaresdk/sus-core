@@ -33,10 +33,10 @@ namespace Sharq.Core.Runtime.Tests
             var label = new Label("before");
             Root.Add(label);
 
-            // schedule.Execute runs after layout, need WaitForEndOfFrame to flush
+            // schedule.Execute runs after layout — poll condition (T-1123: no WaitForEndOfFrame)
             label.schedule.Execute(() => label.text = "after").StartingIn(0);
 
-            yield return new WaitForEndOfFrame();
+            yield return WaitUntilFrames(() => label.text == "after");
 
             Assert.AreEqual("after", label.text);
         }

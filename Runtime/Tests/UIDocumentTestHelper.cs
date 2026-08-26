@@ -105,6 +105,29 @@ namespace Sharq.Core.Runtime.Tests
         }
 
         /// <summary>
+        /// Poll until <paramref name="condition"/> is true, or <paramref name="timeoutSeconds"/> elapse.
+        /// Prefer this over fixed WaitForSeconds / WaitForEndOfFrame (batchmode-safe, T-1123).
+        /// Yields WaitForSecondsRealtime(16ms) so UITK time-based schedule.Every(ms) can tick;
+        /// exits early when the condition holds (no fixed-window flake under batch load).
+        /// </summary>
+        protected static IEnumerator WaitUntil(System.Func<bool> condition, float timeoutSeconds = 1f)
+        {
+            float start = Time.realtimeSinceStartup;
+            while (!condition() && Time.realtimeSinceStartup - start < timeoutSeconds)
+                yield return new WaitForSecondsRealtime(0.016f);
+        }
+
+        /// <summary>
+        /// Poll up to <paramref name="maxFrames"/> frames (no wall-clock wait).
+        /// Use for layout/LateUpdate flushes; prefer overload with timeout for time-based schedules.
+        /// </summary>
+        protected static IEnumerator WaitUntilFrames(System.Func<bool> condition, int maxFrames = 60)
+        {
+            for (int i = 0; i < maxFrames && !condition(); i++)
+                yield return null;
+        }
+
+        /// <summary>
         /// Simulate a mouse click at the center of the given VisualElement.
         /// </summary>
         protected void SimulateClick(VisualElement target)
