@@ -42,7 +42,7 @@ namespace Sharq.Core.Examples
             if (_showcaseStyleSheet != null)
                 root.styleSheets.Add(_showcaseStyleSheet);
             else
-                Debug.LogWarning("[SusExample] Showcase StyleSheet is not assigned — " +
+                SusLog.Warn("[SusExample] Showcase StyleSheet is not assigned — " +
                                  "color swatches will have no token styles. Assign ThemeShowcase.uss.");
 
             // Mount loads the token cascade, creates EventSystem, and attaches SusBreakpointService.
@@ -57,7 +57,7 @@ namespace Sharq.Core.Examples
 
             AddKeyHint("T — toggle theme");
 
-            Debug.Log("[SusExample] Showcase mounted. T — toggle theme.");
+            SusLog.Verbose("[SusExample] Showcase mounted. T — toggle theme.");
         }
 
         private void Update()
@@ -67,7 +67,7 @@ namespace Sharq.Core.Examples
             {
                 _theme = _theme == SusTheme.Dark ? SusTheme.Light : SusTheme.Dark;
                 SusThemeService.Instance.SetTheme(_uiDocument.rootVisualElement, _theme);
-                Debug.Log($"[SusExample] Theme → {_theme}");
+                SusLog.Verbose($"[SusExample] Theme → {_theme}");
             }
         }
 

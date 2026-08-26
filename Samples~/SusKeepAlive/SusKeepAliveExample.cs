@@ -43,7 +43,7 @@ namespace Sharq.Core.Examples
 
             SusBootstrap.ApplyDefaultTSS(_uiDocument);
             _screen = SusBootstrap.Mount<KeepAliveDemoScreen>(_uiDocument);
-            Debug.Log("[KeepAliveExample] Mounted KeepAliveDemoScreen via SusBootstrap.Mount");
+            SusLog.Verbose("[KeepAliveExample] Mounted KeepAliveDemoScreen via SusBootstrap.Mount");
         }
 
         private void Update()
@@ -54,7 +54,7 @@ namespace Sharq.Core.Examples
             {
                 _timer = 0f;
                 _screen.KeepAlive.Active = !_screen.KeepAlive.Active;
-                Debug.Log($"[KeepAlive] Active={_screen.KeepAlive.Active} " +
+                SusLog.Verbose($"[KeepAlive] Active={_screen.KeepAlive.Active} " +
                     $"({(_screen.KeepAlive.Active ? "visible" : "hidden — DOM preserved")})");
             }
         }

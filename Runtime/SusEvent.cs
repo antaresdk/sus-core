@@ -27,7 +27,7 @@ namespace Sharq.Core
     /// }
     ///
     /// // Consumer:
-    /// button.OnClick.Subscribe(args => Debug.Log($"Clicked: {args.Target}"));
+    /// button.OnClick.Subscribe(args => SusLog.Info($"Clicked: {args.Target}"));
     /// </code>
     /// </summary>
     public class SusEvent<TArgs>

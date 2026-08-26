@@ -23,23 +23,23 @@ namespace Sharq.Core.Examples
         {
             try
             {
-                Debug.Log("[CompExample] Start() called");
+                SusLog.Verbose("[CompExample] Start() called");
                 var doc = GetOrCreateUIDocument();
-                Debug.Log($"[CompExample] UIDocument: {(doc != null ? "ok" : "NULL")}, panelSettings: {(doc?.panelSettings != null ? "ok" : "NULL")}, rootVE: {(doc?.rootVisualElement != null ? "ok" : "NULL")}");
+                SusLog.Verbose($"[CompExample] UIDocument: {(doc != null ? "ok" : "NULL")}, panelSettings: {(doc?.panelSettings != null ? "ok" : "NULL")}, rootVE: {(doc?.rootVisualElement != null ? "ok" : "NULL")}");
 
                 SusBootstrap.ApplyDefaultTSS(doc);
-                Debug.Log("[CompExample] ApplyDefaultTSS done");
+                SusLog.Verbose("[CompExample] ApplyDefaultTSS done");
 
                 var root = SusBootstrap.Mount<CompScreen>(doc);
-                Debug.Log($"[CompExample] Mount done, root.name={root?.name ?? "NULL"}");
+                SusLog.Verbose($"[CompExample] Mount done, root.name={root?.name ?? "NULL"}");
 
                 root.VariantProp = "secondary";
                 root.LabelProp = "Composition Works!";
-                Debug.Log("[CompExample] Props set, Start() complete");
+                SusLog.Verbose("[CompExample] Props set, Start() complete");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[CompExample] CRASH: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+                SusLog.Error($"[CompExample] CRASH: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
             }
         }
 

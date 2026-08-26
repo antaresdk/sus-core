@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.0.28] - 2026-08-26
+
+### Changed
+- Samples~ and Runtime XML examples use `SusLog` instead of `Debug.Log*` (T-2016 / ARCH-SUS-LOG §7).
+
 ## [1.0.27] - 2026-08-26
 
 ### Added

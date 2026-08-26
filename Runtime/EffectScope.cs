@@ -25,7 +25,7 @@ namespace Sharq.Core
     /// Usage outside SusComponent (composable pattern):
     /// <code>
     /// using var scope = new EffectScope();
-    /// scope.Watch(myProp, (_, v) => Debug.Log(v));
+    /// scope.Watch(myProp, (_, v) => SusLog.Info($"{v}"));
     /// // all subscriptions auto-disposed at end of block
     /// </code>
     /// </summary>
