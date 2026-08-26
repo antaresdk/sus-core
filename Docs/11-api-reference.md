@@ -33,6 +33,7 @@ public sealed class SusApp
     public SusApp UseFonts(SusFontAsset fontAsset);
     public SusApp UseIcons(params ISusIconProvider[] providers);
     public SusApp UseIcons(SusIconSetAsset iconSet);
+    public SusApp UseLogLevel(SusLogLevel level);       // process gate; call before Run/Mount
     public SusApp Configure(Action<VisualElement> configure);  // before theme; router/manual UI
 
     // Finalize
@@ -52,9 +53,12 @@ public sealed class SusApp
 7. Mount root component (if `Mount<T>`)
 8. Theme last (`SusThemeService.Instance.SetTheme(root, theme)`)
 
+`UseLogLevel` is not part of finalize — it sets `SusLog.Level` immediately (safe before `Run` / `Mount`).
+
 ```csharp
 SusApp.Create(uiDocument)
     .UseTheme(SusTheme.Dark)
+    .UseLogLevel(SusLogLevel.Verbose)   // optional — diagnostics / audits
     .UseCustomStyles("SusRuntime/demo-tokens")
     .UseWorldSpace(true)
     .Configure(root => BuildManualUi(root))
@@ -66,6 +70,52 @@ SusApp.Create(uiDocument)
     .UseRouter(router, r => r.Register("/", typeof(HomeScreen)), initialPath: "/")
     .Run();
 ```
+
+## SusLog
+
+Process-wide gated logger in `Sharq.Core`. Proxies to `UnityEngine.Debug` so the Editor Console and
+in-game [dev console](./17-console.md) keep receiving messages. **Not** the ring-buffer
+`SusLogEntry` type used by `SusConsoleService` — that struct only stores intercepted Unity logs
+for the overlay UI.
+
+```csharp
+public enum SusLogLevel
+{
+    Error = 0,
+    Warn = 1,      // default buyer level
+    Info = 2,
+    Verbose = 3,   // audits, probes, bootstrap traces
+}
+
+public static class SusLog
+{
+    public static SusLogLevel Level { get; set; }   // minimum emitted; default Warn
+    public static bool IsEnabled(SusLogLevel level);
+    public static bool IsVerbose { get; }           // IsEnabled(Verbose)
+
+    public static void Error(string message);
+    public static void Error(string message, Object context);
+    public static void Warn(string message);
+    public static void Warn(string message, Object context);
+    public static void Info(string message);
+    public static void Verbose(string message);
+    public static void Diagnostic(string message);  // same gate as Verbose
+}
+```
+
+**Default:** `Warn` (Error + critical Warn). Diagnostics stay quiet until you raise the level.
+
+**How to enable Verbose**
+
+| Source | Effect |
+|---|---|
+| `SusApp.UseLogLevel(SusLogLevel.Verbose)` / `SusLog.Level = …` | Code override; call before `Run` / `Mount` |
+| `Assets/sus.config.json` → `"logLevel": "Verbose"` | Read on first `SusLog` access (see [10-configuration](./10-configuration.md)) |
+| Scripting define `SUS_VERBOSE_LOGS` | Floors level at `Verbose` on init; cannot be lowered by config or `UseLogLevel` |
+
+Priority: define floor → last `UseLogLevel` / `SusLog.Level` → `logLevel` in config → default `Warn`.
+
+For expensive dumps, gate first: `if (SusLog.IsVerbose) SusLog.Verbose(...)`.
 
 ## SusComponent - base class
 

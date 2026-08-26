@@ -204,6 +204,10 @@ public class SusConsoleDriver : MonoBehaviour
 
 ### SusLogEntry
 
+Ring-buffer row for the overlay console (what `SusConsoleService` stores after intercepting
+Unity logs). **Not** the process-wide gated logger `SusLog` / `SusLogLevel` — see
+[11-api-reference](./11-api-reference.md#suslog).
+
 ```csharp
 public struct SusLogEntry
 {

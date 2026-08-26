@@ -10,7 +10,8 @@ File `Assets/sus.config.json`:
   "EnableValidation": true,
   "StrictVForKey": true,
   "LogGeneratedFiles": true,
-  "HotReloadStatePreserve": true
+  "HotReloadStatePreserve": true,
+  "logLevel": "Warn"
 }
 ```
 
@@ -27,5 +28,8 @@ File `Assets/sus.config.json`:
 | `StrictVForKey` | `true` | Warn if `v-for` lacks `:key` |
 | `LogGeneratedFiles` | `true` | Log generation to the console |
 | `HotReloadStatePreserve` | `true` | Snapshot `Prop<T>` across domain reload while Playing |
+| `logLevel` | `Warn` | Runtime minimum for `SusLog` (`Error` / `Warn` / `Info` / `Verbose`, case-insensitive). Audits and other diagnostics stay silent until `Verbose`. See [11-api-reference](./11-api-reference.md#suslog). |
+
+`logLevel` is read at runtime from `Assets/sus.config.json` on first `SusLog` use (player-safe; not the Editor-only config UI). Code can override it with `SusApp.UseLogLevel(...)` / `SusLog.Level`. Scripting define `SUS_VERBOSE_LOGS` floors the level at `Verbose` and cannot be lowered by config or `UseLogLevel`.
 
 There is no `EnableHashCaching` field — incremental compilation uses the compiler’s own cache.
