@@ -2,11 +2,22 @@
 
 ## [Unreleased]
 
+## [1.0.27] - 2026-08-26
+
 ### Added
 - Set Doctor `RootFileProvenanceDisjoint`: when two co-installed classic sets share no modules
   (neither is a strict nesting of the other), last import still overwrites the shared root
   `README.txt` / `LICENSE.txt` / `Third-Party Notices.txt` — warn and advise reimporting both
   sets, never delete (T-1279, R33/I15(5)).
+- `SusSafeArea` + `SusApp.UseSafeArea` (C-S2, T-1163).
+- Sharq VS Code grammar under `Tools~/vscode-sharq`; Editor setup note in `Docs/00-integration`
+  (T-1924).
+- zh-CN `README.zh-CN.md` + `Docs/GETTING_STARTED.zh-CN.md` (T-1806).
+
+### Changed
+- `SusUiProbe` emits `truncated` on depth-cut (T-1975); Setup hints point at Window/SUS menus
+  (T-1882); Design tokens buyer guide names fonts/colors/icons/themes (T-1951); SusApp documented
+  as entry and Mount as low-level (T-1934).
 
 ## [1.0.26] - 2026-08-21
 
