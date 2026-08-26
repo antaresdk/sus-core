@@ -10,7 +10,7 @@ namespace Sharq.Core
     /// DOM order (last sibling = topmost, no z-index).
     ///
     /// Elements are stacked by category:
-    /// transition &lt; modal &lt; tooltip &lt; dropdown &lt; toast &lt; console.
+    /// transition &lt; modal &lt; tooltip &lt; dropdown &lt; toast &lt; drag &lt; console.
     /// Tooltips/dropdowns sit above modals so popups from inside a dialog stay visible.
     /// World (0) is legacy/internal — world markers render UNDER screens (in a separate
     /// <see cref="SusWorldSpacePanel"/> or the <see cref="WorldMarkerLayer"/>), never in this host.

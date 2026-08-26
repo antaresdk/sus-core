@@ -3,7 +3,7 @@ namespace Sharq.Core
     /// <summary>
     /// Overlay category — defines z-order via DOM position.
     /// Lower enum value = rendered first (behind). Higher = rendered last (on top).
-    /// Categories are ordered: transition → modal → tooltip → dropdown → toast → console.
+    /// Categories are ordered: transition → modal → tooltip → dropdown → toast → drag → console.
     ///
     /// Tooltips and dropdowns are ABOVE modals because modals contain
     /// interactive elements (Select, Dropdown, tooltips on buttons) that
@@ -41,6 +41,12 @@ namespace Sharq.Core
         /// notification is never hidden by an open popup, below the debug console.
         /// </summary>
         Toast = 45,
+
+        /// <summary>
+        /// Cross-component drag ghosts. Above toasts so a notification mid-drag
+        /// cannot bury the ghost; below the debug console.
+        /// </summary>
+        Drag = 48,
 
         /// <summary>Debug console, error overlays. Absolute top.</summary>
         Console = 50
