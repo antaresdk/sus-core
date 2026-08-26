@@ -24,6 +24,7 @@
 | 18 | [MCP / AI probe](./18-mcp.md) | SusUiProbe JSON facade (tree/props/health), MCP phases |
 | 17 | [Dev console](./17-console.md) | SusConsoleService, hotkey `~`, OverlayCategory.Console |
 | — | [Design tokens](./DESIGN_TOKENS.md) | Fonts, colors, icons, themes |
+| — | [快速入门（中文）](./GETTING_STARTED.zh-CN.md) | Chinese getting-started (manual sync; EN docs are authoritative) |
 
 ## Quick start
 

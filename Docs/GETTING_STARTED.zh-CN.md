@@ -7,7 +7,7 @@
 
 **目标：** 不查阅其他文档，把一个空的 Unity 项目搭建到第一个 `.sharq` 屏幕。
 
-**适用引擎：** Unity 6000.3 及以上（全球版 Unity 6）。不支持团结引擎（Tuanjie）或其他 Unity
+**适用引擎：** Unity 6000.3 及以上（全球版 Unity 6）。不支持团结引擎（Tuanjie）或其他 Unity <!-- sus:ok -->
 China 分支。
 
 ---
@@ -17,13 +17,13 @@ China 分支。
 通过 Unity Package Manager 的 Git URL 安装（权威版本号见英文 README 顶部的自动生成区块）：
 
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.26
+https://github.com/antaresdk/sus-core.git#v1.0.26 <!-- sus:ok -->
 ```
 
 可选：安装完 `sus-core` 后再装 `sus-router`（导航，独立包）：
 
 ```
-https://github.com/antaresdk/sus-router.git#v1.0.15
+https://github.com/antaresdk/sus-router.git#v1.0.15 <!-- sus:ok -->
 ```
 
 配置文件（`Assets/sus.config.json`）：
@@ -175,8 +175,8 @@ WorldSpaceService.BindToWorld(healthBar, unit.transform, offset: new Vector3(0, 
 
 ## 6. 下一步
 
-- 导航（路由、守卫、模态、KeepAlive）——安装 `sus-router`，见
-  [`sus-router/docs/GETTING_STARTED.zh-CN.md`](../../sus-router/docs/GETTING_STARTED.zh-CN.md)。
+- 导航（路由、守卫、模态、KeepAlive）——安装 `sus-router`，见站点指南
+  [sus-ui.dev](https://sus-ui.dev)（中文）或英文包内 `docs/GETTING_STARTED`。
 - `.sharq` 全部指令（`v-if` / `v-show` / `v-for` / `:prop` / `@event` / `$using` /
   `$MainElement`）——英文 [`02-sharq-format.md`](./02-sharq-format.md)。
 - 响应式 API（`Prop<T>` / `Computed<T>` / `Watch<T>`）——英文 [`03-reactivity.md`](./03-reactivity.md)。
