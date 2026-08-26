@@ -1,0 +1,32 @@
+{
+  "name": "sharq-language",
+  "displayName": "Sharq (.sharq) — SUS single-file components",
+  "description": "Syntax highlighting for .sharq single-file components: XML template, C# script, USS/CSS style, Sharq directives (v-if, v-for, :prop, @event, $using).",
+  "version": "0.1.0",
+  "publisher": "sharq-it",
+  "license": "MIT",
+  "engines": { "vscode": "^1.70.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "sharq",
+        "aliases": ["Sharq", "sharq"],
+        "extensions": [".sharq"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "sharq",
+        "scopeName": "source.sharq",
+        "path": "./syntaxes/sharq.tmLanguage.json",
+        "embeddedLanguages": {
+          "text.xml": "xml",
+          "source.cs": "csharp",
+          "source.css": "css"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Sharq",
+  "scopeName": "source.sharq",
+  "fileTypes": ["sharq"],
+  "patterns": [
+    { "include": "#template-block" },
+    { "include": "#script-block" },
+    { "include": "#style-block" },
+    { "include": "#xml-comment" }
+  ],
+  "repository": {
+    "xml-comment": {
+      "begin": "<!--",
+      "end": "-->",
+      "name": "comment.block.sharq"
+    },
+    "template-block": {
+      "begin": "(<)(template)(\\s[^>]*)?(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.template.sharq" },
+        "3": { "name": "meta.tag.attributes.sharq" },
+        "4": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "end": "(</)(template)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.template.sharq" },
+        "3": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "contentName": "text.xml",
+      "patterns": [
+        { "include": "#sharq-directives" },
+        { "include": "text.xml" }
+      ]
+    },
+    "sharq-directives": {
+      "patterns": [
+        {
+          "comment": "structural directives: v-if / v-else-if / v-else / v-for / v-show + binding value",
+          "begin": "\\b(v-(?:if|else-if|else|for|show|model))(=)(\")",
+          "beginCaptures": {
+            "1": { "name": "keyword.control.directive.sharq" },
+            "2": { "name": "punctuation.separator.key-value.sharq" },
+            "3": { "name": "punctuation.definition.string.begin.sharq" }
+          },
+          "end": "\"",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.sharq" } },
+          "contentName": "source.cs.embedded.sharq",
+          "patterns": [ { "include": "source.cs" } ]
+        },
+        {
+          "comment": "bound prop  :text=\"expr\"  — expression is C#",
+          "begin": "(:[A-Za-z_][\\w-]*)(=)(\")",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.binding.sharq" },
+            "2": { "name": "punctuation.separator.key-value.sharq" },
+            "3": { "name": "punctuation.definition.string.begin.sharq" }
+          },
+          "end": "\"",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.sharq" } },
+          "contentName": "source.cs.embedded.sharq",
+          "patterns": [ { "include": "source.cs" } ]
+        },
+        {
+          "comment": "event handler  @click=\"expr\"  (with optional .stop/.once modifiers)",
+          "begin": "(@[A-Za-z_][\\w-]*(?:\\.[a-z]+)*)(=)(\")",
+          "beginCaptures": {
+            "1": { "name": "entity.other.attribute-name.event.sharq" },
+            "2": { "name": "punctuation.separator.key-value.sharq" },
+            "3": { "name": "punctuation.definition.string.begin.sharq" }
+          },
+          "end": "\"",
+          "endCaptures": { "0": { "name": "punctuation.definition.string.end.sharq" } },
+          "contentName": "source.cs.embedded.sharq",
+          "patterns": [ { "include": "source.cs" } ]
+        },
+        {
+          "comment": "element markers: $MainElement and other $-refs as bare attributes",
+          "match": "(\\$[A-Za-z_]\\w*)",
+          "name": "variable.language.element-ref.sharq"
+        }
+      ]
+    },
+    "script-block": {
+      "begin": "(<)(script)(\\s[^>]*)?(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.script.sharq" },
+        "3": { "name": "meta.tag.attributes.sharq" },
+        "4": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "end": "(</)(script)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.script.sharq" },
+        "3": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "contentName": "source.cs",
+      "patterns": [
+        {
+          "comment": "$using Sharq.Core; — Sharq import directive",
+          "match": "^\\s*(\\$using)\\b\\s*([\\w.]*)\\s*(;)?",
+          "captures": {
+            "1": { "name": "keyword.control.import.sharq" },
+            "2": { "name": "entity.name.type.namespace.sharq" },
+            "3": { "name": "punctuation.terminator.sharq" }
+          }
+        },
+        { "include": "source.cs" }
+      ]
+    },
+    "style-block": {
+      "begin": "(<)(style)(\\s[^>]*)?(>)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.style.sharq" },
+        "3": { "name": "meta.tag.attributes.sharq" },
+        "4": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "end": "(</)(style)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.sharq" },
+        "2": { "name": "entity.name.tag.style.sharq" },
+        "3": { "name": "punctuation.definition.tag.end.sharq" }
+      },
+      "contentName": "source.css",
+      "patterns": [
+        {
+          "comment": "USS-specific properties (-unity-*) and custom vars (--sus-* and other --*)",
+          "match": "(-unity-[\\w-]+|--[\\w-]+)\\s*(?=:)",
+          "name": "support.type.property-name.uss.sharq"
+        },
+        { "include": "source.css" }
+      ]
+    }
+  }
+}
