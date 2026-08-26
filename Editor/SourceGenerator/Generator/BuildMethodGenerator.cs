@@ -19,26 +19,7 @@ namespace Sharq.Core.Editor
     internal sealed class BuildMethodGenerator
     {
         private int _varCounter;
-        private int _styleCounter;
-
-        private readonly Dictionary<string, string> _generatedStyles = new();
-
-        /// <summary>
-        /// camelCase names that collide with inherited <c>VisualElement</c>/<c>Focusable</c>
-        /// members. A prop like <c>Prop&lt;bool&gt; Visible</c> generates a companion
-        /// <c>public bool visible {...}</c> that hides <c>VisualElement.visible</c> (CS0108),
-        /// so the companion is emitted with the <c>new</c> keyword for these names.
-        /// </summary>
-        private static readonly HashSet<string> ReservedVisualElementMembers = new(StringComparer.Ordinal)
-        {
-            "visible", "name", "style", "parent", "tooltip", "layout", "transform",
-            "panel", "hierarchy", "childCount", "userData", "viewDataKey", "pickingMode",
-            "usageHints", "enabledSelf", "enabledInHierarchy", "resolvedStyle", "customStyle",
-            "styleSheets", "schedule", "experimental", "contentRect", "worldBound",
-            "localBound", "worldTransform", "visualTree", "dataSource", "dataSourcePath",
-            "language", "languageDirection", "focusable", "tabIndex", "delegatesFocus",
-            "canGrabFocus", "focusController", "contentContainer",
-        };
+        private readonly StaticStyleRegistry _styles = new();
 
         /// <summary>
         /// Maps raw inline style strings to generated USS class names, populated by the
@@ -46,7 +27,7 @@ namespace Sharq.Core.Editor
         /// Key: "font-size: 24px; color: white;", Value: "sharq-ComponentName-s0".
         /// Deduplicates — two elements with identical styles share one class.
         /// </summary>
-        internal IReadOnlyDictionary<string, string> GeneratedStyles => _generatedStyles;
+        internal IReadOnlyDictionary<string, string> GeneratedStyles => _styles.Styles;
 
         /// <summary>
         /// Code-only convenience entry point (tests / CLI). Creates a throwaway instance;
@@ -83,37 +64,12 @@ namespace Sharq.Core.Editor
             var root = TemplateParser.Parse(model.TemplateXml, model.ClassName);
             var sb = new StringBuilder();
             _varCounter = 0;
-            _styleCounter = 0;
-            _generatedStyles.Clear();
+            _styles.Clear();
 
-            // [CreateProperty] transient state — local to this generation pass.
-            string createPropDefault = null;
-
-            // ─── Fallback: extract $using / $extends from script body ──
-            if (!string.IsNullOrEmpty(model.ScriptBody))
-            {
-                foreach (var line in model.ScriptBody.Split('\n'))
-                {
-                    var trimmed = line.Trim();
-                    if (trimmed.StartsWith("$using"))
-                    {
-                        var ns = trimmed.Substring(6).Trim().TrimEnd(';').Trim();
-                        if (!string.IsNullOrEmpty(ns) && !model.Usings.Contains(ns))
-                            model.Usings.Add(ns);
-                    }
-                    else if (trimmed.StartsWith("$extends") && string.IsNullOrEmpty(model.BaseClass))
-                    {
-                        var baseName = trimmed.Substring(8).Trim().TrimEnd(';').Trim();
-                        var ci = baseName.IndexOf("//");
-                        if (ci >= 0) baseName = baseName.Substring(0, ci).Trim();
-                        if (!string.IsNullOrEmpty(baseName)) model.BaseClass = baseName;
-                    }
-                }
-            }
+            ScriptBodyTransformer.ApplyDirectives(model);
 
             // ─── Class header ────────────────────────────────────────
-            var hasCreateProp = !string.IsNullOrEmpty(model.ScriptBody)
-                && Regex.IsMatch(model.ScriptBody, @"\[CreateProperty");
+            var hasCreateProp = ScriptBodyTransformer.HasCreateProperty(model.ScriptBody);
             sb.AppendLine("using System;");
             sb.AppendLine("using System.Collections.Generic;");
             sb.AppendLine("using UnityEngine.UIElements;");
@@ -149,120 +105,9 @@ namespace Sharq.Core.Editor
             sb.AppendLine($"{indent}public partial class {model.ClassName} : {baseClass}");
             sb.AppendLine($"{indent}{{");
 
-            // ─── Script body (injected directly) ─────────────────────
+            // ─── Script body (injected via ScriptBodyTransformer) ────
             var memberIndent = indent + "    ";
-            if (!string.IsNullOrEmpty(model.ScriptBody))
-            {
-                sb.AppendLine($"{memberIndent}// ─── From <script> ───");
-                var scriptLines = model.ScriptBody.Split('\n');
-                var prevWasCreateProp = false;
-                foreach (var line in scriptLines)
-                {
-                    var trimmed = line.TrimEnd('\r');
-
-                    // Skip $using / $extends directive lines
-                    if (trimmed.TrimStart().StartsWith("$using")
-                        || trimmed.TrimStart().StartsWith("$extends"))
-                        continue;
-
-                    if (string.IsNullOrWhiteSpace(trimmed))
-                    {
-                        sb.AppendLine();
-                        prevWasCreateProp = false;
-                        continue;
-                    }
-
-                    // [CreateProperty] — parse optional default: / validate: params
-                    var createPropMatch = System.Text.RegularExpressions.Regex.Match(
-                        trimmed.Trim(),
-                        @"^\[CreateProperty\s*(?:\(\s*(?<params>.*?)\s*\))?\s*\]\s*$");
-                    if (createPropMatch.Success)
-                    {
-                        // Emit a bare [CreateProperty]; the default:/validate: DSL params
-                        // are compiler directives, not valid C# attribute arguments.
-                        sb.AppendLine($"{memberIndent}[CreateProperty]");
-                        prevWasCreateProp = true;
-                        createPropDefault = null;
-
-                        var paramStr = createPropMatch.Groups["params"].Value;
-                        if (!string.IsNullOrEmpty(paramStr))
-                        {
-                            // default: raw value up to comma or close-paren
-                            var defMatch = System.Text.RegularExpressions.Regex.Match(
-                                paramStr, @"default\s*:\s*(?<val>(?:""[^""]*""|[^,\)])+)");
-                            if (defMatch.Success)
-                            {
-                                // Keep the raw C# literal as written (quotes included for
-                                // strings) — it is re-emitted verbatim into `new(...)`.
-                                createPropDefault = defMatch.Groups["val"].Value.Trim();
-                            }
-                        }
-                        continue;
-                    }
-
-                    // If previous line was [CreateProperty], transform:
-                    //   public T FieldName = value; → public Prop<T> FieldName = new(value);
-                    if (prevWasCreateProp)
-                    {
-                        prevWasCreateProp = false;
-                        var defVal = createPropDefault;
-                        createPropDefault = null;
-
-                        // A trailing `// comment` after the `;` is tolerated and preserved.
-                        var fieldMatch = System.Text.RegularExpressions.Regex.Match(
-                            trimmed,
-                            @"^\s*(?<mod>public\s+)(?<type>\w+(?:<[\w,\s]+>)?)\s+(?<name>\w+)\s*(?:=\s*(?<val>[^;]+))?\s*;\s*(?<comment>//.*)?$");
-                        if (fieldMatch.Success)
-                        {
-                            var typeName = fieldMatch.Groups["type"].Value;
-                            var fieldName = fieldMatch.Groups["name"].Value;
-                            var comment = fieldMatch.Groups["comment"].Success
-                                ? " " + fieldMatch.Groups["comment"].Value.TrimEnd()
-                                : "";
-
-                            // Author may declare the plain type (int) or the wrapped
-                            // reactive type (Prop<int>). Normalize to the element type so
-                            // we never double-wrap into Prop<Prop<int>>.
-                            var elemType = typeName;
-                            var alreadyWrapped = typeName.StartsWith("Prop<") && typeName.EndsWith(">");
-                            if (alreadyWrapped)
-                                elemType = typeName.Substring(5, typeName.Length - 6);
-
-                            // The author's explicit initializer always wins; the DSL
-                            // `default:` param is only a fallback when the field has none.
-                            string initVal = null;
-                            if (fieldMatch.Groups["val"].Success)
-                            {
-                                var rawVal = fieldMatch.Groups["val"].Value.Trim();
-                                // Author wrote "= new(x)" for a Prop<> field — unwrap to x,
-                                // since we re-emit the "new(...)" ourselves.
-                                var newMatch = Regex.Match(rawVal, @"^new\s*\(\s*(?<inner>.*?)\s*\)\s*$");
-                                initVal = alreadyWrapped && newMatch.Success
-                                    ? newMatch.Groups["inner"].Value.Trim()
-                                    : rawVal;
-                            }
-                            if (string.IsNullOrWhiteSpace(initVal))
-                                initVal = defVal;
-                            if (string.IsNullOrWhiteSpace(initVal))
-                                initVal = $"default({elemType})";
-
-                            // ─── [UxmlAttribute] companion property ───
-                            var camelName = char.ToLowerInvariant(fieldName[0]) + fieldName.Substring(1);
-                            // Prepend `new` when the companion hides an inherited VisualElement
-                            // member (e.g. Visible → visible hides VisualElement.visible, CS0108).
-                            var newKw = ReservedVisualElementMembers.Contains(camelName) ? "new " : "";
-                            sb.AppendLine($"{memberIndent}[UxmlAttribute(\"{fieldName}\")]");
-                            sb.AppendLine($"{memberIndent}public {newKw}{elemType} {camelName} {{ get => {fieldName}.Value; set => {fieldName}.Value = value; }}");
-                            sb.AppendLine($"{memberIndent}public Prop<{elemType}> {fieldName} = new({initVal});{comment}");
-
-                            continue;
-                        }
-                    }
-
-                    sb.AppendLine($"{memberIndent}{trimmed}");
-                }
-                sb.AppendLine();
-            }
+            ScriptBodyTransformer.EmitMembers(sb, model.ScriptBody, memberIndent);
 
             // ─── Build() ─────────────────────────────────────────────
             var bodyIndent = memberIndent + "    ";
@@ -277,13 +122,9 @@ namespace Sharq.Core.Editor
                 sb.AppendLine($"{bodyIndent}ApplyScopedAttribute(\"{hash}\");");
             }
 
-            // Root class
+            // Root class / style (bare AddToClassList for class; this. for style — preserve emit shape)
             if (root.Attributes.TryGetValue("class", out var rootClass))
-            {
-                var classes = rootClass.Split(' ').Where(c => !string.IsNullOrEmpty(c));
-                foreach (var cls in classes)
-                    sb.AppendLine($"{bodyIndent}AddToClassList(\"{cls}\");");
-            }
+                EmitClassListAdds(sb, bodyIndent, receiver: null, rootClass);
 
             // Root :class binding (same logic as GenerateCommonAttributes)
             foreach (var attr in root.Attributes)
@@ -302,13 +143,8 @@ namespace Sharq.Core.Editor
                 }
             }
 
-            // Root styles — register as USS class
             if (root.Attributes.TryGetValue("style", out var rootStyle))
-            {
-                var styleClass = RegisterStaticStyle(model.ClassName, rootStyle);
-                if (styleClass != null)
-                    sb.AppendLine($"{bodyIndent}this.AddToClassList(\"{styleClass}\");");
-            }
+                EmitRegisteredStyle(sb, bodyIndent, "this", model.ClassName, rootStyle);
 
             // Generate children (handles v-if/v-else-if/v-else chains)
             if (root.Children.Count > 0)
@@ -428,9 +264,6 @@ public partial class {className} : {b}
                 {
                     condition = vElseIfCond;
                 }
-                else
-                {
-                }
 
                 sb.AppendLine();
                 sb.Append(k == 0
@@ -476,244 +309,19 @@ public partial class {className} : {b}
             }
         }
 
-        /// <summary>
-        /// Converts Vue-style single-quoted string literals in a template
-        /// expression to C# double-quoted strings (e.g. Mode != 'delete' →
-        /// Mode != "delete"). Content already inside double quotes is left as-is.
-        /// </summary>
-        /// <summary>
-        /// If expr is a simple identifier that matches a Prop&lt;T&gt; field in the script,
-        /// appends .Value so that BindChildProp gets the raw value instead of the Prop wrapper.
-        /// E.g. "Progress" (Prop&lt;int&gt;) → "Progress.Value"
-        /// Leaves complex expressions (unit.HpPercent, squad.IsReady) unchanged.
-        /// </summary>
+        // Expression helpers live in ExpressionTranslator (R-B3 / T-1108).
+        // Thin wrappers keep existing call sites and golden-test access stable.
         private static string ResolvePropExpr(string expr, SharqFileModel model)
-        {
-            if (string.IsNullOrEmpty(expr) || expr.Contains('.'))
-                return expr;
+            => ExpressionTranslator.ResolvePropExpr(expr, model);
 
-            var identifier = expr.Trim();
-            if (string.IsNullOrEmpty(model?.ScriptBody))
-                return expr;
-
-            // Match: Prop<T> identifier  (case-sensitive to avoid false positives)
-            if (Regex.IsMatch(model.ScriptBody, $@"Prop<\w+>\s+{Regex.Escape(identifier)}\b"))
-                return $"{identifier}.Value";
-
-            return expr;
-        }
-
-        /// <summary>
-        /// Resolves a v-for collection expression for reactive BindList.
-        /// If the collection is a Prop&lt;...&gt; field (e.g. Prop&lt;List&lt;T&gt;&gt; Items),
-        /// appends ".Value" so the getter reads the underlying collection inside the
-        /// ReactiveEffect (tracking the Prop dependency).
-        /// Leaves complex expressions (already ".Value", method calls, member access) unchanged.
-        /// </summary>
         private static string ResolveCollectionExpr(string expr, SharqFileModel model)
-        {
-            if (string.IsNullOrEmpty(expr) || expr.Contains('.') || expr.Contains('('))
-                return expr;
-
-            var identifier = expr.Trim();
-            if (string.IsNullOrEmpty(identifier) || string.IsNullOrEmpty(model?.ScriptBody))
-                return expr;
-
-            var collectionVar = identifier.StartsWith("this.")
-                ? identifier.Substring(5)
-                : identifier;
-
-            // Match a Prop<...> field declaration (allows nested generics like Prop<List<T>>)
-            if (Regex.IsMatch(model.ScriptBody, $@"Prop<[^=;]+?>\s+{Regex.Escape(collectionVar)}\b"))
-                return $"{identifier}.Value";
-
-            return expr;
-        }
+            => ExpressionTranslator.ResolveCollectionExpr(expr, model);
 
         internal static string TranslateExpr(string expr)
-        {
-            if (string.IsNullOrEmpty(expr) || expr.IndexOf('\'') < 0)
-                return expr;
+            => ExpressionTranslator.TranslateExpr(expr);
 
-            var sb = new StringBuilder(expr.Length);
-            var inDouble = false;
-            for (int i = 0; i < expr.Length; i++)
-            {
-                var c = expr[i];
-                if (c == '"')
-                {
-                    inDouble = !inDouble;
-                    sb.Append(c);
-                    continue;
-                }
-                if (c == '\'' && !inDouble)
-                {
-                    var j = i + 1;
-                    sb.Append('"');
-                    while (j < expr.Length && expr[j] != '\'')
-                    {
-                        if (expr[j] == '"') sb.Append("\\\"");
-                        else sb.Append(expr[j]);
-                        j++;
-                    }
-                    sb.Append('"');
-                    i = j; // skip closing quote
-                    continue;
-                }
-                sb.Append(c);
-            }
-            return sb.ToString();
-        }
-
-        /// <summary>
-        /// Translates a binding expression that may contain pipe converters (F5):
-        /// <c>Hp.Value | format('{0}/{1}', MaxHp.Value)</c> →
-        /// <c>SusBindingConverters.Format("{0}/{1}", Hp.Value, MaxHp.Value)</c>
-        /// <c>Name.Value | upper</c> → <c>SusBindingConverters.Upper(Name.Value)</c>
-        /// Without pipes — same as <see cref="TranslateExpr"/>.
-        /// </summary>
         internal static string TranslateBindingExpr(string expr)
-        {
-            if (string.IsNullOrEmpty(expr)) return expr;
-            if (expr.IndexOf('|') < 0)
-                return TranslateExpr(expr);
-
-            // Split on top-level pipes (not inside quotes/parens)
-            var parts = SplitPipes(expr);
-            if (parts.Count == 0) return TranslateExpr(expr);
-
-            var current = TranslateExpr(parts[0].Trim());
-            for (int i = 1; i < parts.Count; i++)
-            {
-                var pipe = parts[i].Trim();
-                if (string.IsNullOrEmpty(pipe)) continue;
-
-                // pipeName(args...) or bare pipeName
-                string name;
-                string argsInside = null;
-                var paren = pipe.IndexOf('(');
-                if (paren > 0 && pipe.EndsWith(")"))
-                {
-                    name = pipe.Substring(0, paren).Trim();
-                    argsInside = pipe.Substring(paren + 1, pipe.Length - paren - 2).Trim();
-                }
-                else
-                {
-                    name = pipe;
-                }
-
-                name = name.ToLowerInvariant();
-                switch (name)
-                {
-                    case "format":
-                        // format('{0}', arg2, ...) — first arg is format string; value is prepended as arg0
-                        // OR format('x') alone → Format(value, 'x')
-                        if (string.IsNullOrEmpty(argsInside))
-                            current = $"SusBindingConverters.Format({current}, \"{{0}}\")";
-                        else
-                        {
-                            var args = SplitArgs(argsInside);
-                            if (args.Count == 1)
-                                current = $"SusBindingConverters.Format({current}, {TranslateExpr(args[0])})";
-                            else
-                            {
-                                // :text="Hp.Value | format('{0}/{1}', MaxHp.Value)"
-                                // → Format("{0}/{1}", Hp.Value, MaxHp.Value)
-                                var fmt = TranslateExpr(args[0]);
-                                var rest = new StringBuilder();
-                                rest.Append(current);
-                                for (int a = 1; a < args.Count; a++)
-                                {
-                                    rest.Append(", ");
-                                    rest.Append(TranslateExpr(args[a]));
-                                }
-                                current = $"SusBindingConverters.Format({fmt}, {rest})";
-                            }
-                        }
-                        break;
-                    case "upper":
-                        current = $"SusBindingConverters.Upper({current})";
-                        break;
-                    case "lower":
-                        current = $"SusBindingConverters.Lower({current})";
-                        break;
-                    case "round":
-                        if (string.IsNullOrEmpty(argsInside))
-                            current = $"SusBindingConverters.Round({current})";
-                        else
-                            current = $"SusBindingConverters.Round({current}, {TranslateExpr(argsInside)})";
-                        break;
-                    case "truncate":
-                        current = string.IsNullOrEmpty(argsInside)
-                            ? $"SusBindingConverters.Truncate({current}, 40)"
-                            : $"SusBindingConverters.Truncate({current}, {TranslateExpr(argsInside)})";
-                        break;
-                    default:
-                        // Unknown pipe — leave as comment-safe passthrough
-                        current = $"/* unknown pipe:{name} */ ({current})";
-                        break;
-                }
-            }
-
-            return current;
-        }
-
-        private static List<string> SplitPipes(string expr)
-        {
-            var parts = new List<string>();
-            var sb = new StringBuilder();
-            int depth = 0;
-            bool inSingle = false, inDouble = false;
-            for (int i = 0; i < expr.Length; i++)
-            {
-                var c = expr[i];
-                if (c == '\'' && !inDouble) inSingle = !inSingle;
-                else if (c == '"' && !inSingle) inDouble = !inDouble;
-                else if (!inSingle && !inDouble)
-                {
-                    if (c == '(') depth++;
-                    else if (c == ')') depth = Math.Max(0, depth - 1);
-                    else if (c == '|' && depth == 0)
-                    {
-                        parts.Add(sb.ToString());
-                        sb.Clear();
-                        continue;
-                    }
-                }
-                sb.Append(c);
-            }
-            parts.Add(sb.ToString());
-            return parts;
-        }
-
-        private static List<string> SplitArgs(string args)
-        {
-            var parts = new List<string>();
-            var sb = new StringBuilder();
-            int depth = 0;
-            bool inSingle = false, inDouble = false;
-            for (int i = 0; i < args.Length; i++)
-            {
-                var c = args[i];
-                if (c == '\'' && !inDouble) inSingle = !inSingle;
-                else if (c == '"' && !inSingle) inDouble = !inDouble;
-                else if (!inSingle && !inDouble)
-                {
-                    if (c == '(') depth++;
-                    else if (c == ')') depth = Math.Max(0, depth - 1);
-                    else if (c == ',' && depth == 0)
-                    {
-                        parts.Add(sb.ToString().Trim());
-                        sb.Clear();
-                        continue;
-                    }
-                }
-                sb.Append(c);
-            }
-            var last = sb.ToString().Trim();
-            if (last.Length > 0) parts.Add(last);
-            return parts;
-        }
+            => ExpressionTranslator.TranslateBindingExpr(expr);
 
         private void GenerateElement(StringBuilder sb, TemplateNode node, string indent, string parentVar, SharqFileModel model)
         {
@@ -826,21 +434,11 @@ public partial class {className} : {b}
             sb.AppendLine($"{indent}// v-for=\"{vForExpr}\"{(isTyped ? $" (typed: {itemType})" : "")}");
             sb.AppendLine($"{indent}var {varName} = new VisualElement();");
 
-            // class on container
+            // class / style on container
             if (node.Attributes.TryGetValue("class", out var className))
-            {
-                var classes = className.Split(' ').Where(c => !string.IsNullOrEmpty(c));
-                foreach (var cls in classes)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{cls}\");");
-            }
-
-            // style on container → USS class
+                EmitClassListAdds(sb, indent, varName, className);
             if (node.Attributes.TryGetValue("style", out var styleStr))
-            {
-                var styleClass = RegisterStaticStyle(model.ClassName, styleStr);
-                if (styleClass != null)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{styleClass}\");");
-            }
+                EmitRegisteredStyle(sb, indent, varName, model.ClassName, styleStr);
 
             // Reactive v-for: BindList wraps the collection in a Func<> so the
             // ReactiveEffect re-renders when the underlying Prop/collection changes.
@@ -859,13 +457,13 @@ public partial class {className} : {b}
             sb.AppendLine($"{subIndent}var __wrap = new VisualElement();");
             if (node.Children.Count == 1)
             {
-                GenerateForTemplate(sb, node.Children[0], subIndent, itemVar, isTyped, false, model.ClassName);
+                GenerateForTemplate(sb, node.Children[0], subIndent, itemVar, isTyped, model.ClassName);
             }
             else if (node.Children.Count > 1)
             {
                 foreach (var child in node.Children)
                 {
-                    GenerateForTemplate(sb, child, subIndent, itemVar, isTyped, false, model.ClassName);
+                    GenerateForTemplate(sb, child, subIndent, itemVar, isTyped, model.ClassName);
                 }
             }
             sb.AppendLine($"{subIndent}return __wrap;");
@@ -906,37 +504,25 @@ public partial class {className} : {b}
         /// When isTyped: item.Prop is accessed directly (IL2CPP-safe).
         /// When !isTyped: falls back to item?.ToString().
         /// </summary>
-        private void GenerateForTemplate(StringBuilder sb, TemplateNode child, string indent, string itemVar, bool isTyped, bool isReturned, string className)
+        private void GenerateForTemplate(StringBuilder sb, TemplateNode child, string indent, string itemVar, bool isTyped, string className)
         {
             var varName = $"__el_{_varCounter++}";
             var typeName = ResolveTypeName(child.TagName);
 
             sb.AppendLine($"{indent}var {varName} = new {typeName}();");
 
-            // class
             if (child.Attributes.TryGetValue("class", out var clsVal))
-            {
-                var classes = clsVal.Split(' ').Where(c => !string.IsNullOrEmpty(c));
-                foreach (var c in classes)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{c}\");");
-            }
-
-            // style → USS class
+                EmitClassListAdds(sb, indent, varName, clsVal);
             if (child.Attributes.TryGetValue("style", out var stVal))
-            {
-                var styleClass = RegisterStaticStyle(className, stVal);
-                if (styleClass != null)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{styleClass}\");");
-            }
+                EmitRegisteredStyle(sb, indent, varName, className, stVal);
 
             // :text → typed or untyped
             if (typeName == "Label" && TryGetBindAttr(child.Attributes, "text", out var textExpr))
             {
                 if (isTyped)
                 {
-                    // Typed: item.Name?.ToString() ?? ""
-                    var resolved = ResolveItemRefTyped(textExpr, itemVar);
-                    sb.AppendLine($"{indent}BindText({varName}, () => {TranslateBindingExpr(resolved)}?.ToString() ?? \"\");");
+                    // Typed: item.Name?.ToString() ?? "" — expr already IL2CPP-safe as written
+                    sb.AppendLine($"{indent}BindText({varName}, () => {TranslateBindingExpr(textExpr)}?.ToString() ?? \"\");");
                 }
                 else
                 {
@@ -960,14 +546,11 @@ public partial class {className} : {b}
             {
                 foreach (var sub in child.Children)
                 {
-                    GenerateForTemplate(sb, sub, indent, itemVar, isTyped, false, className);
+                    GenerateForTemplate(sb, sub, indent, itemVar, isTyped, className);
                 }
             }
 
-            if (isReturned)
-                sb.AppendLine($"{indent}return {varName};");
-            else
-                sb.AppendLine($"{indent}__wrap.Add({varName});");
+            sb.AppendLine($"{indent}__wrap.Add({varName});");
         }
 
         /// <summary>
@@ -1015,21 +598,6 @@ public partial class {className} : {b}
             if (expr.StartsWith(itemVar + "."))
                 return itemVar;
             return expr;
-        }
-
-        /// <summary>
-        /// Resolves typed item references. Returns the expression for property access.
-        /// "item" → "item" (caller adds ?.ToString())
-        /// "item.Name" → "item.Name" (typed, IL2CPP-safe)
-        /// "Greeting" → "Greeting" (component field, not an item ref)
-        /// </summary>
-        private static string ResolveItemRefTyped(string expr, string itemVar)
-        {
-            if (expr == itemVar)
-                return itemVar;
-            if (expr.StartsWith(itemVar + "."))
-                return expr; // e.g. "item.Name" — typed property access
-            return expr; // component field, pass through
         }
 
         /// <summary>
@@ -1082,13 +650,8 @@ public partial class {className} : {b}
 
         private void GenerateCommonAttributes(StringBuilder sb, TemplateNode node, string indent, string varName, string typeName, SharqFileModel model)
         {
-            // class
             if (node.Attributes.TryGetValue("class", out var clsName))
-            {
-                var classes = clsName.Split(' ').Where(c => !string.IsNullOrEmpty(c));
-                foreach (var cls in classes)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{cls}\");");
-            }
+                EmitClassListAdds(sb, indent, varName, clsName);
 
             // name — emit for ALL elements (built-in UITK + custom components)
             if (node.Attributes.TryGetValue("name", out var nameVal))
@@ -1096,13 +659,8 @@ public partial class {className} : {b}
                 sb.AppendLine($"{indent}{varName}.name = \"{EscapeCSharpString(nameVal)}\";");
             }
 
-            // style → USS class (all CSS properties, Unity-native parsing)
             if (node.Attributes.TryGetValue("style", out var styleStr))
-            {
-                var styleClass = RegisterStaticStyle(model?.ClassName ?? "", styleStr);
-                if (styleClass != null)
-                    sb.AppendLine($"{indent}{varName}.AddToClassList(\"{styleClass}\");");
-            }
+                EmitRegisteredStyle(sb, indent, varName, model?.ClassName ?? "", styleStr);
 
             // :text binding on Label (supports pipe converters: | format | upper | round)
             if (typeName == "Label" && TryGetBindAttr(node.Attributes, "text", out var textExpr))
@@ -1216,25 +774,33 @@ public partial class {className} : {b}
         }
 
         /// <summary>
-        /// Registers an inline style string for USS generation.
-        /// Returns a deduplicated class name (e.g. "sharq-MyComponent-s0").
-        /// Multiple elements with identical styles share one class.
-        /// The caller adds this class to the element via AddToClassList.
+        /// Emit <c>AddToClassList</c> for each token in a space-separated class attribute.
+        /// <paramref name="receiver"/> null → bare <c>AddToClassList</c> (root); else <c>{receiver}.AddToClassList</c>.
         /// </summary>
-        private string RegisterStaticStyle(string componentName, string styleStr)
+        private static void EmitClassListAdds(StringBuilder sb, string indent, string receiver, string classAttr)
         {
-            if (string.IsNullOrEmpty(styleStr)) return null;
-
-            // Normalize: trim the raw style string
-            var normalized = styleStr.Trim();
-            if (string.IsNullOrEmpty(normalized)) return null;
-
-            if (!_generatedStyles.TryGetValue(normalized, out var styleClass))
+            if (string.IsNullOrEmpty(classAttr)) return;
+            var classes = classAttr.Split(' ').Where(c => !string.IsNullOrEmpty(c));
+            foreach (var cls in classes)
             {
-                styleClass = $"sharq-{componentName}-s{_styleCounter++}";
-                _generatedStyles[normalized] = styleClass;
+                if (string.IsNullOrEmpty(receiver))
+                    sb.AppendLine($"{indent}AddToClassList(\"{cls}\");");
+                else
+                    sb.AppendLine($"{indent}{receiver}.AddToClassList(\"{cls}\");");
             }
-            return styleClass;
+        }
+
+        /// <summary>
+        /// Register inline style → USS class and emit AddToClassList for that class.
+        /// </summary>
+        private void EmitRegisteredStyle(StringBuilder sb, string indent, string receiver, string componentName, string styleStr)
+        {
+            var styleClass = _styles.Register(componentName, styleStr);
+            if (styleClass == null) return;
+            if (string.IsNullOrEmpty(receiver))
+                sb.AppendLine($"{indent}AddToClassList(\"{styleClass}\");");
+            else
+                sb.AppendLine($"{indent}{receiver}.AddToClassList(\"{styleClass}\");");
         }
 
         /// <summary>
