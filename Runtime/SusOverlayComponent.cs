@@ -29,6 +29,18 @@ namespace Sharq.Core
         private OverlayEntry _selfEntry;
         private VisualElement _selfOriginalParent;
 
+        /// <summary>
+        /// Bumped on every mount/unmount state change (see <see cref="MountSelfInOverlay"/> /
+        /// <see cref="UnmountSelfFromOverlay"/>). A deferred restore scheduled by an unmount
+        /// captures the token at schedule time and only performs the reparent-back if the
+        /// token is still current when the callback fires — see T-2174: a same-frame
+        /// Cancel()+Start() (SusTutorialModal on step change) unmounts then immediately
+        /// remounts into the overlay; the unmount's deferred restore must not run a frame
+        /// later and rip the freshly-remounted element back out (that produced the
+        /// "attached 6 times in 1s" RemountLoopAudit flood).
+        /// </summary>
+        private int _overlayMountToken;
+
         /// <summary>The OverlayHost resolved by the last self-mount, if any.</summary>
         protected OverlayHost ResolvedHost => _selfHost;
 
@@ -92,6 +104,7 @@ namespace Sharq.Core
             // Apply theme + tokens BEFORE reparenting so var() resolves in the overlay.
             SusThemeService.ApplyThemeClasses(this);
             IsRelocatingToOverlay = true;
+            _overlayMountToken++;
             try
             {
                 _selfEntry = _selfHost.AddToOverlay(this, Layer, dismissOnClickOutside, onDismiss);
@@ -110,6 +123,7 @@ namespace Sharq.Core
             {
                 var entry = _selfEntry;
                 _selfEntry = null;
+                _overlayMountToken++;
                 IsRelocatingToOverlay = true;
                 try
                 {
@@ -138,11 +152,16 @@ namespace Sharq.Core
                     // traversal. A plain Close() click (IsRelocatingToOverlay never involved,
                     // no reentrancy) is delayed by one frame too, which every existing test
                     // already tolerates (asserts run after `yield return WaitFrame()`).
+                    // Capture the mount token now — if MountSelfInOverlay runs again
+                    // (same-frame Cancel()+Start()) before this callback fires, the token
+                    // will have moved on and the stale restore below must no-op instead of
+                    // ripping the freshly-remounted element back out (T-2174).
                     var restore = _selfOriginalParent;
                     _selfOriginalParent = null;
+                    var restoreToken = _overlayMountToken;
                     restore.schedule.Execute(() =>
                     {
-                        if (parent != restore)
+                        if (restoreToken == _overlayMountToken && parent != restore)
                             restore.Add(this);
                     }).ExecuteLater(0);
                 }
@@ -151,11 +170,13 @@ namespace Sharq.Core
             {
                 // Stale DOM on host without stack entry. Defer restore — Unmounted
                 // may run inside DetachFromPanel where hierarchy mutation is illegal.
+                _overlayMountToken++;
                 var restore = _selfOriginalParent;
                 _selfOriginalParent = null;
+                var restoreToken = _overlayMountToken;
                 restore.schedule.Execute(() =>
                 {
-                    if (parent != restore)
+                    if (restoreToken == _overlayMountToken && parent != restore)
                         restore.Add(this);
                 }).ExecuteLater(0);
             }
