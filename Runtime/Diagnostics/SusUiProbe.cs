@@ -55,8 +55,19 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"name\":{Q(el.name ?? string.Empty)},");
             sb.Append($"\"classes\":{Q(string.Join(" ", el.GetClasses()))},");
             sb.Append($"\"sus\":{(el is SusComponent ? "true" : "false")},");
-            sb.Append($"\"children\":{el.childCount},");
-            sb.Append($"\"w\":{F(wb.width)},\"h\":{F(wb.height)},\"x\":{F(wb.x)},\"y\":{F(wb.y)}");
+            sb.Append($"\"children\":{el.childCount}");
+            // T-2209: before the first layout pass, worldBound is NaN — JSON has no NaN literal,
+            // so writing it via F() below would emit a bare `NaN` token and break JSON.parse for
+            // the WHOLE sidecar (R36 G0 "не парсится"). Omit w/h/x/y entirely instead of coercing
+            // to 0/null: the frame-geometry.mjs reader (`rectOf` + `Number.isFinite` gate) already
+            // treats a MISSING key as "unresolved, skip" — the same outcome as `null`+`+null`=0
+            // would instead read as a real zero-size element (false G2). `resolved:false` names
+            // the reason for a human/agent reading the sidecar without guessing "sizer bug".
+            var boundsResolved = IsFinite(wb.width) && IsFinite(wb.height) && IsFinite(wb.x) && IsFinite(wb.y);
+            if (boundsResolved)
+                sb.Append($",\"w\":{F(wb.width)},\"h\":{F(wb.height)},\"x\":{F(wb.x)},\"y\":{F(wb.y)}");
+            else
+                sb.Append(",\"resolved\":false");
             var text = GetElementText(el);
             var textClipped = false;
             if (!string.IsNullOrEmpty(text))
@@ -569,7 +580,13 @@ namespace Sharq.Core.Diagnostics
             }
         }
 
-        private static string F(float v) => v.ToString("F0", CultureInfo.InvariantCulture);
+        // T-2209: defense-in-depth for every OTHER caller of F() (viewport/content bounds
+        // reported straight to an MCP agent, not through the geometry-sidecar gate above) —
+        // `NaN`/`Infinity` have no JSON literal, so a bare `null` is the only value that keeps
+        // the surrounding JSON parseable instead of emitting an unquoted `NaN` token.
+        private static bool IsFinite(float v) => !float.IsNaN(v) && !float.IsInfinity(v);
+
+        private static string F(float v) => IsFinite(v) ? v.ToString("F0", CultureInfo.InvariantCulture) : "null";
 
         private static string Truncate(string s, int max)
             => string.IsNullOrEmpty(s) ? s : (s.Length <= max ? s : s.Substring(0, max) + "…");

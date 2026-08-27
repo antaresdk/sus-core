@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -129,6 +130,46 @@ namespace Sharq.Core.Runtime.Tests
             var root = new VisualElement();
             var json = SusUiProbe.GetPropsJson(root, "DoesNotExist");
             StringAssert.Contains("\"error\":\"not found\"", json);
+        }
+
+        [Test]
+        public void F_WithSyntheticNaNOrInfinity_EmitsJsonNullNotBareToken()
+        {
+            // T-2209: `resolvedStyle`/`worldBound` are NaN before the first layout pass. JSON has
+            // no NaN/Infinity literal — writing v.ToString("F0") for such a value produces the
+            // bare token `NaN`, which breaks JSON.parse for the WHOLE geometry sidecar (R36 G0
+            // "не парсится"), not just the one field. Reflection: F() is a private static
+            // formatter with no VisualElement dependency, so the synthetic NaN is probed directly
+            // rather than fighting Unity's layout timing to reproduce it end-to-end.
+            var f = typeof(SusUiProbe).GetMethod("F", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(f, "SusUiProbe.F helper not found — update this test alongside any rename");
+
+            Assert.AreEqual("null", (string)f.Invoke(null, new object[] { float.NaN }));
+            Assert.AreEqual("null", (string)f.Invoke(null, new object[] { float.PositiveInfinity }));
+            Assert.AreEqual("null", (string)f.Invoke(null, new object[] { float.NegativeInfinity }));
+            Assert.AreEqual("12", (string)f.Invoke(null, new object[] { 12f }));
+        }
+
+        [Test]
+        public void GetTreeJson_UnresolvedBounds_OmitsBoundsAndFlagsUnresolved()
+        {
+            // T-2209 end-to-end: before layout runs, VisualElement.worldBound components are NaN.
+            // AppendNode must NOT coerce that to a JSON `NaN` token (unparseable) or to `0`/`null`
+            // numbers (reads as a real zero-size element to frame-geometry.mjs's rectOf/G2 — the
+            // exact false positive the honest fix must avoid). It omits w/h/x/y and says
+            // `"resolved":false` instead, so a reader can tell "not measured yet" from "measured
+            // and got zero".
+            var root = new VisualElement { name = "root" };
+            var pending = new VisualElement { name = "pending-layout" };
+            root.Add(pending);
+
+            var json = SusUiProbe.GetTreeJson(root);
+
+            // The literal token JSON.parse cannot handle — this is the actual R36 G0 defect.
+            StringAssert.DoesNotContain("NaN", json);
+            // Detached from any panel, worldBound cannot resolve — the node must say so instead
+            // of silently reporting a numeric bound frame-geometry.mjs would read as real.
+            StringAssert.Contains("\"resolved\":false", json);
         }
 
         [Test]
