@@ -19,7 +19,7 @@ English · [简体中文](./README.zh-CN.md)
 **Tests & releases:** 378 automated tests · [CHANGELOG](./CHANGELOG.md) · [GitHub Releases](https://github.com/antaresdk/sus-core/releases) <!-- sus:ok -->
 
 <!-- sus:gen ver pkg=sus-core -->
-**Package:** `com.sharq-it.sus.core` (current version — `1.0.27`)
+**Package:** `com.sharq-it.sus.core` (current version — `1.0.28`)
 <!-- /sus:gen -->
 
 ---
@@ -94,7 +94,7 @@ Inline UITK writes to appearance properties from C# (colors, fonts, radii, and s
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.0.27
+https://github.com/antaresdk/sus-core.git#v1.0.28
 ```
 <!-- /sus:gen -->
 
