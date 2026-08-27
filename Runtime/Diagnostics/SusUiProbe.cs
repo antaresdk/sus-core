@@ -480,10 +480,9 @@ namespace Sharq.Core.Diagnostics
                 // "author left it at the modern default (auto/native-size)" apart from "author
                 // wants stretch" without re-deriving the same ScaleMode/BackgroundSize duality
                 // Unity itself keeps for back-compat. Migrating this diagnostic string would risk
-                // silently changing the `scaleMode` field that committed frames-spec
-                // `docs-canon/assets/shots/*.geometry.json` fixtures and R36/R51 plants compare
-                // byte-for-byte — out of scope for a warning-count fix. Suppressed locally, not
-                // globally, so any NEW obsolete usage elsewhere still warns.
+                // silently changing the `scaleMode` field that committed visual-regression fixture
+                // sidecars compare byte-for-byte — out of scope for a warning-count fix. Suppressed
+                // locally, not globally, so any NEW obsolete usage elsewhere still warns.
 #pragma warning disable CS0618
                 scaleMode = ScaleModeToKebab(el.resolvedStyle.unityBackgroundScaleMode.value);
 #pragma warning restore CS0618
