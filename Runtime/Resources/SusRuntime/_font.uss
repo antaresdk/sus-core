@@ -6,16 +6,23 @@
 
    IMPORTANT: --sus-font-family-* can ONLY be set from USS — Unity has no
    public API to set USS custom properties (--var) from C#. So:
-     • SusApp.UseFonts(SusFontAsset) / SusFontService.ApplyFonts apply ONLY
-       the Regular (body) typeface, via the inherited -unity-font-definition
-       on the root + OverlayHost. Medium/Bold/Heading/Mono are NOT changed.
-     • To override per-weight families (--sus-font-family-heading, -mono, …),
+     • SusApp.UseFonts(SusFontAsset) / SusFontService.ApplyFonts apply the
+       Regular (body) typeface via the inherited -unity-font-definition on
+       the root + OverlayHost, AND apply Medium/Bold/Light/Heading/Mono/
+       Condensed as an INLINE style to any element tagged with the matching
+       SusFontService.<Role>ClassName marker class (T-2216) — markup must
+       opt in via that class, this does not touch --sus-font-family-* below.
+     • To override the --sus-font-family-* tokens themselves (so ANY USS
+       rule that reads them changes, without touching C# or markup classes),
        define them in USS: an override _font.uss or your branding.uss.
 
    Override options:
-     • Per-weight (all families): place Assets/Resources/SusRuntime/_font.uss
-       in your project and set --sus-font-family-* there.
-     • Body-only (quick): call SusApp.UseFonts(fontAsset).
+     • Per-weight, token-level (all families incl. italic/black/condensed):
+       place Assets/Resources/SusRuntime/_font.uss in your project and set
+       --sus-font-family-* there.
+     • Per-role, code-level (Medium/Bold/Light/Heading/Mono/Condensed): tag
+       elements with SusFontService.<Role>ClassName and call UseFonts.
+     • Body-only (quick): call SusApp.UseFonts(fontAsset) — no markup needed.
    ──────────────────────────────────────────────────────────── */
 
 /* ── Typographic Scale (base sizes) ────────────────────────── */
@@ -37,14 +44,21 @@
 
 /* ── Font Families (Montserrat default, overridable via --sus-font-family-*) ── */
 :root {
-    --font-family-regular: var(--sus-font-family-regular, url("Fonts/Montserrat/Montserrat-Regular.ttf"));
-    --font-family-medium:  var(--sus-font-family-medium,  url("Fonts/Montserrat/Montserrat-Medium.ttf"));
-    --font-family-bold:    var(--sus-font-family-bold,    url("Fonts/Montserrat/Montserrat-Bold.ttf"));
-    --font-family-black:   url("Fonts/Montserrat/Montserrat-Black.ttf");
-    --font-family-italic:  url("Fonts/Montserrat/Montserrat-Italic.ttf");
-    --font-family-light:   var(--sus-font-family-light,   url("Fonts/Montserrat/Montserrat-Light.ttf"));
-    --font-family-heading: var(--sus-font-family-heading, var(--font-family-bold));
-    --font-family-mono:    var(--sus-font-family-mono,    var(--font-family-regular));
+    --font-family-regular:   var(--sus-font-family-regular,   url("Fonts/Montserrat/Montserrat-Regular.ttf"));
+    --font-family-medium:    var(--sus-font-family-medium,    url("Fonts/Montserrat/Montserrat-Medium.ttf"));
+    --font-family-bold:      var(--sus-font-family-bold,      url("Fonts/Montserrat/Montserrat-Bold.ttf"));
+    /* T-2216: black/italic were hardcoded url(...) with no --sus-font-family-* hook — a full
+       replacement typeface could never bring its own black/italic cut. Same override pattern
+       as the four weights above now applies to both. */
+    --font-family-black:    var(--sus-font-family-black,    url("Fonts/Montserrat/Montserrat-Black.ttf"));
+    --font-family-italic:   var(--sus-font-family-italic,   url("Fonts/Montserrat/Montserrat-Italic.ttf"));
+    --font-family-light:    var(--sus-font-family-light,    url("Fonts/Montserrat/Montserrat-Light.ttf"));
+    --font-family-heading:  var(--sus-font-family-heading,  var(--font-family-bold));
+    --font-family-mono:     var(--sus-font-family-mono,     var(--font-family-regular));
+    /* T-2216: narrow/display cut for large titles (e.g. IBM Plex Sans Condensed). No packaged
+       fallback file ships for this — falls back to the heading family, same chain as
+       SusFontAsset.ResolveCondensed() on the C# side. */
+    --font-family-condensed: var(--sus-font-family-condensed, var(--font-family-heading));
 
     --main-font-family: var(--font-family-regular);
     -unity-font-definition: var(--font-family-regular);
