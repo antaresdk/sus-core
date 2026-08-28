@@ -84,8 +84,23 @@ namespace Sharq.Core
             ApplyCursorPolicy();
         }
 
+        /// <summary>
+        /// T-2303: test-only escape hatch. The poll driver (<see cref="SusInputDeviceDriver"/>)
+        /// is a DontDestroyOnLoad singleton that keeps calling <see cref="PollLegacy"/> every
+        /// Update for the rest of the Play session once installed — including across every
+        /// later PlayMode test in the same batch. Any real OS mouse/keyboard event landing
+        /// between a test's own <see cref="NotifyActivity"/> call and its assertion (a single
+        /// yield return null) races the driver's own classification and can silently flip
+        /// <see cref="ActiveKind"/> back to Pointer, failing the assertion non-deterministically.
+        /// Tests that manually drive <see cref="ActiveKind"/> must suppress this for their
+        /// duration; production code must never set it.
+        /// </summary>
+        internal static bool SuppressLegacyPolling;
+
         internal static void PollLegacy()
         {
+            if (SuppressLegacyPolling) return;
+
             // Prefer Input System classification when the package is present.
             if (TryClassifyFromInputSystem(out var fromIs))
             {
