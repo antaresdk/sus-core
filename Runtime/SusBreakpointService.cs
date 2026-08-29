@@ -380,6 +380,9 @@ namespace Sharq.Core
         private static float TryGetEditorGameViewWidth()
         {
 #if UNITY_EDITOR
+            if (Application.isBatchMode)
+                return float.NaN;
+
             try
             {
                 // Unity 2022.2+ — actual Game view render resolution while playing.
