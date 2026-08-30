@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core
@@ -381,6 +382,8 @@ namespace Sharq.Core
         {
 #if UNITY_EDITOR
             if (Application.isBatchMode)
+                return float.NaN;
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
                 return float.NaN;
 
             try

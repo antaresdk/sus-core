@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.0.29] - 2026-08-30
+
+### Fixed
+- `SusBreakpointService` now skips Editor GameView reflection when Unity runs without a graphics device (`-nographics`), so headless PlayMode no longer emits `No graphic device is available to initialize the view`.
+
 ## [1.0.28] - 2026-08-26
 
 ### Changed
