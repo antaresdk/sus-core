@@ -15,7 +15,24 @@
     padding: 0;
 }
 
-/* ── Utility: hide element (display: none; Flex matching) ──── */
+/* ── Utility: hide element (display: none; Flex matching) ────
+   Sole declaration (T-2653): downstream packages used to carry their own
+   copy of this rule too — dropped, this is the one home; that consolidation
+   stands regardless of the finding below.
+
+   NOT reliable against a downstream component's own companion USS of equal
+   apparent specificity (single class, e.g. { display: flex }). T-2653 tried
+   raising specificity with a compound selector (.sus-hidden.sus-hidden,
+   2 classes vs 1) to force a win against exactly such a rule; measured live
+   it did NOT win — the element stayed display:flex with only "sus-hidden"
+   added to its class list, no inline style (regression-locked by a test in
+   each downstream package that hit this, not just this comment). Left as a
+   plain single-class rule (not deleted): at least one downstream consumer
+   hides purely via this class with no inline fallback and nothing else
+   competes with it on display, so the rule still does its job there —
+   deleting it would silently break that consumer. Do NOT rely on this class
+   alone to hide anything that also carries a component rule setting display:
+   set inline IStyle.display for those instead. ── */
 .sus-hidden {
     display: none;
 }
