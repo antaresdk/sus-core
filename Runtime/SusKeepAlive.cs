@@ -33,7 +33,7 @@ namespace Sharq.Core
         public bool Active
         {
             get => _content.style.display != DisplayStyle.None;
-            set => _content.style.display = value ? DisplayStyle.Flex : DisplayStyle.None;
+            set => _content.EnableInClassList("sus-hidden", !value);
         }
 
         private SusKeepAlive()

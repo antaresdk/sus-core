@@ -153,7 +153,7 @@ namespace Sharq.Core
                     else
                     {
                         // Not parented yet (generator BindVisibility-before-Add) — hide until removed.
-                        el.style.display = DisplayStyle.None;
+                        el.EnableInClassList("sus-hidden", true);
                     }
                 }
             });

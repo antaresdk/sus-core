@@ -98,14 +98,14 @@ namespace Sharq.Core
                     if (!tracker.HiddenBehindCamera)
                     {
                         tracker.HiddenBehindCamera = true;
-                        tracker.UIElement.style.display = DisplayStyle.None;
+                        tracker.UIElement.EnableInClassList("sus-hidden", true);
                     }
                     continue;
                 }
                 else if (tracker.HiddenBehindCamera)
                 {
                     tracker.HiddenBehindCamera = false;
-                    tracker.UIElement.style.display = DisplayStyle.Flex;
+                    tracker.UIElement.EnableInClassList("sus-hidden", false);
                 }
 
                 var panelPos = RuntimePanelUtils.ScreenToPanel(panel, screenPos);

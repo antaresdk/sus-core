@@ -445,11 +445,11 @@ namespace Sharq.Core
 
                 if (screenPos.z < 0)
                 {
-                    b.Element.style.display = DisplayStyle.None;
+                    b.Element.EnableInClassList("sus-hidden", true);
                     continue;
                 }
 
-                b.Element.style.display = DisplayStyle.Flex;
+                b.Element.EnableInClassList("sus-hidden", false);
 
                 var panelPos = RuntimePanelUtils.ScreenToPanel(panel,
                     new Vector2(screenPos.x, Screen.height - screenPos.y));

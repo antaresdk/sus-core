@@ -161,3 +161,12 @@
     color: var(--sus-text-disabled, rgba(255, 255, 255, 0.38));
     -unity-text-align: middle-right;
 }
+
+/* sus:uss-hide (T-2643) — состояние «скрыт» переключается КЛАССОМ, а не инлайном.
+   Лист сам объявляет display, поэтому страж живёт ЗДЕСЬ, а не в _global.uss: UI Toolkit
+   отдаёт приоритет ближнему листу, и глобальный .sus-hidden проигрывает (замер T-2653).
+   Селекторы = display-правила листа + .sus-hidden: специфичность строго выше. */
+.sus-console__list .unity-scroller--vertical > .unity-scroller__low-button.sus-hidden,
+.sus-console__list .unity-scroller--vertical > .unity-scroller__high-button.sus-hidden {
+    display: none;
+}

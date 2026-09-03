@@ -101,7 +101,7 @@ namespace Sharq.Core
             _panel.style.paddingBottom = 8;
             _panel.style.paddingLeft = 12;
             _panel.style.paddingRight = 12;
-            _panel.style.display = DisplayStyle.None;
+            _panel.EnableInClassList("sus-hidden", true);
             _panel.pickingMode = PickingMode.Position;
 
             // Header
@@ -195,7 +195,7 @@ namespace Sharq.Core
         {
             if (_panel == null) return;
             var visible = _panel.style.display == DisplayStyle.Flex;
-            _panel.style.display = visible ? DisplayStyle.None : DisplayStyle.Flex;
+            _panel.EnableInClassList("sus-hidden", visible);
             if (!visible)
                 ScanAndShowTree();
         }
