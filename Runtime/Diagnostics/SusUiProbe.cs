@@ -55,7 +55,23 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"name\":{Q(el.name ?? string.Empty)},");
             sb.Append($"\"classes\":{Q(string.Join(" ", el.GetClasses()))},");
             sb.Append($"\"sus\":{(el is SusComponent ? "true" : "false")},");
-            sb.Append($"\"children\":{el.childCount}");
+            // T-2849: "closed" composite controls (ListView/MultiColumnListView/ScrollView —
+            // anything overriding contentContainer to redirect Add()/Children() away from `this`)
+            // report el.childCount==0 even when el.hierarchy.childCount>0 — the row/scroller
+            // elements are real, physically attached, and visible on screen, just not reachable
+            // through the LOGICAL Children() API. Walking only el.Children() made every such
+            // control (and everything under it — table rows, list items) permanently invisible
+            // to this probe: geometry.json for a MultiColumnListView showed `children:0` next to
+            // a screenshot with 3 rendered rows, and no selector could ever resolve `--selected`
+            // on a row because the row was never emitted. Fall back to the physical hierarchy
+            // ONLY when the logical view is empty — ordinary elements (childCount>0, the common
+            // case) keep walking via Children() unchanged, so components that legitimately
+            // redirect Add() to an inner wrapper still show that curated view instead of raw
+            // internals.
+            var useHierarchy = el.childCount == 0 && el.hierarchy.childCount > 0;
+            var kids = useHierarchy ? el.hierarchy.Children() : el.Children();
+            var kidCount = useHierarchy ? el.hierarchy.childCount : el.childCount;
+            sb.Append($"\"children\":{kidCount}");
             // T-2209: before the first layout pass, worldBound is NaN — JSON has no NaN literal,
             // so writing it via F() below would emit a bare `NaN` token and break JSON.parse for
             // the WHOLE sidecar (R36 G0 "не парсится"). Omit w/h/x/y entirely instead of coercing
@@ -77,7 +93,7 @@ namespace Sharq.Core.Diagnostics
             }
             // Depth-cut (T-1975): node is emitted but children are not walked.
             // Same flag as text ellipsis — consumers treat either as truncated.
-            var depthCut = depth >= maxDepth && el.childCount > 0;
+            var depthCut = depth >= maxDepth && kidCount > 0;
             if (textClipped || depthCut) sb.Append(",\"truncated\":true");
             if (el.resolvedStyle.display == DisplayStyle.None) sb.Append(",\"hidden\":true");
             if (!el.visible) sb.Append(",\"invisible\":true");
@@ -88,7 +104,7 @@ namespace Sharq.Core.Diagnostics
             sb.Append('}');
 
             if (depth >= maxDepth) return;
-            foreach (var child in el.Children())
+            foreach (var child in kids)
                 AppendNode(child, sb, depth + 1, maxDepth, ref written);
         }
 

@@ -173,6 +173,49 @@ namespace Sharq.Core.Runtime.Tests
         }
 
         [Test]
+        public void GetTreeJson_ListViewClosedContentContainer_WalksPhysicalRows()
+        {
+            // T-2849: BaseVerticalCollectionView (ListView/MultiColumnListView) redirects
+            // Add()/Children() to nothing — el.childCount==0 even though el.hierarchy.childCount
+            // is the real internal ScrollView, itself holding the row elements. Before this fix
+            // AppendNode walked el.Children() only, so a live table-style component's rows never
+            // reached geometry.json (children:0 next to a screenshot with visible rows) and no
+            // query could ever resolve a row via the sidecar — reproduced live on a
+            // MultiColumnListView-backed data table and confirmed here with a plain ListView so
+            // the fixture needs no panel/layout.
+            var items = new[] { "mission-1", "mission-2", "mission-3" };
+            var lv = new ListView
+            {
+                name = "probe-list",
+                itemsSource = items,
+                makeItem = () => new Label(),
+                bindItem = (e, i) => ((Label)e).text = items[i],
+            };
+            lv.Rebuild();
+
+            var root = new VisualElement { name = "root" };
+            root.Add(lv);
+
+            Assert.AreEqual(0, lv.childCount, "fixture must reproduce the closed contentContainer (logical Children() empty)");
+            Assert.Greater(lv.hierarchy.childCount, 0, "fixture must have a real physical child (the internal ScrollView) to walk into");
+
+            var json = SusUiProbe.GetTreeJson(root);
+
+            StringAssert.Contains("\"name\":\"probe-list\"", json);
+            // The internal ScrollView (physical child) must now be emitted, not skipped.
+            StringAssert.Contains("unity-collection-view__scroll-view", json);
+            // children count on the list-view node must reflect the physical fallback, not 0.
+            var idx = json.IndexOf("\"name\":\"probe-list\"", System.StringComparison.Ordinal);
+            var childrenIdx = json.IndexOf("\"children\":", idx, System.StringComparison.Ordinal);
+            Assert.Greater(childrenIdx, -1);
+            var digitsStart = childrenIdx + "\"children\":".Length;
+            var digitsEnd = digitsStart;
+            while (digitsEnd < json.Length && char.IsDigit(json[digitsEnd])) digitsEnd++;
+            var childrenValue = int.Parse(json.Substring(digitsStart, digitsEnd - digitsStart));
+            Assert.Greater(childrenValue, 0, "probe-list children count must use the physical fallback, not logical childCount==0");
+        }
+
+        [Test]
         public void GetHealthJson_DetachedZeroSize_NotAnomaly()
         {
             // Without a panel, zero bounds are not actionable — do not spam anomalies.
