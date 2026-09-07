@@ -9,9 +9,10 @@ namespace Sharq.Core
     /// <summary>
     /// Reactive property with change notification and Unity UI Toolkit data binding support.
     /// </summary>
-    public class Prop<T> : INotifyBindablePropertyChanged, IDataSourceViewHashProvider, IReactiveSource
+    public class Prop<T> : INotifyBindablePropertyChanged, IDataSourceViewHashProvider, IReactiveSource, ISusPropAccess
     {
         private T _value;
+        private int _reads;
         private readonly Func<T, T, bool> _equals;
         private event Action _invalidated;
 
@@ -19,6 +20,10 @@ namespace Sharq.Core
         {
             get
             {
+                // Counted here and NOWHERE else: this is the one path a real consumer takes.
+                // Peek()/BoxedValue stay invisible so tooling cannot resurrect a dead prop
+                // (ISusPropAccess.ReadCount, SusPropInfo.Dead).
+                if (_reads < int.MaxValue) _reads++;
                 DependencyTracker.RegisterSource(this);
                 return _value;
             }
@@ -207,6 +212,29 @@ namespace Sharq.Core
         {
             _invalidated += onInvalidate;
             return new InvalidSubscriber(() => _invalidated -= onInvalidate);
+        }
+
+        // ── ISusPropAccess (introspection, T-3031) ─────────────────────────
+
+        Type ISusPropAccess.ValueType => typeof(T);
+
+        object ISusPropAccess.BoxedValue
+        {
+            get => _value;                       // untracked AND uncounted by contract
+            set => Value = (T)value;
+        }
+
+        int ISusPropAccess.ReadCount => _reads;
+
+        bool ISusPropAccess.HasObservers =>
+            Changed != null || propertyChanged != null || _invalidated != null;
+
+        IDisposable ISusPropAccess.SubscribeChanged(Action onChanged)
+        {
+            if (onChanged == null) throw new ArgumentNullException(nameof(onChanged));
+            Action<T, T> handler = (_, __) => onChanged();
+            Changed += handler;
+            return new InvalidSubscriber(() => Changed -= handler);
         }
 
         private sealed class InvalidSubscriber : IDisposable

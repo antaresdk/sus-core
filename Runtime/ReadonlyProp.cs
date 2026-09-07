@@ -18,7 +18,7 @@ namespace Sharq.Core
     /// component.Count.Value = 5;          // ❌ compile error
     /// </code>
     /// </summary>
-    public class ReadonlyProp<T> : IReactiveSource
+    public class ReadonlyProp<T> : IReactiveSource, ISusPropAccess
     {
         private readonly Prop<T> _source;
 
@@ -44,5 +44,25 @@ namespace Sharq.Core
         /// <summary>Used by DependencyTracker for auto-tracking.</summary>
         IDisposable IReactiveSource.SubscribeInvalidate(Action onInvalidate)
             => ((IReactiveSource)_source).SubscribeInvalidate(onInvalidate);
+
+        // ── ISusPropAccess (introspection, T-3031) ─────────────────────────
+        // Everything delegates to the source; the setter is the ONLY difference — a readonly
+        // wrapper stays readonly for tooling too (SusPropInfo.TrySetValue returns false).
+
+        Type ISusPropAccess.ValueType => typeof(T);
+
+        object ISusPropAccess.BoxedValue
+        {
+            get => ((ISusPropAccess)_source).BoxedValue;
+            set => throw new InvalidOperationException(
+                "ReadonlyProp<" + typeof(T).Name + "> cannot be written from outside.");
+        }
+
+        int ISusPropAccess.ReadCount => ((ISusPropAccess)_source).ReadCount;
+
+        bool ISusPropAccess.HasObservers => ((ISusPropAccess)_source).HasObservers;
+
+        IDisposable ISusPropAccess.SubscribeChanged(Action onChanged)
+            => ((ISusPropAccess)_source).SubscribeChanged(onChanged);
     }
 }

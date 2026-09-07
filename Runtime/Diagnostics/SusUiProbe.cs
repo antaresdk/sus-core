@@ -140,14 +140,11 @@ namespace Sharq.Core.Diagnostics
             if (!string.IsNullOrEmpty(component.name)) sb.Append($",\"name\":{Q(component.name)}");
             if (!string.IsNullOrEmpty(component.VisualState)) sb.Append($",\"visualState\":{Q(component.VisualState)}");
 
-            foreach (var field in component.GetType().GetFields(BindingFlags.Public | BindingFlags.Instance))
+            // T-3031: values come through ISusPropAccess, not the tracked Value getter — a probe
+            // dump must not register reactive dependencies nor make a dead prop look read.
+            foreach (var prop in component.DescribeProps())
             {
-                if (!field.FieldType.IsGenericType) continue;
-                if (field.FieldType.GetGenericTypeDefinition() != typeof(Prop<>)) continue;
-                object val = null;
-                var propObj = field.GetValue(component);
-                if (propObj != null) val = field.FieldType.GetProperty("Value")?.GetValue(propObj);
-                sb.Append(',').Append(Q(field.Name)).Append(':').Append(JsonValue(val));
+                sb.Append(',').Append(Q(prop.Name)).Append(':').Append(JsonValue(prop.Value));
             }
             sb.Append('}');
             return sb.ToString();

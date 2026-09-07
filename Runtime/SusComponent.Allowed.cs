@@ -28,6 +28,18 @@ namespace Sharq.Core
                 throw new ArgumentException("allowed must be non-empty", nameof(allowed));
 
             var fb = fallback ?? allowed[0];
+            // T-3031: the set used to live ONLY in the closure below, so nothing outside the
+            // component could ever answer "which values are legal here". Record it first.
+            RegisterAllowed(new AllowedRecord
+            {
+                PropObject = prop,
+                ValueType = typeof(string),
+                DeclaredName = propName,
+                StringValues = allowed,
+                Fallback = fb,
+                Aliases = aliases,
+                AllowEmpty = allowEmpty,
+            });
             ClampStringProp(prop, allowed, fb, aliases, allowEmpty, propName);
 
             Watch(prop, (_, __) =>
@@ -53,6 +65,18 @@ namespace Sharq.Core
                 if (allowed == null || allowed.Count == 0) return;
                 ClampIntProp(prop, allowed, fallback ?? allowed[0], propName);
             }
+
+            // T-3031: dynamic sets are recorded as the RESOLVER, not a snapshot — a table's
+            // page-size list changes with the data and a stale copy would lie.
+            RegisterAllowed(new AllowedRecord
+            {
+                PropObject = prop,
+                ValueType = typeof(int),
+                DeclaredName = propName,
+                IntValues = getAllowed,
+                Fallback = fallback,
+                AllowEmpty = false,
+            });
 
             Clamp();
             Watch(prop, (_, __) => Clamp());
@@ -93,7 +117,7 @@ namespace Sharq.Core
             bool allowEmpty,
             string propName)
         {
-            var raw = prop.Value;
+            var raw = prop.Peek();
             var next = NormalizeString(raw, allowed, fallback, aliases, allowEmpty, out var changed);
             if (!changed) return;
 
@@ -110,7 +134,7 @@ namespace Sharq.Core
             int fallback,
             string propName)
         {
-            var raw = prop.Value;
+            var raw = prop.Peek();
             var next = CoerceAllowed(raw, allowed, fallback);
             if (next == raw) return;
 
@@ -178,5 +202,42 @@ namespace Sharq.Core
             }
             return value;
         }
+
+        // ── Allowed-set registry (T-3031, plan ARCH-20260907-STORYBOOK-ENGINE §4.2) ──────
+
+        /// <summary>One recorded <see cref="UseAllowed"/> call. Kept per instance.</summary>
+        internal sealed class AllowedRecord
+        {
+            public object PropObject;
+            public Type ValueType;
+            public string DeclaredName;
+            public IReadOnlyList<string> StringValues;
+            public Func<IReadOnlyList<int>> IntValues;
+            public object Fallback;
+            public IReadOnlyDictionary<string, string> Aliases;
+            public bool AllowEmpty;
+        }
+
+        private List<AllowedRecord> _allowedRecords;
+
+        internal IReadOnlyList<AllowedRecord> AllowedRecords =>
+            (IReadOnlyList<AllowedRecord>)_allowedRecords ?? Array.Empty<AllowedRecord>();
+
+        private void RegisterAllowed(AllowedRecord record)
+        {
+            _allowedRecords ??= new List<AllowedRecord>();
+            // Re-registration for the same prop (a component may call UseAllowed again after a
+            // data swap) replaces the record instead of stacking a second, stale answer.
+            for (int i = 0; i < _allowedRecords.Count; i++)
+            {
+                if (ReferenceEquals(_allowedRecords[i].PropObject, record.PropObject))
+                {
+                    _allowedRecords[i] = record;
+                    return;
+                }
+            }
+            _allowedRecords.Add(record);
+        }
+
     }
 }
