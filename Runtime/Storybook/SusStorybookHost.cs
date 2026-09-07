@@ -27,8 +27,14 @@ namespace Sharq.Core.Storybook
         /// <summary>Panel width below which zone A becomes a drawer (card T-3033, mock-up).</summary>
         public const float NarrowWidth = 800f;
 
+        /// <summary>Panel width at and above which zone B shows the deep-link (card T-3036, mock-up).</summary>
+        public const float WideWidth = 1200f;
+
         /// <summary>How long the share button says "copied" (mock-up: 1.6 s).</summary>
         public const long ShareFeedbackMs = 1600;
+
+        /// <summary>How often the stage looks at its overlay host (card T-3038).</summary>
+        public const long OverlayWatchMs = 120;
 
         const string ShareLabel = "share";
         const string ShareDoneLabel = "copied";
@@ -40,22 +46,33 @@ namespace Sharq.Core.Storybook
         readonly Label _crumbs = new();
         readonly Label _address = new();
         readonly Button _share;
+        readonly SusIconElement _shareIcon = new("link");
+        readonly Label _shareLabel = new(ShareLabel);
         readonly Button _burger;
         readonly VisualElement _scrim = new();
+        readonly SusStoryEnvBar _env;
 
         readonly VisualElement _zoneEnv = new();
         readonly VisualElement _zonePanel = new();
         readonly VisualElement _zoneProbe = new();
         readonly ScrollView _stage = new();
+        // Zone C (card T-3038).
+        readonly Label _stageCrumbs = new();
         readonly Label _stageTitle = new();
         readonly Label _stagePurpose = new();
+        // Zone C, card T-3038.
+        readonly SusStoryMatrix _matrix = new();
+        readonly Label _liveHint = new();
         readonly VisualElement _canvas = new();
+        readonly SusStorySizes _sizes = new();
         readonly VisualElement _stageEmpty = new();
         readonly Label _stageEmptyTitle = new();
         readonly Label _stageEmptyText = new();
 
         OverlayHost _canvasOverlay;
+        SusControlPanel _controls;
         IVisualElementScheduledItem _shareReset;
+        IVisualElementScheduledItem _overlayWatch;   // card T-3038
         SusComponent _current;
         bool _disposed;
 
@@ -99,17 +116,42 @@ namespace Sharq.Core.Storybook
             var center = new VisualElement();
             center.AddToClassList("sus-sb-center");
 
-            // Zone B — environment bar (empty slot, step 5).
+            // Zone B — environment (plan §4.4, card T-3036): chip group left, deep-link and share
+            // right. The deep-link label and the share button are the SAME instances the T-3033
+            // scaffold put in the top bar — moved here, not duplicated (card text: "уже есть в
+            // каркасе — переиспользуй, не дублируй"). Share stops setting Button.text directly so
+            // narrow mode can hide the label and keep only the icon (mock-up, card T-3036).
             _zoneEnv.name = "sus-storybook-zone-b";
             _zoneEnv.AddToClassList("sus-sb-zone");
             _zoneEnv.AddToClassList("sus-sb-env");
-            _zoneEnv.Add(SlotHint("zone B — environment (step 5)"));
 
-            // Zone C — stage.
+            _env = new SusStoryEnvBar(this, _canvas);
+            _env.Changed += RefreshAddress;
+
+            _address.AddToClassList("sus-sb__link");
+            _address.AddToClassList("sus-sb-env__link");
+
+            _share = new Button(ShareCurrentAddress);
+            _share.AddToClassList("sus-sb__share");
+            _share.AddToClassList("sus-sb-env__share");
+            _shareIcon.AddToClassList("sus-sb-env__share-icon");
+            _shareLabel.AddToClassList("sus-sb-env__share-label");
+            _share.Add(_shareIcon);
+            _share.Add(_shareLabel);
+
+            _zoneEnv.Add(_env);
+            _zoneEnv.Add(_address);
+            _zoneEnv.Add(_share);
+
+            // Zone C — stage (card T-3038): crumbs, header, state matrix, live instance on a
+            // dotted canvas, live measurements.
             _stage.name = "sus-storybook-zone-c";
             _stage.AddToClassList("sus-sb-stage");
+            _stageCrumbs.AddToClassList("sus-sb-stage__crumbs");
             _stageTitle.AddToClassList("sus-sb-stage__title");
             _stagePurpose.AddToClassList("sus-sb-stage__purpose");
+            _liveHint.text = "live instance · driven by the props panel";
+            _liveHint.AddToClassList("sus-sb-stage__live-hint");
             _canvas.name = "sus-storybook-canvas";
             _canvas.AddToClassList("sus-sb-stage__canvas");
 
@@ -119,9 +161,14 @@ namespace Sharq.Core.Storybook
             _stageEmpty.Add(_stageEmptyTitle);
             _stageEmpty.Add(_stageEmptyText);
 
+            // Zone C order, card T-3038.
+            _stage.Add(_stageCrumbs);
             _stage.Add(_stageTitle);
             _stage.Add(_stagePurpose);
+            _stage.Add(_matrix);
+            _stage.Add(_liveHint);
             _stage.Add(_canvas);
+            _stage.Add(_sizes);
             _stage.Add(_stageEmpty);
 
             center.Add(_zoneEnv);
@@ -224,6 +271,31 @@ namespace Sharq.Core.Storybook
         /// <summary>Story currently mounted, or null.</summary>
         public SusStoryEntry CurrentStory { get; private set; }
 
+        /// <summary>Zone C state matrix (card T-3038).</summary>
+        public SusStoryMatrix Matrix => _matrix;
+
+        /// <summary>Zone C live-measurement line (card T-3038).</summary>
+        public SusStorySizes Sizes => _sizes;
+
+        /// <summary>
+        /// The stage's OWN overlay host — where a story's popup must land (T-3032). Null until a
+        /// story is mounted.
+        /// </summary>
+        public OverlayHost CanvasOverlay => _canvasOverlay;
+
+        /// <summary>
+        /// Re-reads the stage overlay and mirrors its state into zone C: the canvas grows so a
+        /// popup is not clipped out of the frame, and the bottom line says where the popup went.
+        /// Called on a timer while a story is mounted; public so a test can ask for it directly
+        /// instead of waiting for the scheduler.
+        /// </summary>
+        public void SyncOverlay()
+        {
+            bool open = _canvasOverlay != null && _canvasOverlay.Count > 0;
+            _canvas.EnableInClassList("sus-sb-stage__canvas--overlay", open);
+            _sizes.SetOverlayOpen(open);
+        }
+
         /// <summary>Goes back one route; false when there is nowhere to go.</summary>
         public bool Back() => _history.Back();
 
@@ -280,6 +352,7 @@ namespace Sharq.Core.Storybook
 
             CurrentStory = entry;
             _crumbs.text = entry.Package + " / " + entry.Group + " / " + entry.Name;
+            _stageCrumbs.text = _crumbs.text;   // zone C header, card T-3038
             _stageTitle.text = entry.Name;
             _stagePurpose.text = entry.Purpose;
             Mount(entry, route);
@@ -307,11 +380,112 @@ namespace Sharq.Core.Storybook
             // The story's popups belong to the canvas, not to the panel root (T-3032).
             _canvasOverlay = SusBootstrap.GetOrCreateOverlay(_canvas);
 
+            // Zone D is derived from the mounted instance and from nothing else (card T-3034).
+            BuildControls(entry, component, story, route);
+
+            // Zone C, card T-3038.
+            _matrix.Show(entry);
+            _sizes.Track(component);
+
+            // UI Toolkit raises no event when an overlay gains a child, so the stage looks. The
+            // tick is cheap (two class flips) and stops with the story.
+            _overlayWatch?.Pause();
+            _overlayWatch = schedule.Execute(SyncOverlay).Every(OverlayWatchMs);
+            SyncOverlay();
+
             SetStageEmpty(false);
+        }
+
+        /// <summary>The generated control panel of zone D, or null while nothing is mounted.</summary>
+        public SusControlPanel Controls => _controls;
+
+        void BuildControls(SusStoryEntry entry, SusComponent component, SusStoryContext story, SusStoryRoute route)
+        {
+            _zonePanel.Clear();
+            _controls = new SusControlPanel(component, entry.Name, story, route);
+            _controls.ValueChanged += _ => OnControlValueChanged();
+            _zonePanel.Add(_controls);
+        }
+
+        // A control write must not remount the story - that would throw away the very value just
+        // set - so the address is rewritten in place while history keeps holding stories only.
+        void OnControlValueChanged()
+        {
+            if (_disposed || _controls == null || CurrentStory == null) return;
+            var route = _controls.BuildRoute(CurrentStory.Id);
+            var withEnv = WithEnv(route);
+            _address.text = withEnv.ToHash();
+            _url.Push(withEnv);
+        }
+
+        // ── environment (zone B, card T-3036) ─────────────────────────────────
+
+        /// <summary>
+        /// <paramref name="route"/>'s query plus <c>env.*</c> for every axis away from its
+        /// default (plan §4.4). Never mutates <paramref name="route"/> — env state lives in the
+        /// core services themselves (<see cref="SusStoryEnvBar"/> reads them live), not in any
+        /// <see cref="SusStoryRoute"/>, so switching stories never resets it.
+        /// </summary>
+        SusStoryRoute WithEnv(SusStoryRoute route)
+        {
+            var deltas = _env.CurrentDeltas();
+
+            // A route read back from History can still carry env.* from whatever link it was
+            // opened with (History stores routes as-is — see SusStoryHistory.Go) even after the
+            // environment moved on since. Never trust old env.* in route.Query; only fresh
+            // CurrentDeltas() may contribute one.
+            bool routeCarriesEnv = false;
+            foreach (var key in route.Query.Keys)
+            {
+                if (!key.StartsWith(SusStoryEnvBar.EnvQueryPrefix, StringComparison.Ordinal)) continue;
+                routeCarriesEnv = true;
+                break;
+            }
+            if (deltas.Count == 0 && !routeCarriesEnv) return route;
+
+            var merged = new Dictionary<string, string>();
+            foreach (var kv in route.Query)
+            {
+                if (kv.Key.StartsWith(SusStoryEnvBar.EnvQueryPrefix, StringComparison.Ordinal)) continue;
+                merged[kv.Key] = kv.Value;
+            }
+            foreach (var kv in deltas) merged[kv.Key] = kv.Value;
+            return route.WithQuery(merged);
+        }
+
+        /// <summary>
+        /// Re-derives the address text from the CURRENT route and the environment, without
+        /// touching history — a chip click never navigates. Wired to
+        /// <see cref="SusStoryEnvBar.Changed"/> so "поделиться" is never stale by one click.
+        /// </summary>
+        void RefreshAddress()
+        {
+            var route = _history.Current;
+            if (route == null || route.FromUrl)
+            {
+                _address.text = _url.Address;
+                return;
+            }
+            var withEnv = WithEnv(route);
+            _url.Push(withEnv);
+            _address.text = withEnv.ToHash();
         }
 
         void Unmount()
         {
+            if (_controls != null)
+            {
+                _controls.Dispose();
+                _controls.RemoveFromHierarchy();
+                _controls = null;
+            }
+            if (_zonePanel.childCount == 0) _zonePanel.Add(SlotHint("zone D — no story mounted"));
+            // Zone C, card T-3038.
+            _overlayWatch?.Pause();
+            _overlayWatch = null;
+            _matrix.Clear();
+            _sizes.Track(null);
+            _sizes.SetOverlayOpen(false);
             if (_canvasOverlay != null) _canvasOverlay.ClearAll();
             if (_current != null)
             {
@@ -357,6 +531,11 @@ namespace Sharq.Core.Storybook
             _canvas.EnableInClassList("sus-sb-hidden", empty);
             _stageTitle.EnableInClassList("sus-sb-hidden", empty);
             _stagePurpose.EnableInClassList("sus-sb-hidden", empty);
+            // Zone C, card T-3038.
+            _stageCrumbs.EnableInClassList("sus-sb-hidden", empty);
+            _liveHint.EnableInClassList("sus-sb-hidden", empty);
+            _sizes.EnableInClassList("sus-sb-hidden", empty);
+            if (empty) _matrix.Clear();
         }
 
         // ── chrome ───────────────────────────────────────────────────────────
@@ -417,7 +596,10 @@ namespace Sharq.Core.Storybook
             if (_disposed) return;
             _disposed = true;
             _shareReset?.Pause();
+            _overlayWatch?.Pause();   // card T-3038
             _history.Changed -= ApplyRoute;
+            _env.Changed -= RefreshAddress;
+            _env.Dispose();
             _url.Dispose();
             Unmount();
         }

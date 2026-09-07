@@ -52,6 +52,9 @@ namespace Sharq.Core.Storybook
         /// <summary>Sort key inside its group.</summary>
         public int Order { get; set; }
 
+        /// <summary>Build cost of one instance (card T-3038) — see <see cref="SusStoryAttribute.Weight"/>.</summary>
+        public SusStoryWeight Weight { get; set; } = SusStoryWeight.Normal;
+
         /// <summary>Builds one live instance. Required.</summary>
         public Func<SusComponent> Create { get; set; }
 

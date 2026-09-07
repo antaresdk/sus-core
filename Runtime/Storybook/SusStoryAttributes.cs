@@ -44,6 +44,15 @@ namespace Sharq.Core.Storybook
         /// <summary>Sort key inside its group; equal orders fall back to <see cref="Name"/>.</summary>
         public int Order { get; set; }
 
+        /// <summary>
+        /// How expensive one instance of this component is to build (plan §0.3). A
+        /// <see cref="SusStoryWeight.Heavy"/> story keeps its state matrix COLLAPSED regardless of
+        /// the cell budget: a table, an inventory, a battle grid or a minimap costs more per
+        /// instance than the matrix is worth, and the storybook must open instantly on every
+        /// story, not only on the cheap ones.
+        /// </summary>
+        public SusStoryWeight Weight { get; set; } = SusStoryWeight.Normal;   // card T-3038
+
         public SusStoryAttribute(string id)
         {
             Id = id;

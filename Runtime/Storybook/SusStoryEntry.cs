@@ -61,6 +61,12 @@ namespace Sharq.Core.Storybook
         /// <summary>Sort key inside the group.</summary>
         public int Order { get; }
 
+        /// <summary>
+        /// Build cost declared by the story (<see cref="SusStoryAttribute.Weight"/>, card T-3038). Set by the
+        /// registry right after construction; <see cref="SusStoryWeight.Normal"/> otherwise.
+        /// </summary>
+        public SusStoryWeight Weight { get; internal set; } = SusStoryWeight.Normal;
+
         /// <summary>The <c>[SusStory]</c> class, or the provider type for data-born stories.</summary>
         public Type DeclaringType { get; }
 

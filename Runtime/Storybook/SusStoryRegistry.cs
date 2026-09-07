@@ -223,7 +223,7 @@ namespace Sharq.Core.Storybook
                         NormalizeId(pkg, group, slug), pkg, group, slug,
                         string.IsNullOrWhiteSpace(attr.Name) ? Humanize(slug) : attr.Name,
                         attr.Purpose, attr.Order, type, asm,
-                        story.Create, story.Configure));
+                        story.Create, story.Configure) { Weight = attr.Weight });   // card T-3038
                     Remember(pkg, stamp, stamps, known);
                 }
                 else
@@ -260,7 +260,8 @@ namespace Sharq.Core.Storybook
                 stories.Add(new SusStoryEntry(
                     NormalizeId(p, g, s), p, g, s,
                     string.IsNullOrWhiteSpace(def.Name) ? Humanize(s) : def.Name,
-                    def.Purpose, def.Order, type, asm, def.Create, def.Configure));
+                    def.Purpose, def.Order, type, asm, def.Create, def.Configure)
+                    { Weight = def.Weight });   // card T-3038
                 Remember(p, stamp, stamps, known);
             }
         }
