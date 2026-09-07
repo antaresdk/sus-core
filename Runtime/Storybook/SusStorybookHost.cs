@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
+using Sharq.Core.Storybook.Controls;   // zone D, card T-3034
 using Sharq.Core.Storybook.Nav;
 using Sharq.Core.Storybook.UI;
 
@@ -11,11 +12,11 @@ namespace Sharq.Core.Storybook
     /// mounts into a UIDocument, an Editor window or a screenshot rig without a MonoBehaviour in
     /// between; <see cref="SusStorybookBehaviour"/> is the convenience driver for the scene case.
     ///
-    /// Zones (brief §4): A navigation — built here; B environment, D controls, E probe — EMPTY
-    /// SLOTS with stable names and classes, filled by steps 4, 5 and 6; C stage — the minimum that
-    /// makes the skeleton provable: the selected story is instantiated and mounted into the canvas,
-    /// with an <see cref="OverlayHost"/> of its own so popups stay inside the canvas (T-3032).
-    /// No matrix and no control panel here on purpose — those are cards T-3034 / T-3038.
+    /// Zones (brief §4): A navigation and C stage — built here (the selected story is
+    /// instantiated and mounted into the canvas, with an <see cref="OverlayHost"/> of its own so
+    /// popups stay inside the canvas, T-3032); D controls — built by <see cref="BuildControls"/>
+    /// (card T-3034); B environment is <see cref="SusStoryEnvBar"/> (card T-3036) — chips over
+    /// core services, no story-specific state and no reset of D's controls on a click (plan §4.4).
     ///
     /// Names kept from the pre-engine shell (plan D11) so the 85 driver call sites in
     /// <c>sus-dev</c> keep compiling while stories migrate: <see cref="ShowStoryById"/>,
@@ -180,11 +181,11 @@ namespace Sharq.Core.Storybook
             _zoneProbe.AddToClassList("sus-sb-probe");
             center.Add(_zoneProbe);
 
-            // Zone D — control panel (empty slot, step 4).
+            // Zone D — the control panel, built from the mounted story (card T-3034).
             _zonePanel.name = "sus-storybook-zone-d";
             _zonePanel.AddToClassList("sus-sb-zone");
             _zonePanel.AddToClassList("sus-sb-panel");
-            _zonePanel.Add(SlotHint("zone D — controls (step 4)"));
+            _zonePanel.Add(SlotHint("zone D — no story mounted"));
 
             main.Add(center);
             main.Add(_zonePanel);
@@ -363,9 +364,10 @@ namespace Sharq.Core.Storybook
             Unmount();
 
             SusComponent component;
+            SusStoryContext story;   // card T-3034: zone D reads the story's ledger
             try
             {
-                entry.Instantiate(route, out component);
+                story = entry.Instantiate(route, out component);
             }
             catch (Exception e)
             {

@@ -70,6 +70,7 @@ namespace Sharq.Core.Storybook
     public sealed class SusStoryContext
     {
         readonly Dictionary<string, string> _exclusions = new(StringComparer.Ordinal);
+        readonly Dictionary<string, string> _manual = new(StringComparer.Ordinal);   // card T-3034
 
         public SusStoryContext(SusStoryEntry entry, SusComponent component, Nav.SusStoryRoute route)
         {
@@ -103,6 +104,21 @@ namespace Sharq.Core.Storybook
             if (string.IsNullOrEmpty(propName)) throw new ArgumentException("prop name", nameof(propName));
             if (string.IsNullOrWhiteSpace(reason)) throw new ArgumentException("reason", nameof(reason));
             _exclusions[propName] = reason;
+        }
+
+        /// <summary>
+        /// Props this story drives with a HAND-WRITTEN control instead of the generated one:
+        /// name to reason (reason optional). The generated panel still shows the prop, marked
+        /// "manual", so a reader can tell "a person wired this" from "the machine derived this"
+        /// (card T-3034, mock-up "Controls Panel").
+        /// </summary>
+        public IReadOnlyDictionary<string, string> ManualControls => _manual;
+
+        /// <summary>Records one prop as driven by a control the story wrote itself.</summary>
+        public void AddManualControl(string propName, string reason = null)
+        {
+            if (string.IsNullOrEmpty(propName)) throw new ArgumentException("prop name", nameof(propName));
+            _manual[propName] = reason ?? string.Empty;
         }
 
         /// <summary>Value of one deep-link query key, or null.</summary>

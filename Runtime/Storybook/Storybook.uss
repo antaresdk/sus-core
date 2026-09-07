@@ -628,3 +628,381 @@
 .sus-sb-hidden {
     display: none;
 }
+
+/* ============================================================================
+ * Zone D - the generated control panel (card T-3034, mock-up "Controls Panel").
+ *
+ * Every visual decision of the panel is here: the C# side of Controls/ writes not a single
+ * .style property, it only flips classes (R53/R120). Swatch colours come from the skin tokens
+ * below, which is why a control can offer the skin primary without naming a colour in code.
+ * ==========================================================================*/
+
+.sus-sb-ctlpanel {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.sus-sb-ctlpanel__title {
+    flex-shrink: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 12px;
+    color: var(--sus-text-primary);
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+}
+
+.sus-sb-ctlpanel__groups {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.sus-sb-ctlpanel__group {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 6px;
+}
+
+.sus-sb-ctlpanel__group-title {
+    margin-top: 12px;
+    margin-bottom: 2px;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--sus-text-disabled);
+}
+
+.sus-sb-ctlpanel__empty {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    padding-left: 18px;
+    padding-right: 18px;
+}
+
+.sus-sb-ctlpanel__empty-title {
+    font-size: 12px;
+    color: var(--sus-text-secondary);
+    margin-bottom: 6px;
+}
+
+.sus-sb-ctlpanel__empty-text {
+    font-size: 11px;
+    color: var(--sus-text-disabled);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+.sus-sb-ctlpanel__foot {
+    flex-shrink: 0;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-top-width: 1px;
+    border-top-color: var(--sus-border);
+    background-color: var(--sus-bg-surface-variant);
+}
+
+.sus-sb-ctlpanel__counters {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sus-sb-ctlpanel__count {
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-ctlpanel__badge {
+    font-size: 10px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: var(--sus-radius-sm);
+    color: var(--sus-text-primary);
+}
+
+.sus-sb-ctlpanel__badge--ok {
+    color: var(--sus-success);
+    background-color: var(--sus-selected-overlay);
+}
+
+.sus-sb-ctlpanel__badge--defect {
+    color: var(--sus-error);
+    background-color: var(--sus-hover-overlay);
+}
+
+.sus-sb-ctlpanel__hole {
+    margin-top: 4px;
+    font-size: 10px;
+    white-space: normal;
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-ctlpanel__hole--dead {
+    color: var(--sus-error);
+}
+
+.sus-sb-ctlpanel__hole--excluded {
+    color: var(--sus-text-disabled);
+}
+
+/* -- one row ------------------------------------------------------------- */
+
+.sus-sb-ctl {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+}
+
+.sus-sb-ctl--inert {
+    opacity: 0.45;
+}
+
+.sus-sb-ctl__head {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sus-sb-ctl__name {
+    font-size: 11px;
+    color: var(--sus-text-primary);
+    margin-right: 6px;
+}
+
+.sus-sb-ctl__badge {
+    font-size: 9px;
+    padding-left: 4px;
+    padding-right: 4px;
+    margin-right: 4px;
+    border-radius: var(--sus-radius-sm);
+    color: var(--sus-text-secondary);
+    background-color: var(--sus-bg-surface-raised);
+}
+
+.sus-sb-ctl__badge--dead {
+    color: var(--sus-error);
+}
+
+.sus-sb-ctl__badge--manual {
+    color: var(--sus-text-disabled);
+}
+
+.sus-sb-ctl__body {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.sus-sb-ctl__note,
+.sus-sb-ctl__dependency {
+    margin-top: 3px;
+    font-size: 9px;
+    white-space: normal;
+    color: var(--sus-text-disabled);
+}
+
+/* -- bool ---------------------------------------------------------------- */
+
+.sus-sb-ctl__switch {
+    width: 34px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border-radius: var(--sus-radius-full);
+    border-width: 1px;
+    border-color: var(--sus-border);
+    background-color: var(--sus-bg-surface-raised);
+    justify-content: center;
+}
+
+.sus-sb-ctl__switch--on {
+    background-color: var(--sus-primary);
+    border-color: var(--sus-primary);
+}
+
+.sus-sb-ctl__knob {
+    width: 14px;
+    height: 14px;
+    margin-left: 2px;
+    border-radius: var(--sus-radius-full);
+    background-color: var(--sus-bg-page);
+}
+
+.sus-sb-ctl__switch--on .sus-sb-ctl__knob {
+    margin-left: 18px;
+}
+
+/* -- closed sets --------------------------------------------------------- */
+
+.sus-sb-ctl__segment {
+    flex-grow: 1;
+    flex-direction: row;
+    padding: 2px;
+    border-radius: var(--sus-radius-sm);
+    background-color: var(--sus-bg-surface-raised);
+}
+
+.sus-sb-ctl__seg {
+    flex-grow: 1;
+    margin: 0;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 2px;
+    padding-right: 2px;
+    font-size: 10px;
+    border-width: 0;
+    border-radius: var(--sus-radius-sm);
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--sus-text-secondary);
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.sus-sb-ctl__seg--active {
+    background-color: var(--sus-bg-surface);
+    color: var(--sus-text-primary);
+    border-width: 1px;
+    border-color: var(--sus-border);
+}
+
+.sus-sb-ctl__dropdown {
+    flex-grow: 1;
+    margin: 0;
+    font-size: 11px;
+}
+
+/* -- text, icon, numbers ------------------------------------------------- */
+
+.sus-sb-ctl__text,
+.sus-sb-ctl__number,
+.sus-sb-ctl__hex,
+.sus-sb-ctl__list-row {
+    margin: 0;
+    font-size: 11px;
+}
+
+.sus-sb-ctl__text {
+    flex-grow: 1;
+}
+
+.sus-sb-ctl__number {
+    width: 52px;
+    margin-left: 6px;
+}
+
+.sus-sb-ctl__slider {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.sus-sb-ctl__glyph {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+}
+
+/* -- colour -------------------------------------------------------------- */
+
+.sus-sb-ctl__swatches {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sus-sb-ctl__swatch {
+    width: 18px;
+    height: 18px;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+    margin-right: 4px;
+    padding: 0;
+    border-radius: var(--sus-radius-sm);
+    border-width: 1px;
+    border-color: var(--sus-border);
+}
+
+.sus-sb-ctl__swatch--primary {
+    background-color: var(--sus-primary);
+}
+
+.sus-sb-ctl__swatch--secondary {
+    background-color: var(--sus-secondary);
+}
+
+.sus-sb-ctl__swatch--neutral {
+    background-color: var(--sus-text-secondary);
+}
+
+.sus-sb-ctl__swatch--success {
+    background-color: var(--sus-success);
+}
+
+.sus-sb-ctl__swatch--error {
+    background-color: var(--sus-error);
+}
+
+.sus-sb-ctl__swatch--ink {
+    background-color: var(--sus-text-primary);
+}
+
+.sus-sb-ctl__hex {
+    width: 84px;
+    margin-left: 4px;
+}
+
+.sus-sb-ctl__value {
+    margin-left: 6px;
+    font-size: 10px;
+    color: var(--sus-text-disabled);
+}
+
+/* -- list and model ------------------------------------------------------ */
+
+.sus-sb-ctl__list-summary {
+    margin: 0;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 10px;
+    border-radius: var(--sus-radius-sm);
+    border-width: 1px;
+    border-color: var(--sus-border);
+    background-color: var(--sus-bg-surface-raised);
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-ctl__list {
+    margin-top: 4px;
+    padding-left: 8px;
+    border-left-width: 1px;
+    border-left-color: var(--sus-border);
+}
+
+.sus-sb-ctl__list-row {
+    margin-bottom: 3px;
+}
+
+.sus-sb-ctl__list-add {
+    margin: 0;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    font-size: 10px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-ctl__mono {
+    flex-grow: 1;
+    font-size: 10px;
+    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--font-family-mono);
+}
