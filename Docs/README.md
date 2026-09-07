@@ -24,6 +24,7 @@
 | 18 | [MCP / AI probe](./18-mcp.md) | SusUiProbe JSON facade (tree/props/health), MCP phases |
 | 17 | [Dev console](./17-console.md) | SusConsoleService, hotkey `~`, OverlayCategory.Console |
 | — | [Design tokens](./DESIGN_TOKENS.md) | Fonts, colors, icons, themes |
+| — | [Storybook](./storybook.md) 🆕 | Live component playground: `[SusStory]`, control panel from props, environment chips, deep links |
 | — | [快速入门（中文）](https://sus-ui.dev/zh/docs/getting-started) | Chinese getting-started (site, translated; package copy: `GETTING_STARTED.zh-CN.md` in this folder) |
 
 ## Quick start
@@ -62,6 +63,7 @@ public class AppEntry : MonoBehaviour
 - **I want to configure the compiler** → [10-configuration.md](./10-configuration.md)
 - **I want themes / tokens / icons** → [DESIGN_TOKENS.md](./DESIGN_TOKENS.md) (fonts, colors, icons, themes)
 - **I want the in-game console** → [17-console.md](./17-console.md)
+- **I want a live playground for my own component** → [storybook.md](./storybook.md) 🆕
 
 ## Related documents
 
@@ -69,5 +71,6 @@ public class AppEntry : MonoBehaviour
 - [Integration from scratch](./00-integration.md) - installation and first screen
 - [Design tokens](./DESIGN_TOKENS.md) - fonts, colors, icons, themes
 - [OverlayHost and portals](./07-overlayhost.md) - overlays: tooltips, popups, modals
+- [Storybook](./storybook.md) - live component playground, no separate package
 
 - [Integration known issues](./SUS_INTEGRATION_KNOWN_ISSUES.md) — resolved-issue log from consumer integration

@@ -176,6 +176,48 @@ OnDetachFromPanel:
 
 > `Updated()` runs **only** when attached to the panel (`OnAttachToPanelHandler`). From constructor/deferred call `ScheduleReactiveUpdates` removed — before attachment `schedule` may not tick.
 
+### Introspection (`DescribeProps` / `DescribeAllowed` / `DescribeEvents`)
+
+Three read-only answers a component gives about itself **on the instance, without the caller
+knowing its concrete type**. This is what the [storybook](./storybook.md) control panel is built
+from — nothing about it is specific to that panel, so anything (a save-preset UI, a debug
+inspector) can call the same API:
+
+```csharp
+public partial class SusComponent
+{
+    public IReadOnlyList<SusPropInfo>                  DescribeProps();
+    public IReadOnlyDictionary<string, SusAllowedInfo> DescribeAllowed();
+    public IReadOnlyList<SusEventInfo>                 DescribeEvents();
+    public IDisposable SubscribeEvent(string eventName, Action<object> handler); // null if unknown
+    public bool        IsDependencySatisfied(SusPropInfo prop);
+    public string      DescribeDependency(SusPropInfo prop);   // "ContentMode = icon" | null
+}
+```
+
+- `DescribeProps()` walks every public `Prop<T>` / `ReadonlyProp<T>` field: name, value type,
+  current value (read without registering a reactive dependency), group, declared range/
+  dependencies, and whether anything has ever read or observed it.
+- `DescribeAllowed()` returns the legal-value set for a prop registered through `UseAllowed` —
+  values, fallback, aliases — so a caller can build a picker without knowing the concrete
+  `SusOptionSets` the component used.
+- `DescribeEvents()` lists public `On*` delegate fields (name, bus name, payload type);
+  `SubscribeEvent` attaches to one generically, boxing the argument.
+
+Two attributes make numeric ranges and prop dependencies explicit instead of guessed:
+
+```csharp
+[SusRange(0, 5, 0.5)]                       public Prop<float>  Rating   = new(0);
+[SusRange(0, 100, "%")]                     public Prop<int>    Progress = new(0);
+[SusDependsOn(nameof(ContentMode), "icon")] public Prop<string> Icon     = new("");
+```
+
+`[SusRange(min, max, step)]` (or `[SusRange(min, max, unit)]`) bounds a `Prop<int>`/`Prop<float>`;
+without it a consumer falls back to 0…100. `[SusDependsOn(prop, value = null)]` — repeatable, ANDed
+— declares that a prop only matters while another prop of the same component holds a given value;
+`IsDependencySatisfied` / `DescribeDependency` let a caller disable that control and show why,
+instead of rendering one that silently does nothing.
+
 ## Bind helpers (reactive)
 
 All bindings work through `ReactiveEffect` — auto-subscription to `Prop<T>` / `Computed<T>` and updating when any source changes. Each helper returns a `WatchHandle` (tracked for dispose on detach).

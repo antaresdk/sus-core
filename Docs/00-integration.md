@@ -399,4 +399,5 @@ package drop. Local copy / VSIX above is enough for day-to-day editing.
 - [Quick start](./01-quickstart.md) — more about `.sharq`, compositions, props
 - [OverlayHost](./07-overlayhost.md) — screen overlay layers vs world-space
 - [Design tokens](./DESIGN_TOKENS.md) — theming: colors, fonts, icons
+- [Storybook](./storybook.md) — live playground for your own components, no separate package to install
 - Theme extension notes — `Documentation~/theme-extension.md` in the package repo
