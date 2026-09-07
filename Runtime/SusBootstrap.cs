@@ -557,7 +557,13 @@ namespace Sharq.Core
 
             var root = panel.Root ?? panel.GetComponent<UIDocument>()?.rootVisualElement;
             if (root != null)
+            {
                 EnsureTokenCascade(root);
+                // D-19: мировой домен объявляется КЛАССОМ, иначе лестница размеров на этой
+                // панели резолвится из :root по случайности — классы .breakpoint-* и
+                // .density-* экранного корня в отдельный UIDocument не приходят (T-3071).
+                SusWorldSpacePanel.MarkWorldSpaceRoot(root);
+            }
 
             var svc = WorldSpaceService.Default;
             if (svc == null)

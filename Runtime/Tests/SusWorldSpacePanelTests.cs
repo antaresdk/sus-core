@@ -37,6 +37,37 @@ namespace Sharq.Core.Runtime.Tests
             if (_camGo != null) Object.DestroyImmediate(_camGo);
         }
 
+        // ─── D-19 (T-3071): класс мирового домена на корне панели ───────────
+
+        /// <summary>
+        /// Мировая панель — отдельный UIDocument, и классы `.breakpoint-*` / `.density-*`
+        /// экранного корня до неё не доходят: без класса `.sus-world-space` каждое переменное
+        /// семейство лестницы размеров резолвилось на ней из `:root` ПО СЛУЧАЙНОСТИ. Тест
+        /// меряет объявление, а не намерение: имя класса, идемпотентность и живой корень.
+        /// </summary>
+        [Test]
+        public void MarkWorldSpaceRoot_Declares_World_Dimension_Class()
+        {
+            Assert.AreEqual("sus-world-space", SusWorldSpacePanel.WorldSpaceUssClass,
+                "имя класса — контракт с одноимённым блоком генерата лестницы размеров");
+
+            var root = new VisualElement();
+            SusWorldSpacePanel.MarkWorldSpaceRoot(root);
+            SusWorldSpacePanel.MarkWorldSpaceRoot(root);
+
+            int occurrences = 0;
+            foreach (var cls in root.GetClasses())
+                if (cls == SusWorldSpacePanel.WorldSpaceUssClass) occurrences++;
+            Assert.AreEqual(1, occurrences, "повторный вызов обязан быть идемпотентным");
+
+            Assert.DoesNotThrow(() => SusWorldSpacePanel.MarkWorldSpaceRoot(null),
+                "null-корень (панель без PanelSettings) не роняет вызов");
+
+            if (_panel != null && _panel.Root != null)
+                Assert.IsTrue(_panel.Root.ClassListContains(SusWorldSpacePanel.WorldSpaceUssClass),
+                    "живой корень мировой панели обязан нести класс уже после Awake");
+        }
+
         // ─── W7.2: Attach / Detach / Re-attach ───────────────────────────────
 
         [UnityTest]

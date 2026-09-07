@@ -50,6 +50,18 @@ namespace Sharq.Core
         [Tooltip("Log attachment/detachment events.")]
         public bool VerboseLogging;
 
+        /// <summary>
+        /// USS class of the WORLD dimension root (D-19, план ARCH-20260907-DIMENSION-TOKENS §4.1).
+        /// Мировая панель — отдельный UIDocument: классы <c>.breakpoint-*</c> и <c>.density-*</c>
+        /// экранного корня до неё НЕ доходят, поэтому каждое переменное семейство лестницы
+        /// резолвилось из <c>:root</c> ПО СЛУЧАЙНОСТИ, а не по объявлению. Класс прибивает
+        /// мировой домен к базовой ступени (lg x default) одноимённым блоком в генерате
+        /// лестницы размеров пакета оформления: размер нейм-плейта на sm и на 2xl
+        /// одинаков ПО ОБЪЯВЛЕНИЮ. Блок стоит в генерате ПОСЛЕДНИМ, поэтому при равной
+        /// специфичности (один класс) он выигрывает у <c>.breakpoint-*</c>.
+        /// </summary>
+        public const string WorldSpaceUssClass = "sus-world-space";
+
         private UIDocument _document;
         private VisualElement _root;
         private bool _worldSpaceModeActivated;
@@ -84,12 +96,31 @@ namespace Sharq.Core
             if (_root == null)
                 SusLog.Error("[SusWorldSpacePanel] UIDocument has no rootVisualElement. " +
                                "Make sure PanelSettings is assigned and renderMode = WorldSpace.", this);
+            else
+                MarkWorldSpaceRoot(_root);
+        }
+
+        /// <summary>
+        /// Ставит <see cref="WorldSpaceUssClass"/> на корень мировой панели. Идемпотентно;
+        /// зовётся и из <c>Awake</c>, и из <c>SusBootstrap.EnsureWorldSpacePanel</c>
+        /// (панель может быть собрана руками по сценарию из шапки класса, минуя bootstrap).
+        /// </summary>
+        public static void MarkWorldSpaceRoot(VisualElement root)
+        {
+            if (root == null) return;
+            if (!root.ClassListContains(WorldSpaceUssClass))
+                root.AddToClassList(WorldSpaceUssClass);
         }
 
         private void Start()
         {
             if (TargetCamera == null)
                 TargetCamera = Camera.main;
+
+            // Идемпотентная страховка: UIDocument может пересобрать rootVisualElement
+            // между Awake и Start (перезагрузка домена в редакторе) — класс мирового
+            // домена обязан пережить пересборку (D-19, T-3071).
+            MarkWorldSpaceRoot(_document != null ? _document.rootVisualElement : _root);
 
             if (_root != null && TargetCamera != null)
                 OnReady?.Invoke();
