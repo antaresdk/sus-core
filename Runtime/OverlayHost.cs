@@ -80,6 +80,32 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Converts a panel-space (world) point into <paramref name="host"/>'s own coordinate
+        /// space - the space inline <c>top</c>/<c>left</c> of its absolutely positioned children
+        /// are measured in.
+        ///
+        /// A host mounted on the panel root sits at (0,0), so this is the identity there and the
+        /// long-standing "write worldBound straight into style.top/left" math keeps working
+        /// unchanged. A NESTED host (a Storybook story stage owning its own host, T-3032) has a
+        /// non-zero origin, and without this shift every floating inside it would be displaced by
+        /// exactly that origin.
+        /// </summary>
+        public static Vector2 ToHostLocal(OverlayHost host, Vector2 world)
+        {
+            if (host == null) return world;
+            var origin = host.worldBound.position;
+            if (float.IsNaN(origin.x) || float.IsNaN(origin.y)) return world;
+            return world - origin;
+        }
+
+        /// <summary>
+        /// The host a floating element currently lives in, or <c>null</c> when it is not mounted
+        /// in one. Used by positioning helpers to shift world coordinates into host space.
+        /// </summary>
+        public static OverlayHost HostOf(VisualElement floating)
+            => floating?.hierarchy.parent as OverlayHost;
+
+        /// <summary>
         /// Creates a full-screen, click-transparent overlay host. Absolute
         /// positioning stretches it over the whole panel so modal/tooltip
         /// children (which use absolute insets) get a non-zero rect. Picking is
@@ -107,8 +133,13 @@ namespace Sharq.Core
 
         private void OnGeometryChanged(GeometryChangedEvent evt)
         {
-            if (parent != null && parent.childCount > 1
-                && parent.ElementAt(parent.childCount - 1) != this)
+            // hierarchy view, not the content-container view: parked on a ScrollView (the
+            // Storybook story canvas, T-3032) the host is a hierarchy sibling of the scrolled
+            // content, so the content view would report it as "not last" on every single
+            // geometry change and re-front it forever.
+            var owner = hierarchy.parent;
+            if (owner != null && owner.hierarchy.childCount > 1
+                && owner.hierarchy.ElementAt(owner.hierarchy.childCount - 1) != this)
             {
                 BringToFront();
             }
@@ -439,25 +470,35 @@ namespace Sharq.Core
 
                 // Every left/top below is measured from the anchor's and the tooltip's
                 // worldBound at show time - USS has no number for it (R120/D-069).
+                Vector2 worldPos;
                 switch (position)
                 {
                     case "bottom":
-                        content.style.top = anchorWorld.yMax + 8;   // sus:uss-impossible coordinate measured from anchor worldBound
-                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;  // sus:uss-impossible coordinate measured from anchor worldBound
+                        worldPos = new Vector2(
+                            anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2,
+                            anchorWorld.yMax + 8);
                         break;
                     case "left":
-                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2; // sus:uss-impossible coordinate measured from anchor worldBound
-                        content.style.left = anchorWorld.x - tooltipWorld.width - 8;  // sus:uss-impossible coordinate measured from anchor worldBound
+                        worldPos = new Vector2(
+                            anchorWorld.x - tooltipWorld.width - 8,
+                            anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2);
                         break;
                     case "right":
-                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2; // sus:uss-impossible coordinate measured from anchor worldBound
-                        content.style.left = anchorWorld.xMax + 8;  // sus:uss-impossible coordinate measured from anchor worldBound
+                        worldPos = new Vector2(
+                            anchorWorld.xMax + 8,
+                            anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2);
                         break;
                     default: // "top"
-                        content.style.top = anchorWorld.y - tooltipWorld.height - 8; // sus:uss-impossible coordinate measured from anchor worldBound
-                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;  // sus:uss-impossible coordinate measured from anchor worldBound
+                        worldPos = new Vector2(
+                            anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2,
+                            anchorWorld.y - tooltipWorld.height - 8);
                         break;
                 }
+
+                // Host space, not world space - identity for a root host (T-3032).
+                var tipLocal = ToHostLocal(this, worldPos);
+                content.style.top = tipLocal.y;    // sus:uss-impossible coordinate measured from anchor worldBound
+                content.style.left = tipLocal.x;   // sus:uss-impossible coordinate measured from anchor worldBound
             }).ExecuteLater(0);
 
             // After AddToOverlay, not before: it copies the ancestor component's companion
@@ -484,15 +525,19 @@ namespace Sharq.Core
                 var anchorWorld = anchor.worldBound;
                 var contentWorld = content.worldBound;
 
-                content.style.top = anchorWorld.yMax;  // sus:uss-impossible coordinate measured from anchor worldBound
-                content.style.left = anchorWorld.x;    // sus:uss-impossible coordinate measured from anchor worldBound
+                var worldTop = anchorWorld.yMax;
 
                 // Flip above if not enough space below
                 var rootHeight = panel?.visualTree?.worldBound.height ?? Screen.height;
                 if (anchorWorld.yMax + contentWorld.height > rootHeight && anchorWorld.y > contentWorld.height)
                 {
-                    content.style.top = anchorWorld.y - contentWorld.height;  // sus:uss-impossible coordinate measured from anchor worldBound
+                    worldTop = anchorWorld.y - contentWorld.height;
                 }
+
+                // Host space, not world space - identity for a root host (T-3032).
+                var dropLocal = ToHostLocal(this, new Vector2(anchorWorld.x, worldTop));
+                content.style.top = dropLocal.y;   // sus:uss-impossible coordinate measured from anchor worldBound
+                content.style.left = dropLocal.x;  // sus:uss-impossible coordinate measured from anchor worldBound
             }).ExecuteLater(0);
 
             // After AddToOverlay — see the note in ShowTooltip.

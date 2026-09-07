@@ -67,10 +67,16 @@ namespace Sharq.Core
         //  OverlayHost access
         // ═══════════════════════════════════════════════════════
 
+        /// <summary>
+        /// Nearest OverlayHost above <paramref name="requester"/>, panel root as fallback -
+        /// the one resolution shared with <see cref="SusComponent"/> and
+        /// <see cref="SusOverlayComponent"/> (T-3032). A live panel is still required: a
+        /// floating is positioned from the anchor's worldBound.
+        /// </summary>
         private static OverlayHost GetOverlayHost(VisualElement requester)
         {
             if (requester?.panel == null) return null;
-            return SusBootstrap.GetOrCreateOverlay(requester.panel.visualTree);
+            return SusBootstrap.ResolveOverlayHost(requester);
         }
 
         // ═══════════════════════════════════════════════════════
@@ -431,8 +437,14 @@ namespace Sharq.Core
                 if (top < 0) top = 8f;
             }
 
-            floating.style.top = top;    // sus:uss-impossible coordinate measured from anchor worldBound
-            floating.style.left = left;  // sus:uss-impossible coordinate measured from anchor worldBound
+            // World -> host space. Identity while the host is the panel root (every app);
+            // a nested host (Storybook story stage, T-3032) has a non-zero origin, and its
+            // children's inline top/left are measured from THAT origin.
+            var host = OverlayHost.HostOf(floating) ?? SusBootstrap.FindOverlayHost(anchor);
+            var local = OverlayHost.ToHostLocal(host, new Vector2(left, top));
+
+            floating.style.top = local.y;    // sus:uss-impossible coordinate measured from anchor worldBound
+            floating.style.left = local.x;   // sus:uss-impossible coordinate measured from anchor worldBound
         }
 
         // ═══════════════════════════════════════════════════════
@@ -482,12 +494,17 @@ namespace Sharq.Core
             }
         }
 
+        /// <summary>
+        /// Places an already-mounted tooltip card at a WORLD (panel-space) top-left. The point is
+        /// shifted into the host's own space (T-3032) - identity for a root host.
+        /// </summary>
         public static void PositionTooltip(VisualElement tooltipCard, Vector2 topLeft)
         {
             if (tooltipCard == null) return;
             OverlayHost.ApplyFloatingPosition(tooltipCard);
-            tooltipCard.style.left = topLeft.x;  // sus:uss-impossible screen coordinate measured from layout
-            tooltipCard.style.top = topLeft.y;   // sus:uss-impossible screen coordinate measured from layout
+            var local = OverlayHost.ToHostLocal(OverlayHost.HostOf(tooltipCard), topLeft);
+            tooltipCard.style.left = local.x;  // sus:uss-impossible screen coordinate measured from layout
+            tooltipCard.style.top = local.y;   // sus:uss-impossible screen coordinate measured from layout
         }
 
         // ═══════════════════════════════════════════════════════

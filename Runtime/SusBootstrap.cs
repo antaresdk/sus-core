@@ -363,6 +363,64 @@ namespace Sharq.Core
             SusLabelClassService.Attach(root);
         }
 
+        // --- Overlay host resolution (single channel, T-3032) ---
+
+        /// <summary>
+        /// Finds the NEAREST existing <see cref="OverlayHost"/> for <paramref name="requester"/>,
+        /// walking UP the visual tree from the element itself: an ancestor that IS a host, or an
+        /// ancestor that OWNS one as a direct child, wins over anything higher. Never creates a
+        /// host; returns <c>null</c> when no ancestor carries one.
+        ///
+        /// This is the SINGLE resolution shared by every overlay channel (T-3032):
+        /// <see cref="SusComponent.AddToOverlay"/>, <see cref="SusOverlayService"/> and
+        /// <see cref="SusOverlayComponent.MountSelfInOverlay"/>. Before it, two of the three went
+        /// straight to <c>panel.visualTree</c> and so skipped a nearer host - which is why a
+        /// Storybook story stage could not keep a popup inside its own canvas.
+        ///
+        /// In an application nothing changes: the only host is the one <see cref="SusApp"/> puts
+        /// on the UIDocument root, so walking up reaches exactly that host.
+        /// </summary>
+        public static OverlayHost FindOverlayHost(VisualElement requester)
+        {
+            for (var p = requester; p != null; p = p.parent)
+            {
+                if (p is OverlayHost self) return self;
+
+                // Host is normally the LAST child of its container - scan from the back.
+                // hierarchy, not the content container: a host parked on a ScrollView sits
+                // BESIDE the scrolled content (it must not scroll away, nor be wiped by a
+                // ClearContent), and the content-container view would not see it at all.
+                for (int i = p.hierarchy.childCount - 1; i >= 0; i--)
+                {
+                    if (p.hierarchy.ElementAt(i) is OverlayHost child) return child;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Ancestor-first host resolution WITH the panel root as fallback: the nearest existing
+        /// host (<see cref="FindOverlayHost"/>) when there is one, otherwise
+        /// <see cref="GetOrCreateOverlay"/> on <c>panel.visualTree</c>. Returns <c>null</c> only
+        /// when there is neither a host above the requester nor a panel to create one in.
+        /// </summary>
+        public static OverlayHost ResolveOverlayHost(VisualElement requester)
+        {
+            var host = FindOverlayHost(requester);
+            if (host != null)
+            {
+                // Same upkeep GetOrCreateOverlay does for an existing host: stay last sibling
+                // (paints on top), keep the Escape handler and the unity-* label strip.
+                host.BringToFront();
+                host.InstallEscapeHandler();
+                EnsureLabelClassStrip(host);
+                return host;
+            }
+
+            var root = requester?.panel?.visualTree;
+            return root == null ? null : GetOrCreateOverlay(root);
+        }
+
         /// <summary>
         /// Returns or creates an OverlayHost as the LAST child of the container.
         /// Last sibling = rendered on top (no z-index in USS). Idempotent.

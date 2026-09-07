@@ -100,8 +100,9 @@ namespace Sharq.Core
 
             if (_selfHost == null)
             {
-                var p = parent;
-                while (p != null) { if (p is OverlayHost oh) { _selfHost = oh; break; } p = p.parent; }
+                // Shared ancestor-first resolution (T-3032). Never CREATES a host here: no host
+                // above us means the caller falls back to inline display.
+                _selfHost = SusBootstrap.FindOverlayHost(this);
                 if (_selfHost == null && panel?.visualTree != null)
                     _selfHost = panel.visualTree.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
             }
