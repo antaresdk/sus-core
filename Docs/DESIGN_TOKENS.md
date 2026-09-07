@@ -21,7 +21,7 @@
 3. [Colors: three-layer token system](#3-colors-three-layer-token-system)
 4. [Icons: Phosphor Icons](#4-icons-phosphor-icons)
 5. [Themes: switching Light/Dark](#5-themes-switching-light-dark)
-6. [Responsive breakpoints](#6-responsive-breakpoints)
+6. [Responsive breakpoints](#6-responsive-breakpoints) (incl. [sizing token families](#6-1-sizing-token-families-what-scales-what-doesn-t))
 7. [Bootstrap: how everything is put together](#7-bootstrap-how-everything-is-put-together)
 8. [File structure](#8-file-structure)
 9. [Historical checklist](#9-historical-checklist)
@@ -686,12 +686,76 @@ Width is read from **`cascadeRoot.resolvedStyle.width`** on geometry changes (sa
 feed path as the removed `SusResolutionService`), with panel / Screen fallbacks
 only when the root is not laid out yet. See [06-responsive.md](./06-responsive.md).
 
-Downstream UI package token sheets may override package-specific tokens under those classes
-(heights, spacing, fonts). Components that already consume those vars pick up the
-active breakpoint without per-component C#.
+Package token sheets override package-specific tokens (heights, spacing, fonts) under those
+classes. Components that already consume those vars pick up the active breakpoint without
+per-component C#.
 
 PanelSettings for samples/wizard use **ConstantPixelSize** so breakpoint width matches
 the panel (no Unity `ScaleWithScreenSize` auto-scale).
+
+### 6.1 Sizing token families: what scales, what doesn't
+
+Every sizing property on a component — width, height, margin, padding, font size, border
+radius, border width, letter spacing, position offsets, 9-slice borders — is expressed as a
+token, never a bare number. That part of the rule is unconditional. The part that isn't
+unconditional is whether the token's *value* changes when the breakpoint changes — some
+families of sizes are meant to move with the screen, others are meant to stay put.
+
+| Family | Examples | Moves with breakpoint? | Why |
+|---|---|---|---|
+| Spacing | `--sus-space-*` / `--sk-space-*` | yes | Layout density is exactly what a breakpoint answers |
+| Control height | `--sk-form-height`, `--sk-row-height`, `--sk-button-height`, `--sk-input-height`, `--sk-table-row-height` and the size-tier consolidation that names them `--sk-control-h-*` | yes | Touch targets need to grow on a small screen even as spacing tightens |
+| Font size | `--sk-font-*` | yes | Legibility at arm's length differs from legibility at a desk |
+| Icon size, tooltip/menu max-width, the minimum touch target | `--sk-icon-*`, `--sk-tooltip-max-width`, `--sus-touch-min` | yes | Same reasoning as control height |
+| Pill radius | `--sk-radius-pill`, `--sk-chip-radius*` | yes, but derived | A pill's radius is always half its own control's height, so it rides the height family instead of having a ladder of its own |
+| Border width | hairline and thick borders, the focus-ring width | **no** | A hairline is a display-density concern — how many physical pixels make a crisp line — not a layout concern. Scaling it with logical width makes it vanish on some screens and double on others |
+| Corner radius (everything except pill) | `--sk-radius-xs` … `--sk-radius-xl` | **no** | A control's silhouette should read the same on a phone and on a large monitor. Height and radius don't scale by the same factor — compact screens get *taller* controls and *tighter* spacing at once — so scaling radius with height would distort the shape instead of preserving it |
+| Letter spacing | `--sk-tracking-*` | **no** | Tracking is a property of the typeface, not of the viewport |
+| 9-slice borders | slice tokens | **no** | A slice border indexes a fixed source texture; moving the cut re-slices the image instead of resizing it |
+| Sub-pixel optical nudges (a `top`/`right`/`bottom`/`left` of a few px used to correct alignment) | — | **no** | Same job as a hairline border — it compensates for rasterization, it isn't a layout offset |
+
+The second half of the table isn't an oversight. Those five families are declared invariant on
+purpose: the token still exists (so a project can still retheme it), but its value is the same
+on every breakpoint, and that's a decision a project can rely on rather than a gap waiting to be
+filled in.
+
+> **Status:** this table is the sizing contract the kit is converging on. Names already shipping
+> today — `--sus-space-*`, `--sk-space-*`, `--sk-font-*`, `--sk-form-height` and its siblings,
+> `--sk-radius-*`, `--sk-tracking-wide`/`--sk-tracking-medium` — keep working unchanged; the
+> newer consolidated names (`--sk-control-h-*`, the hairline/thick border tokens, the full
+> `--sk-tracking-*` set) and the single generated breakpoint sheet described below are landing as
+> part of the same release. Check the kit changelog for the exact version before relying on a
+> name that isn't in your installed copy yet.
+
+### 6.2 How the ladder is composed, and how a project overrides it
+
+Two axes decide which rung of a family's ladder is active:
+
+- the **breakpoint** (`sm` … `2xl`, from screen width), and
+- the **density** (`compact` / default / `comfortable`, an explicit product choice, not
+  screen-size adaptation — see [06-responsive.md](./06-responsive.md)).
+
+Both answer the same question — "how much room is there" — so they add up to a single step on
+the ladder, and a project sees one coherent scale rather than two axes that fight each other.
+A component's own size tier (`xs` … `xl`) answers a different question — "which of this
+component's sizes is this particular instance" — so it picks a rung *within* the ladder instead
+of shifting the ladder itself. Overriding the ladder therefore reflows every component that
+uses it at once; choosing a different size tier never changes what the ladder contains.
+
+There's no scale factor to tune — Unity's stylesheets have no arithmetic (no `calc()`, no
+multiplier custom property), so the value at each combination of breakpoint and density is an
+explicit, enumerated step rather than a computed one. A project that wants its own ladder
+overrides the token values at the combinations it cares about, the same way it overrides any
+other token (see [§1.4 Restyle without editing C#](#1-4-restyle-without-editing-c)) — it does not
+edit individual components, and it does not gain a coefficient to compute the next size from the
+last one.
+
+One migration note for anyone who has already overridden a breakpoint-scoped selector directly
+(`.breakpoint-xl .my-panel { width: 400px }`): that pattern still parses, but a future kit
+release resolves breakpoint and density together with higher specificity than a single-class
+selector, so a project override of that shape can stop winning. Overriding the token itself
+(rather than re-declaring the property under a breakpoint class) isn't affected by that change —
+it's the pattern this section recommends. Watch the changelog for the exact release.
 
 ---
 

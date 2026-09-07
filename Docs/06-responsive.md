@@ -64,14 +64,26 @@ width across the thresholds below, or force a breakpoint in Storybook
 
 ## Tokens (`--sk-*`)
 
-Downstream UI packages override spacing / heights / fonts under `.breakpoint-*`
-(e.g. a downstream `*-tokens.uss` sheet). Components already use `var(--sk-button-height)`,
+UI packages built on core (kit, game) resize spacing / heights / fonts under `.breakpoint-*`
+through their own token sheet. Components already use `var(--sk-button-height)`,
 `var(--sk-space-16)`, `var(--sk-font-body)`, etc. — they react automatically when
 the root class changes.
 
-Breakpoint token blocks are ordered **after** density in the kit token sheet so
-overlapping keys (heights, spacing) prefer the active breakpoint when both
-classes are present.
+Not every `--sk-*` token moves with the breakpoint. Sizes split into families — spacing,
+control height, font size and a few others resize; border width, radius (except a pill's,
+which follows its own height), letter spacing, 9-slice borders and small optical-alignment
+nudges stay fixed on every breakpoint, on purpose. See
+[Design tokens §6.1](https://sus-ui.dev/docs/guide/DESIGN_TOKENS) for the full family list
+and the reasoning behind each invariant one.
+
+Breakpoint and density (`.density-compact` / `.density-comfortable`) both narrow down "how
+much room is there", so a project should be able to combine them and get one predictable
+result rather than have one silently override the other.
+
+> **Status:** combining breakpoint and density predictably, and collecting every breakpoint ×
+> density combination into one generated token sheet, is part of an upcoming kit release — see
+> the kit changelog. Today the two axes can still compete on some breakpoints; this note will be
+> replaced with a plain statement of the new behavior once that release ships.
 
 ## Use in a component
 
@@ -90,9 +102,20 @@ public class ResponsivePanel : SusComponent
 }
 ```
 
-## USS via breakpoint classes
+## USS: resize through a token, not a breakpoint selector
+
+Prefer a token over hand-writing a `.breakpoint-*` selector on a project class — the token
+already carries the right value for every breakpoint, and it keeps working once breakpoint and
+density are resolved together (see the status note above):
 
 ```css
+/* preferred — the token already varies by breakpoint */
+.responsive-panel { width: var(--sk-tooltip-max-width, 300px); }
+```
+
+```css
+/* still parses, but a project override of this shape can stop winning once breakpoint and
+   density combine with higher specificity — override the token instead */
 .responsive-panel { width: 300px; }
 .breakpoint-xl .responsive-panel { width: 400px; }
 ```
