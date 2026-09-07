@@ -69,6 +69,10 @@ namespace Sharq.Core.Storybook.Controls
             Component = component ?? throw new ArgumentNullException(nameof(component));
             Context = new SusControlContext(component, story, colorTokens);
 
+            // The engine's own providers (icon picker, T-3035). Idempotent, and here rather than
+            // in a bootstrap so a panel built by a test or a probe is the panel the buyer sees.
+            SusControlFactory.RegisterDefaults();
+
             AddToClassList("sus-sb-ctlpanel");
             name = "sus-storybook-controls";
 

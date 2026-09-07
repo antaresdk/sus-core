@@ -49,6 +49,17 @@ namespace Sharq.Core.Storybook.Controls
         public static void ClearProviders() => Extra.Clear();
 
         /// <summary>
+        /// Registers the providers the ENGINE itself ships on top of the built-in table - today
+        /// the glyph picker of icon props (<see cref="SusIconControlProvider"/>, card T-3035).
+        /// Idempotent (the providers are singletons), and called by every
+        /// <see cref="SusControlPanel"/> it builds, so a panel is never the stub by accident.
+        ///
+        /// Deliberately NOT a static constructor: <see cref="ClearProviders"/> must be able to
+        /// leave the table bare, or the built-in rows could not be tested at all.
+        /// </summary>
+        public static void RegisterDefaults() => Register(SusIconControlProvider.Default);
+
+        /// <summary>
         /// Which widget the built-in table gives this prop. Order matters: a closed set beats the
         /// underlying type (an <c>int</c> with an allowed set is a picker, not a slider), and
         /// read-only beats everything (a control that cannot write must not look writable).

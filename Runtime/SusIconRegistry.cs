@@ -57,6 +57,14 @@ namespace Sharq.Core
                 InvalidateCache();
         }
 
+        /// <summary>
+        /// The registered providers in priority order (first asked first). Read-only: a browser
+        /// of the icon set — the storybook's glyph picker (card T-3035) — has to say WHERE the
+        /// glyphs come from and which registered set supplies nothing yet, and
+        /// <see cref="KnownAliases"/> is a union that has already lost that split.
+        /// </summary>
+        public static IReadOnlyList<ISusIconProvider> Providers => s_providers;
+
         // ── Known names — union of all providers, for browsing ──
         public static HashSet<string> KnownAliases => s_knownAliases ??= BuildKnownAliases();
         private static HashSet<string> s_knownAliases;

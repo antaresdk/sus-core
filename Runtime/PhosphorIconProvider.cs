@@ -15,6 +15,14 @@ namespace Sharq.Core
     /// </summary>
     public sealed class PhosphorIconProvider : ResourcesFolderIconProvider
     {
+        /// <summary>
+        /// SVG files the full set ships: 1512 names × 6 weights. Declared, not measured — the
+        /// number is what a project GETS by importing the sample, and it has to be nameable
+        /// exactly when the sample is absent and <see cref="ResourcesFolderIconProvider.KnownNames"/>
+        /// is therefore empty (the storybook's icon picker prints it as the "not imported" hint).
+        /// </summary>
+        public const int DeclaredSvgCount = 9072;
+
         public PhosphorIconProvider() : base("phosphor") { }
     }
 }
