@@ -1,0 +1,16 @@
+{
+    "name": "com.sharq-it.sus.core.storybook",
+    "rootNamespace": "Sharq.Core.Storybook",
+    "references": [
+        "com.sharq-it.sus.core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

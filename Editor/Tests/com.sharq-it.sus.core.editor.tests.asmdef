@@ -4,6 +4,7 @@
     "references": [
         "com.sharq-it.sus.core",
         "com.sharq-it.sus.core.editor",
+        "com.sharq-it.sus.core.storybook",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

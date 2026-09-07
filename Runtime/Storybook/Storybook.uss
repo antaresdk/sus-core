@@ -1,0 +1,493 @@
+/*
+ * Shell of the SUS storybook engine — zone A (navigation), the shell chrome around it and the
+ * empty slots of zones B..E (plan ARCH-20260907-STORYBOOK-ENGINE.md §4.6, §6.1 step 3).
+ *
+ * This file lives NEXT TO THE CODE and is referenced by GUID from a [SerializeField] StyleSheet
+ * (SusStorybookBehaviour) or loaded by package path in the Editor. It must NOT move under
+ * Resources/: a package's Resources folder goes into every player build unconditionally, and a
+ * buyer who never opens the storybook must not pay for its skin (plan §0.1).
+ *
+ * Every visual decision is here and none of it is in C#: the engine now lives in Runtime, where
+ * R53/R120 judge appearance written through the C# style API.
+ */
+
+/* ── shell ─────────────────────────────────────────────────────────────── */
+
+.sus-sb {
+    flex-grow: 1;
+    flex-direction: column;
+    min-height: 0;
+    background-color: var(--sus-bg-page);
+    color: var(--sus-text-primary);
+}
+
+.sus-sb__topbar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    height: 46px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+    background-color: var(--sus-bg-surface);
+}
+
+.sus-sb__burger {
+    width: 30px;
+    height: 30px;
+    margin-right: 8px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-sm);
+    background-color: var(--sus-bg-surface);
+    color: var(--sus-text-primary);
+}
+
+.sus-sb--narrow .sus-sb__burger {
+    display: flex;
+}
+
+.sus-sb__crumbs {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 260px;
+}
+
+.sus-sb__spacer {
+    flex-grow: 1;
+}
+
+.sus-sb__link {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+    margin-right: 10px;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sus-sb--narrow .sus-sb__link {
+    display: none;
+}
+
+.sus-sb__share {
+    height: 30px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-sm);
+    background-color: var(--sus-bg-surface);
+    color: var(--sus-text-primary);
+    font-size: 12px;
+}
+
+.sus-sb__share:hover {
+    border-color: var(--sus-border-hover);
+}
+
+.sus-sb__body {
+    flex-grow: 1;
+    flex-direction: row;
+    min-height: 0;
+}
+
+.sus-sb__scrim {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--sus-scrim);
+    display: none;
+}
+
+.sus-sb--narrow.sus-sb--drawer-open .sus-sb__scrim {
+    display: flex;
+}
+
+/* ── zone A: navigation ────────────────────────────────────────────────── */
+
+.sus-sb-nav {
+    flex-shrink: 0;
+    width: 220px;
+    flex-direction: column;
+    min-height: 0;
+    border-right-width: 1px;
+    border-right-color: var(--sus-border);
+    background-color: var(--sus-bg-surface);
+}
+
+.sus-sb--narrow .sus-sb-nav {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 260px;
+    border-right-width: 1px;
+    display: none;
+}
+
+.sus-sb--narrow.sus-sb--drawer-open .sus-sb-nav {
+    display: flex;
+}
+
+.sus-sb-nav__head {
+    flex-shrink: 0;
+    padding-top: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-bottom: 6px;
+}
+
+.sus-sb-nav__search {
+    flex-direction: row;
+    align-items: center;
+    height: 30px;
+    padding-left: 9px;
+    padding-right: 9px;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-sm);
+    background-color: var(--sus-bg-surface-variant);
+}
+
+.sus-sb-nav__search:focus-within {
+    border-color: var(--sus-border-focus);
+}
+
+.sus-sb-nav__search-input {
+    flex-grow: 1;
+    font-size: 12px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+    color: var(--sus-text-primary);
+}
+
+.sus-sb-nav__search-input > #unity-text-input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    color: var(--sus-text-primary);
+}
+
+.sus-sb-nav__search-hint {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 10.5px;
+    color: var(--sus-text-secondary);
+    margin-left: 6px;
+}
+
+.sus-sb-nav__search-placeholder {
+    position: absolute;
+    left: 9px;
+    font-size: 12px;
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-nav__search-placeholder.sus-sb-hidden {
+    display: none;
+}
+
+.sus-sb-nav__tabs {
+    flex-direction: row;
+    margin-top: 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+}
+
+.sus-sb-nav__tab {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    min-width: 0;
+    margin: 0;
+    padding-top: 6px;
+    padding-bottom: 8px;
+    padding-left: 2px;
+    padding-right: 2px;
+    -unity-text-align: middle-center;
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(0, 0, 0, 0);
+    border-radius: 0;
+    margin-bottom: -1px;
+}
+
+.sus-sb-nav__tab:hover {
+    color: var(--sus-text-primary);
+}
+
+.sus-sb-nav__tab--active {
+    color: var(--sus-text-primary);
+    -unity-font-style: bold;
+    border-bottom-color: var(--sus-primary);
+}
+
+.sus-sb-nav__list {
+    flex-grow: 1;
+    min-height: 0;
+    padding-left: 6px;
+    padding-right: 6px;
+    padding-bottom: 8px;
+}
+
+.sus-sb-nav__group {
+    -unity-font-definition: var(--font-family-mono);
+    -unity-font-style: bold;
+    font-size: 10.5px;
+    letter-spacing: 1px;
+    color: var(--sus-text-secondary);
+    margin-top: 12px;
+    margin-bottom: 4px;
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.sus-sb-nav__row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-radius: var(--sus-radius-sm);
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    margin: 0;
+    color: var(--sus-text-primary);
+    font-size: 12.5px;
+    -unity-text-align: middle-left;
+}
+
+.sus-sb-nav__row:hover {
+    background-color: var(--sus-hover-overlay);
+}
+
+.sus-sb-nav__row--active {
+    background-color: var(--sus-selected-overlay);
+    color: var(--sus-primary);
+    -unity-font-style: bold;
+}
+
+.sus-sb-nav__row-name {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sus-sb-nav__row-count {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 10.5px;
+    color: var(--sus-text-secondary);
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.sus-sb-nav__empty {
+    margin-top: 8px;
+    margin-left: 2px;
+    margin-right: 2px;
+    padding: 10px;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-md);
+    background-color: var(--sus-bg-surface-variant);
+}
+
+.sus-sb-nav__empty-title {
+    color: var(--sus-text-primary);
+    -unity-font-style: bold;
+    font-size: 12px;
+    margin-bottom: 4px;
+    white-space: normal;
+}
+
+.sus-sb-nav__empty-text {
+    color: var(--sus-text-secondary);
+    font-size: 12px;
+    white-space: normal;
+}
+
+.sus-sb-nav__empty-code {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-primary);
+    background-color: var(--sus-bg-surface-raised);
+    border-radius: var(--sus-radius-sm);
+    padding: 6px 8px;
+    margin-top: 8px;
+    white-space: normal;
+}
+
+.sus-sb-nav__foot {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-top-width: 1px;
+    border-top-color: var(--sus-border);
+    padding: 9px 12px;
+}
+
+.sus-sb-nav__health {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sus-sb-nav__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--sus-radius-full);
+    margin-right: 6px;
+    flex-shrink: 0;
+    background-color: var(--sus-success);
+}
+
+.sus-sb-nav__dot--bad {
+    background-color: var(--sus-error);
+}
+
+.sus-sb-nav__health-text,
+.sus-sb-nav__version {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+}
+
+/* ── zones B..E ────────────────────────────────────────────────────────── */
+
+.sus-sb-main {
+    flex-grow: 1;
+    flex-direction: row;
+    min-width: 0;
+    min-height: 0;
+}
+
+.sus-sb-center {
+    flex-grow: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.sus-sb-zone {
+    flex-shrink: 0;
+}
+
+/* Zone B — environment bar. Empty until step 5 fills it. */
+.sus-sb-env {
+    flex-direction: row;
+    align-items: center;
+    height: 38px;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--sus-border);
+}
+
+/* Zone C — stage. */
+.sus-sb-stage {
+    flex-grow: 1;
+    min-height: 0;
+    padding: 16px 20px 22px 20px;
+}
+
+.sus-sb-stage__title {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--sus-text-primary);
+    margin-top: 8px;
+}
+
+.sus-sb-stage__purpose {
+    font-size: 13px;
+    color: var(--sus-text-secondary);
+    margin-top: 4px;
+    white-space: normal;
+}
+
+.sus-sb-stage__canvas {
+    margin-top: 18px;
+    padding: 22px;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-md);
+    background-color: var(--sus-bg-page);
+    min-height: 120px;
+}
+
+.sus-sb-stage__empty {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+.sus-sb-stage__empty-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: var(--sus-text-primary);
+    margin-bottom: 6px;
+}
+
+.sus-sb-stage__empty-text {
+    font-size: 12.5px;
+    color: var(--sus-text-secondary);
+    white-space: normal;
+    max-width: 420px;
+    -unity-text-align: middle-center;
+}
+
+/* Zone D — control panel. Empty until step 4 fills it. */
+.sus-sb-panel {
+    flex-shrink: 0;
+    width: 300px;
+    min-height: 0;
+    border-left-width: 1px;
+    border-left-color: var(--sus-border);
+    background-color: var(--sus-bg-surface);
+}
+
+.sus-sb--narrow .sus-sb-panel {
+    display: none;
+}
+
+/* Zone E — probe. Empty until step 6 fills it. */
+.sus-sb-probe {
+    flex-shrink: 0;
+    height: 0;
+    border-top-width: 0;
+    border-top-color: var(--sus-border);
+}
+
+.sus-sb-slot-hint {
+    font-size: 11px;
+    color: var(--sus-text-disabled);
+    -unity-font-definition: var(--font-family-mono);
+}
+
+/* Visibility switch of the shell — state through classes, never through the C# style API
+ * (R53/R120). Prefixed on purpose: the stylesheet is applied to the shell root, so an unprefixed
+ * .is-hidden would also reach every story mounted inside the stage. */
+.sus-sb-hidden {
+    display: none;
+}
