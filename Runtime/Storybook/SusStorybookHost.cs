@@ -90,19 +90,9 @@ namespace Sharq.Core.Storybook
             _burger.AddToClassList("sus-sb__burger");
 
             _crumbs.AddToClassList("sus-sb__crumbs");
-            _address.AddToClassList("sus-sb__link");
-
-            var spacer = new VisualElement();
-            spacer.AddToClassList("sus-sb__spacer");
-
-            _share = new Button(ShareCurrentAddress) { text = ShareLabel };
-            _share.AddToClassList("sus-sb__share");
 
             top.Add(_burger);
             top.Add(_crumbs);
-            top.Add(spacer);
-            top.Add(_address);
-            top.Add(_share);
 
             // ── body: zone A + main ──────────────────────────────────────
             var body = new VisualElement();
@@ -260,8 +250,11 @@ namespace Sharq.Core.Storybook
         /// <summary>Zone A, exposed so a step-4 panel can read the selection.</summary>
         public SusStoryNavPanel Nav => _nav;
 
-        /// <summary>Zone B slot — environment axes land here in step 5.</summary>
+        /// <summary>Zone B — the environment chip group (<see cref="SusStoryEnvBar"/>, card T-3036).</summary>
         public VisualElement ZoneEnvironment => _zoneEnv;
+
+        /// <summary>The environment bar itself, exposed so a test can drive a chip directly.</summary>
+        public SusStoryEnvBar Env => _env;
 
         /// <summary>Zone D slot — the generated control panel lands here in step 4.</summary>
         public VisualElement ZoneControls => _zonePanel;
@@ -330,11 +323,26 @@ namespace Sharq.Core.Storybook
         {
             if (_disposed) return;
 
+            // env.* entries apply to their axis and leave the route BEFORE anything renders, so a
+            // story mounted from a shared link comes up already in the environment it was shared
+            // from (plan §4.4: "чтение из адреса при старте"). What Mount/BuildControls see below
+            // is the clean route — control props only, exactly like before this card.
+            route = _env.ConsumeFromRoute(route);
+
             // The address bar is written only for routes that did NOT come from it (§4.6 loop
             // guard). SusStoryUrl.Push enforces the same rule; asking twice is cheap and makes
-            // the intention readable at the call site.
-            if (route != null && !route.FromUrl) _url.Push(route);
-            _address.text = route != null ? route.ToHash() : _url.Address;
+            // the intention readable at the call site. WithEnv puts env.* BACK for display/share
+            // only (plan §4.4: "поделиться" must reproduce the environment).
+            if (route != null)
+            {
+                var withEnv = WithEnv(route);
+                if (!route.FromUrl) _url.Push(withEnv);
+                _address.text = withEnv.ToHash();
+            }
+            else
+            {
+                _address.text = _url.Address;
+            }
 
             var entry = route == null ? null : SusStoryRegistry.Find(route.StoryId);
 
@@ -545,11 +553,11 @@ namespace Sharq.Core.Storybook
         void ShareCurrentAddress()
         {
             bool ok = _url.CopyToClipboard();
-            _share.text = ok ? ShareDoneLabel : ShareLabel;
+            _shareLabel.text = ok ? ShareDoneLabel : ShareLabel;
             if (!ok) return;
 
             _shareReset?.Pause();
-            _shareReset = schedule.Execute(() => _share.text = ShareLabel).StartingIn(ShareFeedbackMs);
+            _shareReset = schedule.Execute(() => _shareLabel.text = ShareLabel).StartingIn(ShareFeedbackMs);
         }
 
         void ToggleDrawer() => EnableInClassList("sus-sb--drawer-open", !ClassListContains("sus-sb--drawer-open"));
@@ -558,10 +566,18 @@ namespace Sharq.Core.Storybook
 
         void OnGeometryChanged(GeometryChangedEvent evt)
         {
-            bool narrow = evt.newRect.width > 0 && evt.newRect.width < NarrowWidth;
-            if (narrow == ClassListContains("sus-sb--narrow")) return;
-            EnableInClassList("sus-sb--narrow", narrow);
-            if (!narrow) CloseDrawer();
+            float width = evt.newRect.width;
+
+            bool narrow = width > 0 && width < NarrowWidth;
+            if (narrow != ClassListContains("sus-sb--narrow"))
+            {
+                EnableInClassList("sus-sb--narrow", narrow);
+                if (!narrow) CloseDrawer();
+            }
+
+            // Zone B's deep-link only fits a host wide enough to show it without crowding the
+            // chips (card T-3036, mock-up: "деролинк... только ≥1200").
+            EnableInClassList("sus-sb--wide", width >= WideWidth);
         }
 
         void OnKeyDown(KeyDownEvent evt)

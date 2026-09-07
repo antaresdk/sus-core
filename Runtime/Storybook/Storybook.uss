@@ -393,7 +393,7 @@
     flex-shrink: 0;
 }
 
-/* Zone B — environment bar. Empty until step 5 fills it. */
+/* Zone B — environment (card T-3036, plan §4.4): chip group left, deep-link + share right. */
 .sus-sb-env {
     flex-direction: row;
     align-items: center;
@@ -402,6 +402,95 @@
     padding-right: 16px;
     border-bottom-width: 1px;
     border-bottom-color: var(--sus-border);
+}
+
+.sus-sb-env__bar {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    height: 30px;
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: var(--sus-border);
+    border-radius: var(--sus-radius-sm);
+    background-color: var(--sus-bg-surface);
+    overflow: hidden;
+}
+
+/* Mock-up: narrow mode scrolls the whole chip group as one horizontal strip. */
+.sus-sb-env__chips {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.sus-sb-env__chips > #unity-content-container {
+    flex-direction: row;
+    align-items: center;
+}
+
+.sus-sb-env__chip {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    height: 28px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-right-width: 1px;
+    border-right-color: var(--sus-border);
+}
+
+.sus-sb-env__chip--last {
+    border-right-width: 0;
+}
+
+.sus-sb-env__chip-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sus-sb-env__chip-value {
+    font-size: 12px;
+    color: var(--sus-text-primary);
+    white-space: nowrap;
+}
+
+/* Deep-link — the SAME Label the top bar used before this card (T-3033); only ≥1200px wide
+ * (WideWidth) so it does not crowd the chip group (card T-3036, mock-up). */
+.sus-sb-env__link {
+    display: none;
+    margin-left: 12px;
+    margin-right: 10px;
+}
+
+.sus-sb--wide .sus-sb-env__link {
+    display: flex;
+}
+
+/* Share — the SAME Button the top bar used before this card; icon always shown, its text label
+ * hidden in narrow mode so the button collapses to an icon (card T-3036, mock-up: "кнопка share —
+ * иконкой"). */
+.sus-sb-env__share {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+}
+
+.sus-sb-env__share-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+.sus-sb-env__share-label {
+    margin-left: 6px;
+}
+
+.sus-sb--narrow .sus-sb-env__share-label {
+    display: none;
 }
 
 /* Zone C — stage. */
