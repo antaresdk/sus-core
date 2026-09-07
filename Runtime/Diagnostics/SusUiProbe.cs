@@ -190,6 +190,20 @@ namespace Sharq.Core.Diagnostics
             return json;
         }
 
+        /// <summary>
+        /// Just the anomaly lines of <see cref="GetHealthJson"/> — the same detector, without the
+        /// JSON around it. Zone E of the storybook (card T-3040) counts these for one stage
+        /// canvas, and a shell that had to parse its own JSON to say "health 2" would be one
+        /// parser away from disagreeing with <c>sus_ui_health</c> about the same tree.
+        /// </summary>
+        public static IReadOnlyList<string> GetAnomalies(VisualElement root)
+        {
+            int elements = 0, components = 0, children = 0, maxDepth = 0;
+            var anomalies = new List<string>();
+            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies);
+            return anomalies;
+        }
+
         private static void Walk(VisualElement el, int depth,
             ref int elements, ref int components, ref int children, ref int maxDepth, List<string> anomalies)
         {

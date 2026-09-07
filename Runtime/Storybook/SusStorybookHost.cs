@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook.Controls;   // zone D, card T-3034
 using Sharq.Core.Storybook.Nav;
+using Sharq.Core.Storybook.Probe;   // zone E, card T-3040
 using Sharq.Core.Storybook.UI;
 
 namespace Sharq.Core.Storybook
@@ -56,6 +57,7 @@ namespace Sharq.Core.Storybook
         readonly VisualElement _zoneEnv = new();
         readonly VisualElement _zonePanel = new();
         readonly VisualElement _zoneProbe = new();
+        readonly SusStoryProbe _probe = new();   // zone E, card T-3040
         readonly ScrollView _stage = new();
         // Zone C (card T-3038).
         readonly Label _stageCrumbs = new();
@@ -165,10 +167,11 @@ namespace Sharq.Core.Storybook
             center.Add(_zoneEnv);
             center.Add(_stage);
 
-            // Zone E — probe (empty slot, step 6).
+            // Zone E — probe (card T-3040): event feed, health of the stage canvas, frame verdict.
             _zoneProbe.name = "sus-storybook-zone-e";
             _zoneProbe.AddToClassList("sus-sb-zone");
             _zoneProbe.AddToClassList("sus-sb-probe");
+            _zoneProbe.Add(_probe);
             center.Add(_zoneProbe);
 
             // Zone D — the control panel, built from the mounted story (card T-3034).
@@ -192,6 +195,11 @@ namespace Sharq.Core.Storybook
             _nav.PackageSelected += _ => CloseDrawer();
 
             _history.Changed += ApplyRoute;
+
+            // The anomaly count of zone E is the one shown at the bottom of zone A (card T-3040):
+            // a reader scanning the story list must see that this story is broken without
+            // looking down at the strip.
+            _probe.AnomalyCountChanged += count => _nav.AnomalyCount = count;
 
             _url = new SusStoryUrl();
             _url.ExternalChanged += route =>
@@ -259,8 +267,11 @@ namespace Sharq.Core.Storybook
         /// <summary>Zone D slot — the generated control panel lands here in step 4.</summary>
         public VisualElement ZoneControls => _zonePanel;
 
-        /// <summary>Zone E slot — the probe lands here in step 6.</summary>
+        /// <summary>Zone E slot — holds <see cref="Probe"/>.</summary>
         public VisualElement ZoneProbe => _zoneProbe;
+
+        /// <summary>Zone E itself: event feed, health count and frame verdict (card T-3040).</summary>
+        public SusStoryProbe Probe => _probe;
 
         /// <summary>Story currently mounted, or null.</summary>
         public SusStoryEntry CurrentStory { get; private set; }
@@ -288,6 +299,10 @@ namespace Sharq.Core.Storybook
             bool open = _canvasOverlay != null && _canvasOverlay.Count > 0;
             _canvas.EnableInClassList("sus-sb-stage__canvas--overlay", open);
             _sizes.SetOverlayOpen(open);
+
+            // Zone E rides the same tick (card T-3040): health has no event to listen to either —
+            // a story that collapses to zero size does it silently, during layout.
+            _probe.Refresh();
         }
 
         /// <summary>Goes back one route; false when there is nowhere to go.</summary>
@@ -397,6 +412,10 @@ namespace Sharq.Core.Storybook
             _matrix.Show(entry);
             _sizes.Track(component);
 
+            // Zone E, card T-3040: the feed subscribes to every declared event of THIS instance
+            // and forgets the previous story's session.
+            _probe.Attach(entry, component, _canvas);
+
             // UI Toolkit raises no event when an overlay gains a child, so the stage looks. The
             // tick is cheap (two class flips) and stops with the story.
             _overlayWatch?.Pause();
@@ -495,6 +514,7 @@ namespace Sharq.Core.Storybook
             _overlayWatch = null;
             _matrix.Clear();
             _sizes.Track(null);
+            _probe.Clear();   // card T-3040: reset on story change
             _sizes.SetOverlayOpen(false);
             if (_canvasOverlay != null) _canvasOverlay.ClearAll();
             if (_current != null)
@@ -620,6 +640,7 @@ namespace Sharq.Core.Storybook
             _env.Dispose();
             _url.Dispose();
             Unmount();
+            _probe.Dispose();   // card T-3040 — after Unmount, so the last session still reports
         }
     }
 }

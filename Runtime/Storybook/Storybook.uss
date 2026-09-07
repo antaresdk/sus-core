@@ -697,12 +697,125 @@
     display: none;
 }
 
-/* Zone E — probe. Empty until step 6 fills it. */
+/* ── Zone E — the probe strip (card T-3040, mock-up "Storybook Shell" zone E) ─────────────
+ *
+ * One line under the stage: what the story raised, what it promised and never raised, how
+ * healthy the canvas is and whether the live render still matches its canon. Everything the
+ * C# side of Probe/ does to it is a class flip — not one .style write (R53/R120).
+ */
 .sus-sb-probe {
     flex-shrink: 0;
-    height: 0;
-    border-top-width: 0;
+    border-top-width: 1px;
     border-top-color: var(--sus-border);
+    background-color: var(--sus-bg-surface);
+    padding: 9px 16px;
+}
+
+.sus-sb-probe__body {
+    flex-direction: column;
+}
+
+.sus-sb-probe__strip {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sus-sb-probe__title,
+.sus-sb-probe__none,
+.sus-sb-probe__health,
+.sus-sb-probe__frame,
+.sus-sb-probe__unfired,
+.sus-sb-probe__chip {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-secondary);
+}
+
+.sus-sb-probe__title {
+    margin-right: 8px;
+}
+
+.sus-sb-probe__chips {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.sus-sb-probe__chip {
+    background-color: var(--sus-bg-surface-variant);
+    border-radius: var(--sus-radius-sm);
+    padding: 3px 7px;
+    margin-right: 6px;
+    color: var(--sus-text-primary);
+}
+
+.sus-sb-probe__none {
+    margin-right: 8px;
+}
+
+/* "Promise without a deed" is a warning, not a failure: the story may simply not have been
+ * clicked yet — which is exactly what the reader has to notice. */
+.sus-sb-probe__unfired {
+    color: var(--sus-warning);
+    margin-right: 8px;
+}
+
+.sus-sb-probe__status {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    justify-content: flex-end;
+}
+
+.sus-sb-probe__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--sus-radius-full);
+    margin-right: 6px;
+    flex-shrink: 0;
+    background-color: var(--sus-success);
+}
+
+.sus-sb-probe__dot--bad {
+    background-color: var(--sus-error);
+}
+
+.sus-sb-probe__health--bad,
+.sus-sb-probe__frame--bad {
+    color: var(--sus-error);
+}
+
+.sus-sb-probe__frame {
+    margin-left: 14px;
+}
+
+.sus-sb-probe__anomalies {
+    flex-direction: column;
+    margin-top: 6px;
+}
+
+.sus-sb-probe__anomaly {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.sus-sb-probe__anomaly-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    margin-right: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--sus-error);
+}
+
+.sus-sb-probe__anomaly-text {
+    -unity-font-definition: var(--font-family-mono);
+    font-size: 11px;
+    color: var(--sus-text-primary);
+    white-space: normal;
+    flex-shrink: 1;
 }
 
 .sus-sb-slot-hint {
