@@ -95,12 +95,19 @@ controls look like *your* game **without editing C#**:
    (`AddToClassList` / `RemoveFromClassList` or the Sharq equivalent). Restyling a state is the
    same job as restyling the base: change the sheet, not the script.
 
-**Policy vs debt.** Look-and-feel that buyers need to override belongs in USS. Geometry and
-motion that must follow runtime props may stay in C#. UITK inline appearance writes from C#
-(`.style.backgroundColor`, `.style.color`, fonts, radii, and similar) **beat any selector** —
-a known remainder of those call sites still exists and is being migrated into USS/classes. Do
-not treat those call sites as the theming API; prefer tokens and classes. Named exceptions
-(motion tweens, font service, drag ghosts, and similar) are intentional and documented in code.
+**Policy vs debt.** Look-and-feel that buyers need to override belongs in USS — classes and
+tokens, never inline. Runtime code switches appearance by calling `AddToClassList` /
+`RemoveFromClassList` / `EnableInClassList`; it does not assign `.style.<X>` for anything a class
+could express — colors, fonts, and every on/off switch (`display`, `position`, `flex*`, `align*`,
+`justify*`, text alignment and similar). The only legitimate direct write is a continuous value
+computed from data at runtime that no class enumeration could cover — a size measured from a
+prop, a tween's current frame, a color parsed from a per-instance string, a floating tooltip's
+position measured from its anchor. Those call sites carry an inline comment naming the reason
+(`// sus:uss-impossible <why>`, plus `// sus:style-ok <why>` next to a color/font write) so the
+exception is visible in the diff and can be audited — it is not a general-purpose styling API,
+and writing `.style.<X>` to skip a USS class is a defect, not a shortcut. Hiding an element
+follows the same rule: toggle a `sus-hidden` class (guarded in the component's own sheet, so the
+element's own base rule is never `display: none`), don't set `display` from code.
 
 ---
 
@@ -938,13 +945,17 @@ L1 helpers often used next to L3 (not counted in the 61): `--font-family-regular
 
 ```csharp
 // C# - only dynamic from props
-el.style.width = size;                     // ← from prop Size
-el.style.height = size;
+el.style.width = size;   // sus:uss-impossible continuous value from prop Size
+el.style.height = size;  // sus:uss-impossible continuous value from prop Size
 el.AddToClassList("icon-row");             // ← statics in USS
 
 /* USS:
 .icon-row { flex-direction: row; align-items: center; margin-bottom: 6px; } */
 ```
+
+The `sus:uss-impossible <reason>` comment is not decorative — it is what marks a `.style.<X>`
+write as an intentional, audited exception instead of debt. Without it (or on a switch like
+`flexDirection`/`alignItems` below) the same write is the antipattern in the next example.
 
 **Example (bad - antipattern):**
 
@@ -985,16 +996,16 @@ In special cases (self-target, container-target - see rule `sharq-css-scoping.md
 UI Toolkit Known Issue: `VectorImage` sometimes doesn't render on the first frame. Proven pattern (from old `SizedIcon`):
 
 ```csharp
-el.style.backgroundImage = new StyleBackground(vec);
+el.style.backgroundImage = new StyleBackground(vec);  // sus:uss-impossible resolved icon asset from data
 el.MarkDirtyRepaint();
 el.schedule.Execute(() =>
 {
-    el.style.backgroundImage = new StyleBackground(vec);
+    el.style.backgroundImage = new StyleBackground(vec);  // sus:uss-impossible resolved icon asset from data
     el.MarkDirtyRepaint();
 }).ExecuteLater(0);
 el.schedule.Execute(() =>
 {
-    el.style.backgroundImage = new StyleBackground(vec);
+    el.style.backgroundImage = new StyleBackground(vec);  // sus:uss-impossible resolved icon asset from data
     el.MarkDirtyRepaint();
 }).ExecuteLater(16);  // next frame
 ```

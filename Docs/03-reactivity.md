@@ -87,12 +87,16 @@ protected override void Created()
     WatchEffect(() =>
     {
         var ratio = Health.Value / MaxHealth.Value;
-        bar.style.width = Length.Percent(ratio * 100f);
+        bar.style.width = Length.Percent(ratio * 100f);  // sus:uss-impossible continuous value from Health/MaxHealth
     });
 }
 ```
 
 Automatically tracks every `Prop<T>` and `Computed<T>` read inside `fn`, and re-runs `fn` whenever any of them changes. Returns a `WatchHandle` for unsubscribing.
+
+`bar.style.width` here is the legitimate case for a direct style write: a continuous value with no
+finite set of classes to enumerate. It still carries the `sus:uss-impossible` marker — see
+[Design tokens §1.4](./DESIGN_TOKENS.md) for what does and doesn't qualify.
 
 **Internally** this uses `ReactiveEffect` - the single reactive primitive that every `Bind*` method and `WatchEffect` are built on. When a component detaches, all of its subscriptions are cleared automatically (`DisposeAllBindings`).
 

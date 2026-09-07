@@ -142,8 +142,14 @@ Details: [CSS Scoping](./05-css-scoping.md).
 |----|--------|
 | USS in `<style>` + `AddToClassList` / `:class` | `element.style.width = 12f` for static layout |
 | Modifier classes (`.card--open`) | Copying the same tokens into C# |
+| `EnableInClassList` for a state/switch (hover, open, hidden…) | `element.style.display = DisplayStyle.None` |
 
-Use C# `style.*` only for runtime geometry (`resolvedStyle`, `GeometryChangedEvent`) or one-off hosts outside the component.
+Use C# `style.*` only for a continuous value computed from data at runtime that no class could
+enumerate (a size from a prop, a tween frame, a position measured from `resolvedStyle`/
+`GeometryChangedEvent`) — and mark the line `// sus:uss-impossible <why>` so the exception reads
+as intentional, not as an unmigrated shortcut. A switch (`display`, `position`, `flex*`, `align*`,
+`justify*` and similar) is never a valid use of `style.*`, marker or not — it is always a class.
+See [Design tokens §1.4](./DESIGN_TOKENS.md) for the full rule.
 
 ### Inline `style="…"` attribute
 
