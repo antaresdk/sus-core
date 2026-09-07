@@ -207,7 +207,7 @@ public class MyApp : MonoBehaviour
 2. **Icons** — `UseIcons` providers registered (highest priority)
 3. **Token cascade** — `_palette` → `_font` → `_theme` → `design-tokens` → `_icon` → L4/L5 extras + **`OverlayHost`** (last child)
 4. **World** — `EnsureWorldSpacePanel` + `WorldSpaceService.Default` (unless `UseWorldSpace(false)`)
-5. **Fonts** — `UseFonts` on root + OverlayHost
+5. **Fonts** — `UseFonts` writes no style; typeface comes from `_font.uss` / `--sus-font-family-*`, already loaded on root and OverlayHost by the token cascade (step 3)
 6. **Custom styles** — `UseCustomStyles` on root + OverlayHost (top override layer)
 7. **Configure** — callbacks (router registration, manual UI)
 8. **Mount** — root component (if `Mount<T>`)
@@ -301,9 +301,16 @@ example for each axis; everything is already connected in the starter via one `U
 | Axis | File | Line in starter |
 |---|---|---|
 | Colors/sizes (tokens) | `Customization/Theme/Resources/branding.uss` | `.UseCustomStyles("branding")` |
-| Fonts | `Customization/Fonts/AppFonts.asset` | `.UseFonts(_fonts)` |
+| Fonts | `Customization/Fonts/AppFonts.asset` | `.UseFonts(_fonts)` + one-time **Window → SUS → Fonts → Export Font Set to USS** |
 | Icons | `Customization/Icons/Resources/SusRuntime/Icons/app/…` | `.UseIcons(new ResourcesFolderIconProvider(<yourPackageOrCollection>, "app"))` |
 | Your component | `Customization/Components/AppButton.sharq` (optional downstream package) | `<sus:AppButton>` in `HomeScreen.sharq` |
+
+> **Fonts — export step caveat.** Filling `AppFonts.asset` in the Inspector and calling
+> `.UseFonts(_fonts)` is not enough by itself — Unity has no API to push a `SusFontAsset` onto
+> the tree from C#. Run **Window → SUS → Fonts → Export Font Set to USS** once after filling the
+> asset (and again after changing it); that writes `Assets/Resources/SusRuntime/_font.uss`, which
+> is what actually reaches the cascade. See [Design tokens §2](./DESIGN_TOKENS.md#2-fonts) /
+> `Documentation~/font-extension.md`.
 
 > **Icons — first argument caveat.** `ResourcesFolderIconProvider(editorPackagePath, collection)`
 > resolves the editor scan against `Packages/{editorPackagePath}/Runtime/Resources/SusRuntime/Icons/{collection}`

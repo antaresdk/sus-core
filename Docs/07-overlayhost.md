@@ -112,8 +112,12 @@ overlay.InstallFocusTrap(myModalRoot);
 **Yes.** The OverlayHost is the last child of the screen root and receives the full design-token
 cascade during bootstrap (`SusApp` / `SusBootstrap.GetOrCreateOverlay`), plus:
 
-- `SusApp.UseCustomStyles(...)` (branding) and `UseFonts(...)` are applied to the OverlayHost as
-  well as the screen root, so popups match your brand colors and typeface.
+- `SusApp.UseCustomStyles(...)` (branding) is applied to the OverlayHost as well as the screen
+  root, so popups match your brand colors too.
+- Typeface reaches the OverlayHost the same way it reaches everything else — through the USS
+  cascade (`_font.uss` / `--sus-font-family-*` and the `sus-font-*` marker classes), not through
+  an explicit apply call. The OverlayHost lives in the same panel as the screen root, so it
+  inherits the panel's typeface and resolves the same marker classes on its own children.
 - `SusThemeService.Instance.SetTheme(root, theme)` also swaps the `.theme-*` class **on the
   OverlayHost and on every currently open overlay child**, so reparented popups repaint with the
   active theme.

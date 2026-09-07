@@ -152,12 +152,18 @@ public class MultiPanelEntry : MonoBehaviour
 `_global.uss` is **not** part of this cascade. It is applied via panel TSS (`SusDefault.tss` /
 `SusBootstrap.ApplyDefaultTSS` / `SusApp.Create(UIDocument)`).
 
-**Default font** is Montserrat. Comes with the package (`_font.uss`). Preferred override is
-`SusApp.UseFonts(SusFontAsset)` (see [Design tokens §2](./DESIGN_TOKENS.md)). To override in USS
-instead:
-1. Create `Assets/Resources/SusRuntime/_font.uss`
-2. Add `:root { -unity-font-definition: url("path/to/YourFont.asset"); }` (use `-unity-font-definition`
-   with a Font Asset, **not** the legacy `-unity-font`)
+**Default font** is Montserrat. Comes with the package (`_font.uss`). Preferred override is USS
+token-level:
+1. Create `Assets/Resources/SusRuntime/_font.uss` in your project
+2. Set `--sus-font-family-regular` (and any other family you need) to
+   `url("path/to/YourFont.asset")` — a Font Asset (SDF), not the legacy `-unity-font`
+
+Or fill a `SusFontAsset` (**Assets → Create → SUS → Font Set**) and run
+**Window → SUS → Fonts → Export Font Set to USS**, which writes that same file for you.
+`SusApp.UseFonts(SusFontAsset)` only registers the set so it can warn you if you forgot that
+export step — it does not apply a typeface by itself. See
+`Documentation~/font-extension.md` for the full picture (both paths, role marker classes,
+SDF vs. raw TTF, missing-glyph fallback).
 
 ## Installation
 

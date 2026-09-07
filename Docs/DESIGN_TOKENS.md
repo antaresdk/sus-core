@@ -722,11 +722,13 @@ SusApp.Create(uiDocument)
 `design-tokens`). Prefer `SusApp` over hand-rolled `root.styleSheets.Add(...)`.
 
 > **World-space panel caveat.** `EnsureWorldSpacePanel` gives the world panel its own token
-> cascade (`_palette → _font → _theme → design-tokens`), but **`UseFonts`, `UseCustomStyles`
-> (branding) and `SetTheme` are applied only to the screen root + OverlayHost** — not to the
-> world panel. So world UI (healthbars/nameplates from a downstream UI package) renders with the **default** Dark theme,
-> default fonts and no branding override. If you need brand colors / a light theme / custom fonts
-> on world UI, apply them to `app.WorldPanel` / `WorldSpaceService.Default.WorldSpacePanel`
+> cascade (`_palette → _font → _theme → design-tokens`), which already includes `_font.uss` — so
+> a typeface exported via `Window > SUS > Fonts > Export Font Set to USS` (or set by hand in
+> `--sus-font-family-*`) reaches the world panel the same way it reaches everything else, no
+> extra step needed. `UseCustomStyles` (branding) and `SetTheme`, however, **are applied only to
+> the screen root + OverlayHost** — not to the world panel. So world UI (healthbars/nameplates
+> from a downstream UI package) renders with the **default** Dark theme and no branding override
+> unless you apply them to `app.WorldPanel` / `WorldSpaceService.Default.WorldSpacePanel`
 > yourself (e.g. `SusThemeService.Instance.SetTheme(worldRoot, theme)` and load your branding USS
 > onto it).
 

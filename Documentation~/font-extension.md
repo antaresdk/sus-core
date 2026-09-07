@@ -3,10 +3,12 @@
 > **For whom:** integrators who want their own typeface(s) in a SUS-based project instead of
 > the packaged Montserrat / IBM Plex Mono.
 >
-> **What:** the two independent override mechanisms (token-level USS, and per-role code-level
-> via `SusFontAsset` / `SusFontService`), raw TTF vs. SDF FontAsset, the missing-glyph fallback
-> chain, and the letter-spacing em→px recipe. Companion to `_font.uss`'s own header comment,
-> which is the terse version of §1–2 below.
+> **What:** the two USS-level override paths — a hand-written `_font.uss` override (§2), and a
+> `SusFontAsset` set exported to one via an Editor menu (§3) — plus the `sus-font-*` role marker
+> classes that pick a typeface per element either way, raw TTF vs. SDF FontAsset, the
+> missing-glyph fallback chain, and the letter-spacing em→px recipe. Companion to `_font.uss`'s
+> own header comment, which is the terse version of §1–3 below. Policy behind "USS, not C#, sets
+> appearance": [Restyle without editing C#](../Docs/DESIGN_TOKENS.md#1-4-restyle-without-editing-c).
 
 ---
 
@@ -14,22 +16,23 @@
 
 SusCore ships every font reference as a CSS custom property with a Montserrat/IBM Plex Mono
 fallback: `--font-family-regular: var(--sus-font-family-regular, url("Fonts/Montserrat/…"));`
-(see `Runtime/Resources/SusRuntime/_font.uss`). There are two ways to replace that default,
-and they are independent — most projects only need one:
+(see `Runtime/Resources/SusRuntime/_font.uss`). Every override path — however you fill it in —
+ends up writing to that same `--sus-font-family-*` layer; USS is the only place SUS declares a
+typeface, there is no inline / code-level path any more. Two ways to fill it in, independent —
+most projects only need one:
 
-| Path | Sets | Reaches | Needs markup changes? |
+| Path | Fills in | Reaches | Needs markup changes? |
 |---|---|---|---|
-| **Token-level** (USS override file, §2) | `--sus-font-family-*` | Every USS rule that reads the token, everywhere, including third-party/kit components you don't own | No |
-| **Code-level** (`SusFontAsset` + `SusFontService`, §3) | inline `-unity-font-definition` on tagged elements | Only elements tagged with a `SusFontService.<Role>ClassName` marker class | Yes — one class per element |
+| **Direct USS override** (hand-written `_font.uss`, §2) | `--sus-font-family-*`, by hand | Every USS rule that reads the token, everywhere, including third-party/kit components you don't own | No |
+| **`SusFontAsset` export** (`SusFontUssExporter`, §3) | the same `--sus-font-family-*`, generated from a `SusFontAsset` you fill in the Inspector | Same as above, once exported — plus the `sus-font-*` role marker classes described in §3, which pick a typeface per tagged element | Only if you want per-element roles; the export alone already reaches every consumer |
 
-**Why both exist:** Unity's UI Toolkit has no public API to set a USS custom property
-(`--var`) from C#. The token-level path is USS-only by construction. The code-level path
-works around that by writing an *inline* style directly onto tagged elements — inline
-styles outrank USS rules regardless of selector specificity, so a marker class lets
-`SusFontService.ApplyFonts` win against a component's own more-specific `-unity-font-definition`
-rule. Body text is the one role that gets a free ride: `ApplyFonts` also sets the root's
-inline font, which cascades down by inheritance to any element that doesn't have its own
-explicit rule.
+**Why the export step exists:** Unity's UI Toolkit has no public API to set a USS custom
+property (`--var`) from C# at runtime, so a `SusFontAsset` filled in the Inspector cannot be
+pushed onto a live tree in code. `Window > SUS > Fonts > Export Font Set to USS`
+(`SusFontUssExporter`) resolves the asset **once**, in the Editor, into
+`Assets/Resources/SusRuntime/_font.uss` — the exact file §2 describes hand-editing — so the rest
+of the pipeline (component rules, the `sus-font-*` marker classes, skins, overlays) never has to
+know the typeface came from an asset instead of a hand-written sheet.
 
 ## 2. Token-level: `Assets/Resources/SusRuntime/_font.uss`
 
@@ -65,26 +68,38 @@ This file is not auto-discovered from a comment — before T-2216 the only place
 was documented at all was a comment inside `_font.uss` itself, which nobody reads before
 shipping. It is now also cross-linked from `SusFontAsset`'s tooltips.
 
-## 3. Code-level: `SusFontAsset` + `SusFontService`
+## 3. `SusFontAsset` export + role marker classes
 
-Create an asset via **Assets → Create → SUS → Font Set**, fill in the slots you have, then:
+Create an asset via **Assets → Create → SUS → Font Set**, fill in the slots you have, then run
+**Window → SUS → Fonts → Export Font Set to USS** (writes/overwrites
+`Assets/Resources/SusRuntime/_font.uss`, prompting before it overwrites a hand-written file).
+That single step is what makes the asset reach the cascade — filling the asset alone changes
+nothing until you export it.
 
-```csharp
-SusApp.UseFonts(myFontSet); // or: SusFontService.ApplyFonts(root, myFontSet);
-```
+`SusApp.UseFonts(myFontSet)` / `SusFontService.ApplyFonts(root, myFontSet)` are kept for source
+compatibility; they no longer write any style. If the asset you pass still has slots filled,
+they log a warning (`SusLog.Warn`) naming the export step above — that is the current form of
+the "don't silently do nothing" behavior T-2216 introduced.
 
-`Regular` is always applied (inherited from the root). The other five slots — `Medium`,
-`Bold`, `Light`, `Heading`, `Mono` — plus `Condensed` are applied **only** to elements
-tagged with the matching marker class:
+`Regular` is the panel default (`:root` in `_font.uss`), inherited by every element; the other
+five slots — `Medium`, `Bold`, `Light`, `Heading`, `Mono` — plus `Condensed` reach only elements
+tagged with the matching marker class. Each marker class carries its typeface **on its own**,
+as a plain USS rule keyed by the exported token — no C# call is required once the class is in
+the markup:
 
 | Slot | Resolve fallback chain | Marker class |
 |---|---|---|
-| `Heading` | Heading → Bold → Regular | `SusFontService.HeadingClassName` (`sus-font-heading`) |
-| `Mono` | Mono → Regular | `SusFontService.MonoClassName` (`sus-font-mono`) |
-| `Bold` | Bold → Medium → Regular | `SusFontService.BoldClassName` (`sus-font-bold`) |
-| `Medium` | Medium → Regular | `SusFontService.MediumClassName` (`sus-font-medium`) |
-| `Light` | Light → Regular | `SusFontService.LightClassName` (`sus-font-light`) |
-| `Condensed` | Condensed → Heading chain | `SusFontService.CondensedClassName` (`sus-font-condensed`) |
+| `Heading` | Heading → Bold → Regular | `sus-font-heading` (`SusFontService.HeadingClassName`) |
+| `Mono` | Mono → Regular | `sus-font-mono` (`SusFontService.MonoClassName`) |
+| `Bold` | Bold → Medium → Regular | `sus-font-bold` (`SusFontService.BoldClassName`) |
+| `Medium` | Medium → Regular | `sus-font-medium` (`SusFontService.MediumClassName`) |
+| `Light` | Light → Regular | `sus-font-light` (`SusFontService.LightClassName`) |
+| `Condensed` | Condensed → Heading chain | `sus-font-condensed` (`SusFontService.CondensedClassName`) |
+
+The fallback chain is USS itself — `_font.uss` chains
+`var(--sus-font-family-heading, var(--font-family-bold))` and so on — so an empty slot in the
+asset simply leaves that `var()` unresolved, and it falls through to the next family in the
+chain, not to a C# lookup.
 
 Tag whatever markup should carry that role, e.g. in a `.sharq` template:
 
@@ -93,10 +108,10 @@ Tag whatever markup should carry that role, e.g. in a `.sharq` template:
 <span class="unit-code sus-font-mono">P01</span>
 ```
 
-If a slot is filled on the asset but nothing under the root you called `ApplyFonts(root, …)`
-on carries its marker class, `SusFontService` logs a warning (`SusLog.Warn`, level `Warn`
-by default) instead of silently doing nothing — that silent half-application (only Regular
-ever changing) is exactly the defect T-2216 closed.
+That's enough by itself. Use `SusFontService.ApplyRoleClass(el, SusFontRole.Heading)` /
+`ClearRoleClasses(el)` only when an element's role needs to change at runtime (e.g. code built
+by something other than markup) — they swap the marker class and write nothing else; the
+typeface still comes from `_font.uss`.
 
 ## 4. Raw TTF vs. FontAsset (SDF) — which to use
 

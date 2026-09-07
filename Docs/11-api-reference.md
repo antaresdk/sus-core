@@ -30,7 +30,7 @@ public sealed class SusApp
     public SusApp UseTokenCascade(bool enabled = true); // L1–L5 + OverlayHost (default on)
     public SusApp UseWorldSpace(bool enabled = true);   // SusWorldSpacePanel + Default (default on)
     public SusApp UseCustomStyles(params string[] resourcePaths);  // after cascade
-    public SusApp UseFonts(SusFontAsset fontAsset);
+    public SusApp UseFonts(SusFontAsset fontAsset);     // writes no style; warns unless exported to USS
     public SusApp UseIcons(params ISusIconProvider[] providers);
     public SusApp UseIcons(SusIconSetAsset iconSet);
     public SusApp UseLogLevel(SusLogLevel level);       // process gate; call before Run/Mount
@@ -47,7 +47,7 @@ public sealed class SusApp
 1. Icons (`UseIcons` → `SusIconRegistry.RegisterProvider`)
 2. Token cascade (`LoadTokenCascade`: `_palette` → `_font` → `_theme` → `design-tokens` → `_icon` → extras + OverlayHost)
 3. World-space panel (`EnsureWorldSpacePanel`, if playing and `UseWorldSpace`)
-4. Fonts (`UseFonts`)
+4. Fonts (`UseFonts` — no-op on style; typeface comes from `_font.uss`, see [Design tokens §2](./DESIGN_TOKENS.md#2-fonts))
 5. Custom styles (`UseCustomStyles` on root + OverlayHost)
 6. Configure callbacks
 7. Mount root component (if `Mount<T>`)
