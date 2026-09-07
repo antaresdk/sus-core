@@ -27,6 +27,12 @@ namespace Sharq.Core
         /// <summary>Current active screen mounted in this outlet.</summary>
         public TScreen CurrentScreen { get; protected set; }
 
+        /// <summary>
+        /// USS class that makes a mounted screen fill the outlet (SusRuntime/_global.uss).
+        /// Replaces the inline <c>style.flexGrow = 1f</c> this outlet used to write (R120/D-069).
+        /// </summary>
+        public const string GrowClass = "sus-grow";
+
         private readonly Dictionary<string, TScreen> _keepAliveCache = new();
         private readonly List<string> _keepAliveOrder = new(); // LRU: front = oldest
 
@@ -53,7 +59,7 @@ namespace Sharq.Core
             if (screen.parent != this)
             {
                 Add(screen);
-                screen.style.flexGrow = 1f;
+                screen.EnableInClassList(GrowClass, true);
             }
             CurrentScreen = screen;
         }
@@ -67,7 +73,7 @@ namespace Sharq.Core
                 Remove(CurrentScreen);
 
             Add(screen);
-            screen.style.flexGrow = 1f;
+            screen.EnableInClassList(GrowClass, true);
             CurrentScreen = screen;
         }
 

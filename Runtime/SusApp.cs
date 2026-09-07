@@ -113,7 +113,8 @@ namespace Sharq.Core
             if (document == null) throw new ArgumentNullException(nameof(document));
             SusBootstrap.ApplyDefaultTSS(document);
             var root = document.rootVisualElement;
-            root.style.flexGrow = 1f;
+            // `.sus-grow` (SusRuntime/_global.uss) replaces the inline flex-grow (R120/D-069).
+            root.EnableInClassList("sus-grow", true);
             return new SusApp(root, document);
         }
 

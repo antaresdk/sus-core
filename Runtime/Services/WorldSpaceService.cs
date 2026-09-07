@@ -302,7 +302,7 @@ namespace Sharq.Core
             if (ScreenHost == null)
                 return null;
 
-            element.style.position = Position.Absolute;
+            OverlayHost.ApplyFloatingPosition(element);
             element.pickingMode = PickingMode.Ignore;
 
             var binding = new WorldBinding
@@ -372,7 +372,7 @@ namespace Sharq.Core
         {
             if (element == null || ScreenHost == null) return;
 
-            element.style.position = Position.Absolute;
+            OverlayHost.ApplyFloatingPosition(element);
             element.pickingMode = PickingMode.Ignore;
 
             // Use a null-target binding for lifecycle tracking (Unbind will clean it up).
@@ -465,8 +465,8 @@ namespace Sharq.Core
                     y = Mathf.Clamp(y, 4f, ph - elH - 4f);
                 }
 
-                b.Element.style.left = x;
-                b.Element.style.top = y;
+                b.Element.style.left = x;  // sus:uss-impossible screen offset measured from the camera projection
+                b.Element.style.top = y;   // sus:uss-impossible screen offset measured from the camera projection
             }
 
             foreach (var dead in _toRemove)

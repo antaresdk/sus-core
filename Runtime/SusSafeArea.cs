@@ -163,10 +163,12 @@ namespace Sharq.Core
             bool changed = !ApproximatelyEqual(s_insets, next);
             s_insets = next;
 
-            root.style.paddingTop = next.Top;
-            root.style.paddingRight = next.Right;
-            root.style.paddingBottom = next.Bottom;
-            root.style.paddingLeft = next.Left;
+            // Insets are measured from Screen.safeArea on the live device - USS has no
+            // number for a notch (R120/D-069).
+            root.style.paddingTop = next.Top;       // sus:uss-impossible inset measured from Screen.safeArea
+            root.style.paddingRight = next.Right;   // sus:uss-impossible inset measured from Screen.safeArea
+            root.style.paddingBottom = next.Bottom; // sus:uss-impossible inset measured from Screen.safeArea
+            root.style.paddingLeft = next.Left;     // sus:uss-impossible inset measured from Screen.safeArea
 
             if (changed && raiseChanged)
                 Changed?.Invoke();

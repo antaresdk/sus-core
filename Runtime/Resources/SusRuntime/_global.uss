@@ -42,6 +42,18 @@
     flex-grow: 1;
 }
 
+/* ── Utility: fill the parent's flex flow ───────────────────
+   Replaces the inline `style.flexGrow = 1f` that SusApp (document root),
+   SusScreenOutlet (mounted screen) and SusRouteView (active route screen)
+   used to write from C# (R120/D-069). Same declaration as .sus-spacer,
+   different intent: a spacer is an empty filler between siblings, this
+   one makes a real screen take the outlet's height (without it an outlet
+   whose children are absolute collapses to W×0 — see the note above).
+   ─────────────────────────────────────────────────────────── */
+.sus-grow {
+    flex-grow: 1;
+}
+
 /* ── Slot container ───────────────────────────────────
    <slot> / <slot name="x"> compiles to a VisualElement created by
    SusComponent.GetSlotContainer(): classes `sus-slot sus-slot--<name>`,

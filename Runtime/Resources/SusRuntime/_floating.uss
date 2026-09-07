@@ -1,0 +1,21 @@
+/* ── SUS overlay / floating positioning ─────────────────────
+   Companion sheet of the overlay stack (OverlayHost, SusOverlayService,
+   WorldSpaceService). Attached to the FLOATING ELEMENT ITSELF by
+   OverlayHost.ApplyFloatingPosition(), not to a panel-level cascade.
+
+   Why: floating content is usually a component with its own companion
+   USS (`.sus-card { position: relative }` and friends). A utility class
+   living in _global.uss has the same specificity and sits in a FARTHER
+   sheet, so it loses — measured in T-2653 and documented in _global.uss.
+   Adding this sheet on the element makes it the nearest and last-added
+   one, so `.sus-floating` wins the way the old inline
+   `style.position = Absolute` did (R120/D-069).
+
+   Only `position` lives here on purpose: left/top/width of a floating
+   element are measured from the anchor's worldBound at runtime and stay
+   in C# behind `sus:uss-impossible` markers.
+   ─────────────────────────────────────────────────────────── */
+
+.sus-floating {
+    position: absolute;
+}

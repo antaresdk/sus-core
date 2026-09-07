@@ -52,7 +52,7 @@ namespace Sharq.Core
 
             var clamped = Mathf.Clamp(scale, Min.Value, Max.Value);
             Current.Value = clamped;
-            root.style.scale = new Scale(new Vector3(clamped, clamped, 1f));
+            root.style.scale = new Scale(new Vector3(clamped, clamped, 1f));  // sus:uss-impossible continuous zoom factor measured on the accessibility slider
         }
 
         /// <summary>
@@ -66,7 +66,7 @@ namespace Sharq.Core
             var s = Current.Value;
             if (!Mathf.Approximately(s, 1f))
             {
-                root.style.scale = new Scale(new Vector3(s, s, 1f));
+                root.style.scale = new Scale(new Vector3(s, s, 1f));  // sus:uss-impossible continuous zoom factor measured on the accessibility slider
             }
         }
     }

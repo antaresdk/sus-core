@@ -277,7 +277,7 @@ namespace Sharq.Core
             if (state.MatchAnchorWidth)
             {
                 var w = state.Anchor.resolvedStyle.width;
-                if (w > 0f) state.Overlay.style.width = w;
+                if (w > 0f) state.Overlay.style.width = w;  // sus:uss-impossible width measured from anchor resolvedStyle
             }
 
             RepositionFloating(state.Overlay, state.Anchor);
@@ -359,7 +359,7 @@ namespace Sharq.Core
 
             // Clone width from anchor — select/dropdown popups must match source.
             var w = anchor.resolvedStyle.width;
-            if (w > 0f) popup.style.width = w;
+            if (w > 0f) popup.style.width = w;  // sus:uss-impossible width measured from anchor resolvedStyle
 
             RepositionFloating(popup, anchor);
 
@@ -403,7 +403,7 @@ namespace Sharq.Core
         {
             if (floating == null || anchor == null) return;
 
-            floating.style.position = Position.Absolute;
+            OverlayHost.ApplyFloatingPosition(floating);
 
             var anchorWorld = anchor.worldBound;
             float top = anchorWorld.yMax;
@@ -431,8 +431,8 @@ namespace Sharq.Core
                 if (top < 0) top = 8f;
             }
 
-            floating.style.top = top;
-            floating.style.left = left;
+            floating.style.top = top;    // sus:uss-impossible coordinate measured from anchor worldBound
+            floating.style.left = left;  // sus:uss-impossible coordinate measured from anchor worldBound
         }
 
         // ═══════════════════════════════════════════════════════
@@ -485,9 +485,9 @@ namespace Sharq.Core
         public static void PositionTooltip(VisualElement tooltipCard, Vector2 topLeft)
         {
             if (tooltipCard == null) return;
-            tooltipCard.style.position = Position.Absolute;
-            tooltipCard.style.left = topLeft.x;
-            tooltipCard.style.top = topLeft.y;
+            OverlayHost.ApplyFloatingPosition(tooltipCard);
+            tooltipCard.style.left = topLeft.x;  // sus:uss-impossible screen coordinate measured from layout
+            tooltipCard.style.top = topLeft.y;   // sus:uss-impossible screen coordinate measured from layout
         }
 
         // ═══════════════════════════════════════════════════════

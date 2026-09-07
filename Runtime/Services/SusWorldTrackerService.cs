@@ -120,7 +120,7 @@ namespace Sharq.Core
                 tracker.ScreenPosition = panelPos;
 
                 // GPU-friendly positioning
-                tracker.UIElement.style.translate = new Translate(panelPos.x, panelPos.y, 0);
+                tracker.UIElement.style.translate = new Translate(panelPos.x, panelPos.y, 0);  // sus:uss-impossible screen offset measured from the camera projection
             }
         }
     }

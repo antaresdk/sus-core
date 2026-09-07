@@ -115,7 +115,7 @@ namespace Sharq.Core
                 var worldPos = a.Target.position + a.Offset;
 
                 // ── W7.2: 3D world position ──
-                a.Container.style.translate = new Translate(worldPos.x, worldPos.y);
+                a.Container.style.translate = new Translate(worldPos.x, worldPos.y);  // sus:uss-impossible panel offset measured from the camera projection
 
                 // ── W7.3: Billboard (always face camera) ──
                 if (EnableBillboard)
@@ -128,11 +128,13 @@ namespace Sharq.Core
                 {
                     float dist = Vector3.Distance(TargetCamera.transform.position, worldPos);
                     float scale = Mathf.Clamp(BaseDistance / Mathf.Max(dist, 0.01f), MinScale, MaxScale);
-                    a.Container.style.scale = new Scale(Vector3.one * scale);
+                    a.Container.style.scale = new Scale(Vector3.one * scale);  // sus:uss-impossible distance factor measured from the camera each frame
                 }
                 else
                 {
-                    a.Container.style.scale = new Scale(Vector3.one);
+                    // Distance scaling off: drop the inline scale instead of writing the
+                    // neutral 1 - USS cascade then owns the transform again (R120/D-069).
+                    a.Container.style.scale = StyleKeyword.Null;
                 }
             }
 
@@ -208,7 +210,7 @@ namespace Sharq.Core
             container.Add(element);
 
             var worldPos = target.position + offset;
-            container.style.translate = new Translate(worldPos.x, worldPos.y);
+            container.style.translate = new Translate(worldPos.x, worldPos.y);  // sus:uss-impossible panel offset measured from the camera projection
 
             _root.Add(container);
 

@@ -47,6 +47,7 @@ namespace Sharq.Core
             }
 
             var vec = SusIconRegistry.Load(alias, Weight.Value);
+            // sus:uss-impossible VectorImage иконки берётся из данных (алиас + вес), не константа
             this.style.backgroundImage = vec != null
                 ? new StyleBackground(vec)
                 : StyleKeyword.None;

@@ -19,9 +19,13 @@ namespace Sharq.Core
     /// </summary>
     public static class SusDevtools
     {
-        private const float PanelWidth = 380f;
         private const string PanelName = "sus-devtools";
         private const string PanelClass = "sus-devtools";
+        private const string ButtonClass = "sus-devtools__btn";
+        private const string ButtonNextClass = "sus-devtools__btn--next";
+
+        /// <summary>Companion sheet holding every constant of the panel's look.</summary>
+        private const string StyleSheetName = "_devtools";
 
         private static VisualElement _root;
         private static VisualElement _panel;
@@ -89,18 +93,12 @@ namespace Sharq.Core
         private static void BuildPanel()
         {
             _panel = new VisualElement { name = PanelName };
+            // Geometry, colours and padding of the panel live in SusRuntime/_devtools.uss
+            // (R120/D-069). The sheet is attached to the panel itself — same call
+            // SusConsoleService makes for sus-console.uss — so it outranks whatever USS
+            // the host root happens to carry.
+            SusBootstrap.AddStyleSheet(_panel, SusBootstrap.ResourcePath + StyleSheetName);
             _panel.AddToClassList(PanelClass);
-            _panel.style.position = Position.Absolute;
-            _panel.style.top = 0;
-            _panel.style.right = 0;
-            _panel.style.width = PanelWidth;
-            _panel.style.height = Length.Percent(100);
-            _panel.style.backgroundColor = new Color(0.12f, 0.12f, 0.14f, 0.95f);
-            _panel.style.color = new Color(0.85f, 0.85f, 0.85f);
-            _panel.style.paddingTop = 8;
-            _panel.style.paddingBottom = 8;
-            _panel.style.paddingLeft = 12;
-            _panel.style.paddingRight = 12;
             _panel.EnableInClassList("sus-hidden", true);
             _panel.pickingMode = PickingMode.Position;
 
@@ -120,15 +118,11 @@ namespace Sharq.Core
             // Refresh button
             var btnRow = new VisualElement { style = { flexDirection = FlexDirection.Row, marginBottom = 8 } };
             var refreshBtn = new Button(() => RefreshProps()) { text = "⟳ Refresh" };
-            refreshBtn.style.flexGrow = 1f;
-            refreshBtn.style.height = 22;
-            refreshBtn.style.fontSize = 11;
+            refreshBtn.AddToClassList(ButtonClass);
 
             var scanBtn = new Button(() => ScanAndShowTree()) { text = "🌳 Tree" };
-            scanBtn.style.flexGrow = 1f;
-            scanBtn.style.height = 22;
-            scanBtn.style.fontSize = 11;
-            scanBtn.style.marginLeft = 4;
+            scanBtn.AddToClassList(ButtonClass);
+            scanBtn.AddToClassList(ButtonNextClass);
 
             btnRow.Add(refreshBtn);
             btnRow.Add(scanBtn);

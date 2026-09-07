@@ -30,8 +30,54 @@ namespace Sharq.Core
     {
         public const string OverlayHostName = "overlay-host";
 
+        /// <summary>USS class that puts floating content into absolute positioning.</summary>
+        public const string FloatingClass = "sus-floating";
+
+        /// <summary>Companion sheet declaring <see cref="FloatingClass"/>.</summary>
+        private const string FloatingStyleSheet = "_floating";
+
         private readonly List<OverlayEntry> _stack = new();
         private bool _clickGuardInstalled;
+
+        /// <summary>
+        /// Absolute-positions floating content through USS instead of an inline
+        /// <c>style.position</c> (R120/D-069).
+        ///
+        /// The sheet is attached to the element ITSELF, not to a shared cascade: floating
+        /// content is usually a component carrying its own companion USS
+        /// (<c>.sus-card { position: relative }</c> and friends), which a utility class of
+        /// equal specificity in a farther sheet loses to — the caveat measured in T-2653 and
+        /// documented in <c>_global.uss</c>. Attached here it is the nearest, last-added sheet,
+        /// so the class wins the way the inline write used to.
+        ///
+        /// Idempotent in effect: the class is added once, the sheet is re-asserted as the last
+        /// one on the element (see the comment in the body).
+        /// </summary>
+        public static void ApplyFloatingPosition(VisualElement element)
+        {
+            if (element == null) return;
+
+            var sheet = UnityEngine.Resources.Load<StyleSheet>(SusBootstrap.ResourcePath + FloatingStyleSheet);
+            if (sheet == null)
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                SusLog.Warn($"[OverlayHost] StyleSheet not found: {SusBootstrap.ResourcePath}{FloatingStyleSheet}");
+#endif
+            }
+            else
+            {
+                // Re-add instead of skipping a sheet already present: AddToOverlay copies the
+                // ancestor component's companion sheets onto this element afterwards, and among
+                // rules of equal specificity the LATER sheet wins. Re-asserting the position on
+                // every call keeps `.sus-floating` last whoever added what in between.
+                if (element.styleSheets.Contains(sheet))
+                    element.styleSheets.Remove(sheet);
+                element.styleSheets.Add(sheet);
+            }
+
+            if (!element.ClassListContains(FloatingClass))
+                element.AddToClassList(FloatingClass);
+        }
 
         /// <summary>
         /// Creates a full-screen, click-transparent overlay host. Absolute
@@ -386,36 +432,40 @@ namespace Sharq.Core
         {
             if (anchor == null || content == null) return null;
 
-            content.style.position = Position.Absolute;
-
             anchor.schedule.Execute(() =>
             {
                 var anchorWorld = anchor.worldBound;
                 var tooltipWorld = content.worldBound;
 
+                // Every left/top below is measured from the anchor's and the tooltip's
+                // worldBound at show time - USS has no number for it (R120/D-069).
                 switch (position)
                 {
                     case "bottom":
-                        content.style.top = anchorWorld.yMax + 8;
-                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;
+                        content.style.top = anchorWorld.yMax + 8;   // sus:uss-impossible coordinate measured from anchor worldBound
+                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;  // sus:uss-impossible coordinate measured from anchor worldBound
                         break;
                     case "left":
-                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2;
-                        content.style.left = anchorWorld.x - tooltipWorld.width - 8;
+                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2; // sus:uss-impossible coordinate measured from anchor worldBound
+                        content.style.left = anchorWorld.x - tooltipWorld.width - 8;  // sus:uss-impossible coordinate measured from anchor worldBound
                         break;
                     case "right":
-                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2;
-                        content.style.left = anchorWorld.xMax + 8;
+                        content.style.top = anchorWorld.y + (anchorWorld.height - tooltipWorld.height) / 2; // sus:uss-impossible coordinate measured from anchor worldBound
+                        content.style.left = anchorWorld.xMax + 8;  // sus:uss-impossible coordinate measured from anchor worldBound
                         break;
                     default: // "top"
-                        content.style.top = anchorWorld.y - tooltipWorld.height - 8;
-                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;
+                        content.style.top = anchorWorld.y - tooltipWorld.height - 8; // sus:uss-impossible coordinate measured from anchor worldBound
+                        content.style.left = anchorWorld.x + (anchorWorld.width - tooltipWorld.width) / 2;  // sus:uss-impossible coordinate measured from anchor worldBound
                         break;
                 }
             }).ExecuteLater(0);
 
-            return AddToOverlay(content, OverlayCategory.Tooltip,
+            // After AddToOverlay, not before: it copies the ancestor component's companion
+            // sheets onto `content`, which would land after _floating.uss and outrank it.
+            var entry = AddToOverlay(content, OverlayCategory.Tooltip,
                 dismissOnClickOutside: true);
+            ApplyFloatingPosition(content);
+            return entry;
         }
 
         /// <summary>
@@ -426,7 +476,7 @@ namespace Sharq.Core
         {
             if (anchor == null || content == null) return null;
 
-            content.style.position = Position.Absolute;
+            // sus:uss-impossible width measured from anchor worldBound
             content.style.minWidth = anchor.worldBound.width;
 
             anchor.schedule.Execute(() =>
@@ -434,19 +484,22 @@ namespace Sharq.Core
                 var anchorWorld = anchor.worldBound;
                 var contentWorld = content.worldBound;
 
-                content.style.top = anchorWorld.yMax;
-                content.style.left = anchorWorld.x;
+                content.style.top = anchorWorld.yMax;  // sus:uss-impossible coordinate measured from anchor worldBound
+                content.style.left = anchorWorld.x;    // sus:uss-impossible coordinate measured from anchor worldBound
 
                 // Flip above if not enough space below
                 var rootHeight = panel?.visualTree?.worldBound.height ?? Screen.height;
                 if (anchorWorld.yMax + contentWorld.height > rootHeight && anchorWorld.y > contentWorld.height)
                 {
-                    content.style.top = anchorWorld.y - contentWorld.height;
+                    content.style.top = anchorWorld.y - contentWorld.height;  // sus:uss-impossible coordinate measured from anchor worldBound
                 }
             }).ExecuteLater(0);
 
-            return AddToOverlay(content, OverlayCategory.Dropdown,
+            // After AddToOverlay — see the note in ShowTooltip.
+            var entry = AddToOverlay(content, OverlayCategory.Dropdown,
                 dismissOnClickOutside: true);
+            ApplyFloatingPosition(content);
+            return entry;
         }
 
         private bool _escapeHandlerInstalled;

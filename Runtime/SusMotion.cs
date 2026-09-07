@@ -497,7 +497,7 @@ namespace Sharq.Core
         void ApplySeeds()
         {
             if (_seedOpacity)
-                _target.style.opacity = _fromOpacity;
+                _target.style.opacity = _fromOpacity;  // sus:uss-impossible tween start frame value from the motion timeline
             if (_seedScale)
                 WriteScale(_fromScale);
             if (_seedTranslate)
@@ -654,7 +654,7 @@ namespace Sharq.Core
             switch (s.Kind)
             {
                 case PropKind.Opacity:
-                    _target.style.opacity = Mathf.LerpUnclamped(s.FromOpacity, s.ToOpacity, eased01);
+                    _target.style.opacity = Mathf.LerpUnclamped(s.FromOpacity, s.ToOpacity, eased01);  // sus:uss-impossible interpolated tween frame value
                     _written.Add(PropKind.Opacity);
                     break;
                 case PropKind.Scale:
@@ -670,7 +670,7 @@ namespace Sharq.Core
                     _written.Add(PropKind.Rotate);
                     break;
                 case PropKind.Color:
-                    _target.style.backgroundColor = UnityEngine.Color.LerpUnclamped(s.FromColor, s.ToColor, eased01);
+                    _target.style.backgroundColor = UnityEngine.Color.LerpUnclamped(s.FromColor, s.ToColor, eased01);  // sus:style-ok motion-tween-color // sus:uss-impossible interpolated tween frame value
                     _written.Add(PropKind.Color);
                     break;
             }
@@ -698,19 +698,19 @@ namespace Sharq.Core
                     switch (kind)
                     {
                         case PropKind.Opacity:
-                            if (_snapshot.HasOpacity) _target.style.opacity = _snapshot.Opacity;
+                            if (_snapshot.HasOpacity) _target.style.opacity = _snapshot.Opacity;  // sus:uss-impossible tween snapshot value measured before the run
                             break;
                         case PropKind.Scale:
-                            if (_snapshot.HasScale) _target.style.scale = _snapshot.Scale;
+                            if (_snapshot.HasScale) _target.style.scale = _snapshot.Scale;  // sus:uss-impossible tween snapshot value measured before the run
                             break;
                         case PropKind.Translate:
-                            if (_snapshot.HasTranslate) _target.style.translate = _snapshot.Translate;
+                            if (_snapshot.HasTranslate) _target.style.translate = _snapshot.Translate;  // sus:uss-impossible tween snapshot value measured before the run
                             break;
                         case PropKind.Rotate:
-                            if (_snapshot.HasRotate) _target.style.rotate = _snapshot.Rotate;
+                            if (_snapshot.HasRotate) _target.style.rotate = _snapshot.Rotate;  // sus:uss-impossible tween snapshot value measured before the run
                             break;
                         case PropKind.Color:
-                            if (_snapshot.HasColor) _target.style.backgroundColor = _snapshot.BackgroundColor;
+                            if (_snapshot.HasColor) _target.style.backgroundColor = _snapshot.BackgroundColor;  // sus:style-ok motion-tween-color // sus:uss-impossible tween snapshot value measured before the run
                             break;
                     }
                 }
@@ -766,12 +766,12 @@ namespace Sharq.Core
         }
 
         void WriteScale(Vector2 v) =>
-            _target.style.scale = new Scale(new Vector3(v.x, v.y, 1f));
+            _target.style.scale = new Scale(new Vector3(v.x, v.y, 1f));  // sus:uss-impossible interpolated tween frame value
 
         void WriteTranslate(Vector2 v) =>
-            _target.style.translate = new Translate(v.x, v.y);
+            _target.style.translate = new Translate(v.x, v.y);  // sus:uss-impossible interpolated tween frame value
 
         void WriteRotate(float degrees) =>
-            _target.style.rotate = new Rotate(Angle.Degrees(degrees));
+            _target.style.rotate = new Rotate(Angle.Degrees(degrees));  // sus:uss-impossible interpolated tween frame value
     }
 }

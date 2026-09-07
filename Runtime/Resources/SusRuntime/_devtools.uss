@@ -1,0 +1,42 @@
+/* ── SUS Devtools panel (F12) ───────────────────────────────
+   Companion sheet of Sharq.Core.SusDevtools. Loaded onto the panel
+   element itself by SusDevtools.BuildPanel() via
+   SusBootstrap.AddStyleSheet(_panel, ResourcePath + "_devtools") —
+   the same call SusConsoleService uses for sus-console.uss.
+
+   Why an element-level sheet and not _global.uss: the panel is built
+   over an arbitrary host root that may carry its own USS; attaching
+   here keeps this sheet nearest to the element, so no downstream rule
+   of equal specificity outranks it (measured caveat in _global.uss,
+   T-2653).
+
+   R120/D-069: every constant of the panel's look lives here, the C#
+   only adds classes. Nothing in this sheet declares `display` — the
+   global `.sus-hidden` utility stays free to hide the panel.
+   ─────────────────────────────────────────────────────────── */
+
+.sus-devtools {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100%;
+    background-color: rgba(31, 31, 36, 0.95);
+    color: rgb(217, 217, 217);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+/* ── Header row buttons (⟳ Refresh / 🌳 Tree) ── */
+.sus-devtools__btn {
+    flex-grow: 1;
+    height: 22px;
+    font-size: 11px;
+}
+
+/* Second button in the row — separated from the first. */
+.sus-devtools__btn--next {
+    margin-left: 4px;
+}
