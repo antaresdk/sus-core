@@ -189,9 +189,12 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Applies a custom <see cref="SusFontAsset"/> as the "fonts" axis of the rebrand story.
-        /// Sets the inherited <c>-unity-font-definition</c> (body typeface) on the root and
-        /// OverlayHost, overriding the default Montserrat. Call once, before Run/Mount.
+        /// Registers a custom <see cref="SusFontAsset"/> as the "fonts" axis of the rebrand story.
+        /// T-2767: the typefaces themselves are no longer pushed onto the tree from C# - an inline
+        /// -unity-font-definition outranks every USS rule and made the font unstyleable
+        /// downstream. Export the set once via Window > SUS > Fonts > Export Font Set to USS
+        /// (SusFontUssExporter) and the whole cascade reads it; this call now only lets
+        /// <see cref="SusFontService.ApplyFonts"/> report a set USS has not been told about.
         /// </summary>
         public SusApp UseFonts(SusFontAsset fontAsset)
         {
@@ -298,13 +301,11 @@ namespace Sharq.Core
             if (_useWorldSpace && Application.isPlaying)
                 _worldPanel = SusBootstrap.EnsureWorldSpacePanel(Camera.main, _markerLayer);
 
-            // Font override — after cascade, before custom styles. Sets the inherited
-            // -unity-font-definition (body typeface) on root + OverlayHost.
+            // Font set — T-2767: writes no style. The typeface comes from USS
+            // (--sus-font-family-* / _font.uss); this call only reports a set that the USS
+            // cascade has not been told about, naming the Editor exporter that tells it.
             if (_fontAsset != null)
-            {
                 SusFontService.ApplyFonts(_root, _fontAsset);
-                SusFontService.ApplyToOverlayHost(_root, _fontAsset);
-            }
 
             // Brand/custom overrides AFTER the cascade — the TOP layer.
             // Applied to the root AND the OverlayHost so overrides (typography, spacing,

@@ -11,34 +11,36 @@ namespace Sharq.Core
     [CreateAssetMenu(menuName = "SUS/Font Set", fileName = "SusFontSet", order = 200)]
     public class SusFontAsset : ScriptableObject
     {
-        // T-2216: every slot below is dispatched by SusFontService.ApplyFonts to elements that
-        // carry the matching marker USS class (SusFontService.<Role>ClassName) — NOT to the
-        // whole tree. Unity has no public API to set USS custom properties (--var) from C#, so
-        // the inherited-root trick only ever worked for Regular; the other roles need markup to
-        // opt in via that class. A filled slot with no marked element in the tree logs a warning
-        // instead of silently doing nothing (see SusFontService.ApplyFonts).
+        // T-2767 (D-069 / R120): this asset is an EDITOR-TIME declaration, not a runtime
+        // applicator. Unity has no public API to set a USS custom property (--var) from C#, so
+        // the old code path wrote each slot as an INLINE -unity-font-definition — which outranks
+        // every USS rule and left the buyer unable to restyle the result. Export the set once via
+        // Window > SUS > Fonts > Export Font Set to USS (SusFontUssExporter): it writes
+        // Assets/Resources/SusRuntime/_font.uss with the --sus-font-family-* declarations that
+        // the packaged sheet already reads, and from then on the whole cascade — component rules,
+        // the .sus-font-* marker classes, skins, overlays — follows with no C# call at all.
 
         [Header("Primary typeface")]
-        [Tooltip("Default body text (regular weight). Required. Applied to the root (and inherited by default) via SusApp.UseFonts / SusFontService.ApplyFonts.")]
+        [Tooltip("Default body text (regular weight). Required. Exported to --sus-font-family-regular, which the packaged _font.uss makes the inherited panel default.")]
         public FontDefinition Regular;
 
-        [Tooltip("Emphasis / labels (medium weight). Applied only to elements with the USS class SusFontService.MediumClassName.")]
+        [Tooltip("Emphasis / labels (medium weight). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.MediumClassName.")]
         public FontDefinition Medium;
 
-        [Tooltip("Strong emphasis / headings (bold weight). Applied only to elements with the USS class SusFontService.BoldClassName.")]
+        [Tooltip("Strong emphasis / headings (bold weight). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.BoldClassName.")]
         public FontDefinition Bold;
 
-        [Tooltip("Thin / captions (light weight). Applied only to elements with the USS class SusFontService.LightClassName.")]
+        [Tooltip("Thin / captions (light weight). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.LightClassName.")]
         public FontDefinition Light;
 
         [Header("Special-purpose")]
-        [Tooltip("Heading display font (optional — falls back to Bold, then Regular). Applied only to elements with the USS class SusFontService.HeadingClassName.")]
+        [Tooltip("Heading display font (optional — falls back to Bold, then Regular). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.HeadingClassName.")]
         public FontDefinition Heading;
 
-        [Tooltip("Monospaced font for code / stats (optional — falls back to Regular). Applied only to elements with the USS class SusFontService.MonoClassName.")]
+        [Tooltip("Monospaced font for code / stats (optional — falls back to Regular). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.MonoClassName.")]
         public FontDefinition Mono;
 
-        [Tooltip("Narrow / display typeface for large titles, e.g. a Condensed weight (optional — falls back to Heading, then Bold, then Regular). Applied only to elements with the USS class SusFontService.CondensedClassName.")]
+        [Tooltip("Narrow / display typeface for large titles, e.g. a Condensed weight (optional — falls back to Heading, then Bold, then Regular). Exported to the matching --sus-font-family-* USS hook; reaches elements tagged with SusFontService.CondensedClassName.")]
         public FontDefinition Condensed;
 
         /// <summary>Returns Heading if set, Bold if set, otherwise Regular.</summary>

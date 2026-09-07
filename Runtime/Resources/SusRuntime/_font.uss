@@ -4,25 +4,25 @@
    Each var(--font-family-*) resolves from --sus-font-family-* first,
    falling back to the packaged Montserrat.
 
-   IMPORTANT: --sus-font-family-* can ONLY be set from USS — Unity has no
-   public API to set USS custom properties (--var) from C#. So:
-     • SusApp.UseFonts(SusFontAsset) / SusFontService.ApplyFonts apply the
-       Regular (body) typeface via the inherited -unity-font-definition on
-       the root + OverlayHost, AND apply Medium/Bold/Light/Heading/Mono/
-       Condensed as an INLINE style to any element tagged with the matching
-       SusFontService.<Role>ClassName marker class (T-2216) — markup must
-       opt in via that class, this does not touch --sus-font-family-* below.
-     • To override the --sus-font-family-* tokens themselves (so ANY USS
-       rule that reads them changes, without touching C# or markup classes),
-       define them in USS: an override _font.uss or your branding.uss.
+   T-2767 (D-069 / R120): the typeface of every role is declared HERE, in USS.
+   No C# writes -unity-font-definition as an inline style any more — an inline
+   value outranks every USS rule regardless of specificity, so the buyer could
+   not restyle what SusFontService had written. SusFontService now only
+   adds/removes the marker USS classes below; the VALUE always comes from the
+   --sus-font-family-* / --font-family-* token chain, which any theme, skin or
+   project override sheet can redefine.
 
-   Override options:
+   How to change the typeface:
      • Per-weight, token-level (all families incl. italic/black/condensed):
        place Assets/Resources/SusRuntime/_font.uss in your project and set
-       --sus-font-family-* there.
-     • Per-role, code-level (Medium/Bold/Light/Heading/Mono/Condensed): tag
-       elements with SusFontService.<Role>ClassName and call UseFonts.
-     • Body-only (quick): call SusApp.UseFonts(fontAsset) — no markup needed.
+       --sus-font-family-* there. A skin does the same from its own brand
+       sheet. A SusFontAsset filled in the Inspector is turned into exactly
+       such a sheet by  SUS > Fonts > Export Font Set to USS
+       (SusFontUssExporter) — that is the supported way to bring a project's
+       own typefaces in, and it replaces the old inline-style code path.
+     • Per-role, markup-level: tag an element with the matching
+       SusFontService.<Role>ClassName marker class (see the rules below) —
+       no C# call needed, the class alone carries the role's typeface.
    ──────────────────────────────────────────────────────────── */
 
 /* ── Typographic Scale (base sizes) ────────────────────────── */
@@ -63,6 +63,27 @@
     --main-font-family: var(--font-family-regular);
     -unity-font-definition: var(--font-family-regular);
 }
+
+/* ── Role marker classes (SusFontService.<Role>ClassName) ─────────────────
+   T-2767: these classes used to be inert on the USS side — they existed only
+   as C# query markers, and SusFontService wrote the FontDefinition inline.
+   Now the class IS the mechanism: tag markup with it and the role's typeface
+   applies through the token chain above, so a theme/skin override reaches it.
+
+   Each rule is listed twice on purpose. The bare .sus-font-* form is the
+   readable one; the ':root .sus-font-*' form carries two simple selectors
+   (specificity 0,2,0) so a marker deliberately put on an element ALSO wins
+   over a component's own single-class -unity-font-definition rule, which
+   loads later in the cascade and would otherwise tie and win on order.
+   A skin keeps the last word either way: its own selectors are compound, and
+   it can redefine --sus-font-family-* instead of fighting the selector. */
+.sus-font-regular,   :root .sus-font-regular   { -unity-font-definition: var(--font-family-regular); }
+.sus-font-medium,    :root .sus-font-medium    { -unity-font-definition: var(--font-family-medium); }
+.sus-font-bold,      :root .sus-font-bold      { -unity-font-definition: var(--font-family-bold); }
+.sus-font-light,     :root .sus-font-light     { -unity-font-definition: var(--font-family-light); }
+.sus-font-heading,   :root .sus-font-heading   { -unity-font-definition: var(--font-family-heading); }
+.sus-font-mono,      :root .sus-font-mono      { -unity-font-definition: var(--font-family-mono); }
+.sus-font-condensed, :root .sus-font-condensed { -unity-font-definition: var(--font-family-condensed); }
 
 /* ── Semantic Size Aliases (L3) ──────────────────────────────
    Components should reference these, NOT --base-font-size-* directly.

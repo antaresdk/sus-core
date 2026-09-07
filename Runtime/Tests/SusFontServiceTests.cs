@@ -6,14 +6,15 @@ using UnityEngine.UIElements;
 namespace Sharq.Core.Runtime.Tests
 {
     /// <summary>
-    /// T-2216 — SusFontAsset promises six slots (Regular/Medium/Bold/Light/Heading/Mono) but
-    /// SusFontService.ApplyFonts only ever applied Regular; the other five and the three
-    /// Resolve* helper methods were dead code (never read, never called). EditMode.
+    /// T-2767 (D-069 / R120) — SusFontService used to write the typeface as an INLINE
+    /// -unity-font-definition, which outranks every USS rule and left the buyer unable to restyle
+    /// it. The service is now a pure USS-class switch: the typeface lives in _font.uss and this
+    /// type only adds/removes the marker classes. EditMode.
     ///
-    /// Contract: ApplyFonts must dispatch every non-Regular slot to elements that opt in via a
-    /// marker USS class (SusFontService.&lt;Role&gt;ClassName), and must warn once when a filled
-    /// slot has no marked element to apply to (a silent half-applied font set is the defect this
-    /// card exists to close).
+    /// Contract asserted here: (1) no entry point writes an inline appearance style any more,
+    /// (2) the role classes switch exclusively, (3) a font set handed to ApplyFonts is REPORTED
+    /// with the Editor route that makes it reach USS rather than silently ignored. What the
+    /// classes actually resolve to needs a live panel — see SusFontUssPlaymodeTests.
     /// </summary>
     public class SusFontServiceTests
     {
@@ -26,26 +27,23 @@ namespace Sharq.Core.Runtime.Tests
             return asset;
         }
 
+        private static void AssertNoInlineFont(VisualElement el, string what)
+        {
+            var inline = el.style.unityFontDefinition.value;
+            Assert.IsNull(inline.font, $"{what}: legacy Font written inline");
+            Assert.IsNull(inline.fontAsset, $"{what}: SDF FontAsset written inline");
+        }
+
         [TearDown]
         public void TearDown()
         {
             SusLog.ResetForTests(SusLogLevel.Warn, defineFloor: false);
         }
 
-        [Test]
-        public void ApplyFonts_AppliesRegularToRoot()
-        {
-            var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            var root = new VisualElement();
-
-            SusFontService.ApplyFonts(root, asset);
-
-            Assert.AreEqual(asset.Regular.font, root.style.unityFontDefinition.value.font);
-        }
+        // ── The regression this card exists to close ─────────────────────────────────────────
 
         [Test]
-        public void ApplyFonts_AppliesHeadingToMarkedElement()
+        public void ApplyFonts_FilledSet_WritesNoInlineStyleAnywhere()
         {
             var asset = MakeAsset();
             asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
@@ -55,114 +53,103 @@ namespace Sharq.Core.Runtime.Tests
             title.AddToClassList(SusFontService.HeadingClassName);
             root.Add(title);
 
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Export Font Set to USS"));
             SusFontService.ApplyFonts(root, asset);
 
-            Assert.AreEqual(asset.Heading.font, title.style.unityFontDefinition.value.font);
+            AssertNoInlineFont(root, "root");
+            AssertNoInlineFont(title, "marked element");
         }
 
         [Test]
-        public void ApplyFonts_HeadingUnset_MarkedElementFallsBackToBold()
+        public void ApplyToOverlayHost_WritesNoInlineStyle()
         {
             var asset = MakeAsset();
             asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Bold = FontDefinition.FromFont(MakeFont("Bold"));
-            // Heading left unset on purpose — ResolveHeading() must fall back to Bold.
             var root = new VisualElement();
-            var title = new VisualElement();
-            title.AddToClassList(SusFontService.HeadingClassName);
-            root.Add(title);
 
-            SusFontService.ApplyFonts(root, asset);
+            SusFontService.ApplyToOverlayHost(root, asset);
 
-            Assert.AreEqual(asset.Bold.font, title.style.unityFontDefinition.value.font);
+            AssertNoInlineFont(root, "overlay host path");
         }
 
         [Test]
-        public void ApplyFonts_AppliesMonoToMarkedElement()
+        public void ResetToDefault_ClearsInlineFontBackToCascade()
+        {
+            var root = new VisualElement();
+            root.style.unityFontDefinition = FontDefinition.FromFont(MakeFont("Legacy"));
+
+            SusFontService.ResetToDefault(root);
+
+            AssertNoInlineFont(root, "after reset");
+        }
+
+        // ── Class switching ─────────────────────────────────────────────────────────────────
+
+        [Test]
+        public void ClassNameFor_MatchesPublishedConstants()
+        {
+            Assert.AreEqual(SusFontService.RegularClassName, SusFontService.ClassNameFor(SusFontRole.Regular));
+            Assert.AreEqual(SusFontService.MediumClassName, SusFontService.ClassNameFor(SusFontRole.Medium));
+            Assert.AreEqual(SusFontService.BoldClassName, SusFontService.ClassNameFor(SusFontRole.Bold));
+            Assert.AreEqual(SusFontService.LightClassName, SusFontService.ClassNameFor(SusFontRole.Light));
+            Assert.AreEqual(SusFontService.HeadingClassName, SusFontService.ClassNameFor(SusFontRole.Heading));
+            Assert.AreEqual(SusFontService.MonoClassName, SusFontService.ClassNameFor(SusFontRole.Mono));
+            Assert.AreEqual(SusFontService.CondensedClassName, SusFontService.ClassNameFor(SusFontRole.Condensed));
+        }
+
+        [Test]
+        public void ApplyRoleClass_IsExclusive()
+        {
+            var el = new VisualElement();
+
+            SusFontService.ApplyRoleClass(el, SusFontRole.Heading);
+            Assert.IsTrue(el.ClassListContains(SusFontService.HeadingClassName));
+
+            SusFontService.ApplyRoleClass(el, SusFontRole.Mono);
+            Assert.IsTrue(el.ClassListContains(SusFontService.MonoClassName), "new role applied");
+            Assert.IsFalse(el.ClassListContains(SusFontService.HeadingClassName), "previous role removed");
+        }
+
+        [Test]
+        public void ApplyRoleClass_WritesNoInlineStyle()
+        {
+            var el = new VisualElement();
+
+            SusFontService.ApplyRoleClass(el, SusFontRole.Bold);
+
+            AssertNoInlineFont(el, "role class");
+        }
+
+        [Test]
+        public void ClearRoleClasses_RemovesEveryRoleMarker()
+        {
+            var el = new VisualElement();
+            foreach (var cls in SusFontService.RoleClassNames) el.AddToClassList(cls);
+
+            SusFontService.ClearRoleClasses(el);
+
+            foreach (var cls in SusFontService.RoleClassNames)
+                Assert.IsFalse(el.ClassListContains(cls), cls);
+        }
+
+        // ── Reporting: a font set must never be silently ignored ────────────────────────────
+
+        [Test]
+        public void ApplyFonts_FilledSet_NamesTheUssRoute()
         {
             var asset = MakeAsset();
             asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
             asset.Mono = FontDefinition.FromFont(MakeFont("Mono"));
             var root = new VisualElement();
-            var stat = new VisualElement();
-            stat.AddToClassList(SusFontService.MonoClassName);
-            root.Add(stat);
 
-            SusFontService.ApplyFonts(root, asset);
-
-            Assert.AreEqual(asset.Mono.font, stat.style.unityFontDefinition.value.font);
-        }
-
-        [Test]
-        public void ApplyFonts_AppliesBoldMediumLightToMarkedElements()
-        {
-            var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Bold = FontDefinition.FromFont(MakeFont("Bold"));
-            asset.Medium = FontDefinition.FromFont(MakeFont("Medium"));
-            asset.Light = FontDefinition.FromFont(MakeFont("Light"));
-            var root = new VisualElement();
-            var bold = new VisualElement(); bold.AddToClassList(SusFontService.BoldClassName); root.Add(bold);
-            var medium = new VisualElement(); medium.AddToClassList(SusFontService.MediumClassName); root.Add(medium);
-            var light = new VisualElement(); light.AddToClassList(SusFontService.LightClassName); root.Add(light);
-
-            SusFontService.ApplyFonts(root, asset);
-
-            Assert.AreEqual(asset.Bold.font, bold.style.unityFontDefinition.value.font);
-            Assert.AreEqual(asset.Medium.font, medium.style.unityFontDefinition.value.font);
-            Assert.AreEqual(asset.Light.font, light.style.unityFontDefinition.value.font);
-        }
-
-        [Test]
-        public void ApplyFonts_AppliesCondensedToMarkedElement()
-        {
-            var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Condensed = FontDefinition.FromFont(MakeFont("Condensed"));
-            var root = new VisualElement();
-            var heroTitle = new VisualElement();
-            heroTitle.AddToClassList(SusFontService.CondensedClassName);
-            root.Add(heroTitle);
-
-            SusFontService.ApplyFonts(root, asset);
-
-            Assert.AreEqual(asset.Condensed.font, heroTitle.style.unityFontDefinition.value.font);
-        }
-
-        [Test]
-        public void ApplyFonts_CondensedUnset_FallsBackThroughHeadingChain()
-        {
-            var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Bold = FontDefinition.FromFont(MakeFont("Bold"));
-            // Condensed and Heading both unset -> ResolveCondensed() must reach Bold via ResolveHeading().
-            var root = new VisualElement();
-            var heroTitle = new VisualElement();
-            heroTitle.AddToClassList(SusFontService.CondensedClassName);
-            root.Add(heroTitle);
-
-            SusFontService.ApplyFonts(root, asset);
-
-            Assert.AreEqual(asset.Bold.font, heroTitle.style.unityFontDefinition.value.font);
-        }
-
-        [Test]
-        public void ApplyFonts_FilledSlotWithoutMarkedElement_WarnsOnce()
-        {
-            var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Mono = FontDefinition.FromFont(MakeFont("Mono")); // filled, but no element carries the marker class
-            var root = new VisualElement();
-
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Mono"));
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("Regular, Mono"));
             SusFontService.ApplyFonts(root, asset);
         }
 
         [Test]
-        public void ApplyFonts_NoFilledExtraSlots_NoWarning()
+        public void ApplyFonts_EmptySet_Silent()
         {
             var asset = MakeAsset();
-            asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
             var root = new VisualElement();
 
             SusFontService.ApplyFonts(root, asset);
@@ -171,20 +158,18 @@ namespace Sharq.Core.Runtime.Tests
         }
 
         [Test]
-        public void ApplyFonts_FilledSlotWithMarkedElement_NoWarning()
+        public void ApplyFonts_NullArguments_Silent()
         {
             var asset = MakeAsset();
             asset.Regular = FontDefinition.FromFont(MakeFont("Regular"));
-            asset.Mono = FontDefinition.FromFont(MakeFont("Mono"));
-            var root = new VisualElement();
-            var stat = new VisualElement();
-            stat.AddToClassList(SusFontService.MonoClassName);
-            root.Add(stat);
 
-            SusFontService.ApplyFonts(root, asset);
+            SusFontService.ApplyFonts(null, asset);
+            SusFontService.ApplyFonts(new VisualElement(), null);
 
             LogAssert.NoUnexpectedReceived();
         }
+
+        // ── Slot fallback chains (pure data, unchanged by T-2767) ───────────────────────────
 
         [Test]
         public void ResolveCondensed_ChainMatchesDocumentedFallback()

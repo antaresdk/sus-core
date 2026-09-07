@@ -1,144 +1,167 @@
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core
 {
+    /// <summary>Typographic roles a SUS font set can fill. Each one maps to a marker USS
+    /// class (<see cref="SusFontService.ClassNameFor"/>) whose typeface is declared in
+    /// <c>_font.uss</c>.</summary>
+    public enum SusFontRole
+    {
+        /// <summary>Body text. Also the panel default (<c>:root</c> in <c>_font.uss</c>), so an
+        /// element needs this class only to opt back OUT of a more specific role.</summary>
+        Regular,
+        /// <summary>Emphasis / labels.</summary>
+        Medium,
+        /// <summary>Strong emphasis.</summary>
+        Bold,
+        /// <summary>Thin / captions.</summary>
+        Light,
+        /// <summary>Headings.</summary>
+        Heading,
+        /// <summary>Monospaced (code / stats).</summary>
+        Mono,
+        /// <summary>Narrow display cut for large titles.</summary>
+        Condensed,
+    }
+
     /// <summary>
-    /// Applies a <see cref="SusFontAsset"/> to a VisualElement tree.
+    /// Switches typographic ROLES on a VisualElement tree by adding/removing marker USS classes.
     ///
-    /// Unity has no public API to set USS custom properties (<c>--var</c>) from C#,
-    /// so fonts are applied via the inherited <c>-unity-font-definition</c> style
-    /// (<see cref="IStyle.unityFontDefinition"/>). The body (Regular) typeface is set
-    /// on the root and inherited by all children, unless a more specific USS rule
-    /// overrides it on a particular element.
+    /// T-2767 (D-069 / R120) — what changed and why. Until now this service wrote the typeface
+    /// itself: <c>el.style.unityFontDefinition = FontDefinition.From...(...)</c>. An inline style
+    /// outranks every USS rule regardless of selector specificity, so whatever this service had
+    /// written could not be restyled by a theme, a skin, or a project override sheet - the exact
+    /// harm R120 exists to stop. The typeface of every role is now declared in USS
+    /// (<c>_font.uss</c>, rules <c>.sus-font-*</c>, values from the <c>--sus-font-family-*</c> /
+    /// <c>--font-family-*</c> token chain), and this service only puts the class on or takes it
+    /// off. Nothing here writes an inline appearance style any more.
     ///
-    /// T-2216: the other five slots (Medium/Bold/Light/Heading/Mono) and Condensed cannot
-    /// ride that same inheritance trick — components declare their own more-specific
-    /// <c>-unity-font-definition</c> rule for those roles (see <c>_font.uss</c> and any
-    /// downstream package's own token bridge), which always wins over an inherited value. So those
-    /// roles are dispatched directly: any element under <paramref name="root"/> tagged with
-    /// the matching marker USS class (<see cref="HeadingClassName"/> etc.) gets that role's
-    /// resolved <see cref="FontDefinition"/> set as an INLINE style, which outranks any USS
-    /// rule regardless of selector specificity. Markup opts in by adding the marker class;
-    /// nothing is auto-discovered. A filled slot with no marked element anywhere under
-    /// <paramref name="root"/> logs a warning instead of silently doing nothing.
+    /// Consequence for <see cref="SusFontAsset"/>: a ScriptableObject reference cannot be handed
+    /// to USS from C# (Unity has no public API to author a StyleSheet or to set a USS custom
+    /// property at runtime), so a filled font set is no longer pushed onto the tree by
+    /// <see cref="ApplyFonts"/>. The supported route is one Editor step -
+    /// <c>Window / SUS / Fonts / Export Font Set to USS</c> (<c>SusFontUssExporter</c>) writes
+    /// <c>Assets/Resources/SusRuntime/_font.uss</c> with the set's <c>--sus-font-family-*</c>
+    /// declarations, after which the whole cascade (root text, every component rule, every marker
+    /// class below, skins, overlays) reads the project's typefaces. <see cref="ApplyFonts"/> says
+    /// so in a warning when it is called with a font set that USS has not been told about.
     /// </summary>
     public static class SusFontService
     {
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveHeading().</summary>
-        public const string HeadingClassName = "sus-font-heading";
+        /// <summary>Marker USS class for <see cref="SusFontRole.Regular"/>.</summary>
+        public const string RegularClassName = "sus-font-regular";
 
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveMono().</summary>
-        public const string MonoClassName = "sus-font-mono";
-
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveBold().</summary>
-        public const string BoldClassName = "sus-font-bold";
-
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveMedium().</summary>
+        /// <summary>Marker USS class for <see cref="SusFontRole.Medium"/>.</summary>
         public const string MediumClassName = "sus-font-medium";
 
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveLight().</summary>
+        /// <summary>Marker USS class for <see cref="SusFontRole.Bold"/>.</summary>
+        public const string BoldClassName = "sus-font-bold";
+
+        /// <summary>Marker USS class for <see cref="SusFontRole.Light"/>.</summary>
         public const string LightClassName = "sus-font-light";
 
-        /// <summary>Marker USS class: elements tagged with this get SusFontAsset.ResolveCondensed().</summary>
+        /// <summary>Marker USS class for <see cref="SusFontRole.Heading"/>.</summary>
+        public const string HeadingClassName = "sus-font-heading";
+
+        /// <summary>Marker USS class for <see cref="SusFontRole.Mono"/>.</summary>
+        public const string MonoClassName = "sus-font-mono";
+
+        /// <summary>Marker USS class for <see cref="SusFontRole.Condensed"/>.</summary>
         public const string CondensedClassName = "sus-font-condensed";
 
+        /// <summary>Every marker class this service manages, indexed by <see cref="SusFontRole"/>.</summary>
+        public static readonly string[] RoleClassNames =
+        {
+            RegularClassName, MediumClassName, BoldClassName, LightClassName,
+            HeadingClassName, MonoClassName, CondensedClassName,
+        };
+
+        /// <summary>Marker USS class that carries <paramref name="role"/>'s typeface.</summary>
+        public static string ClassNameFor(SusFontRole role) => RoleClassNames[(int)role];
+
         /// <summary>
-        /// Applies every slot of <paramref name="fontAsset"/> to <paramref name="root"/>:
-        /// Regular as the inherited default on the root, and Heading/Mono/Bold/Medium/Light/
-        /// Condensed to any descendant tagged with the matching marker class (see the
-        /// <c>*ClassName</c> constants on this type). Call once at startup, before mounting UI,
-        /// then again whenever the marked subtree changes shape.
+        /// Puts <paramref name="role"/>'s marker class on <paramref name="el"/>, removing whatever
+        /// other role class it carried (an element has exactly one typographic role). The typeface
+        /// itself comes from <c>_font.uss</c> - this call writes no style.
+        /// </summary>
+        public static void ApplyRoleClass(VisualElement el, SusFontRole role)
+        {
+            if (el == null) return;
+            var wanted = ClassNameFor(role);
+            foreach (var cls in RoleClassNames)
+                el.EnableInClassList(cls, cls == wanted);
+        }
+
+        /// <summary>
+        /// Removes every role marker class from <paramref name="el"/>, so it falls back to the
+        /// inherited body typeface (or to whatever a component/skin rule declares for it).
+        /// </summary>
+        public static void ClearRoleClasses(VisualElement el)
+        {
+            if (el == null) return;
+            foreach (var cls in RoleClassNames)
+                el.RemoveFromClassList(cls);
+        }
+
+        /// <summary>
+        /// Kept for API compatibility (<c>SusApp.UseFonts</c> calls it). Applies no style: since
+        /// T-2767 the typeface of every role lives in USS, so a tree whose markup carries the
+        /// marker classes is already correct without this call. When <paramref name="fontAsset"/>
+        /// carries typefaces, this warns once with the one step that actually makes them reach the
+        /// cascade (the Editor exporter named on this type) - silently doing nothing would be the
+        /// worse failure.
         /// </summary>
         public static void ApplyFonts(VisualElement root, SusFontAsset fontAsset)
         {
             if (root == null || fontAsset == null) return;
-            ApplyFontDefinition(root, fontAsset.Regular);
 
-            var unapplied = new List<string>();
-            ApplyRole(root, HeadingClassName, fontAsset.ResolveHeading(), fontAsset.Heading, "Heading", unapplied);
-            ApplyRole(root, MonoClassName, fontAsset.ResolveMono(), fontAsset.Mono, "Mono", unapplied);
-            ApplyRole(root, BoldClassName, fontAsset.ResolveBold(), fontAsset.Bold, "Bold", unapplied);
-            ApplyRole(root, MediumClassName, fontAsset.ResolveMedium(), fontAsset.Medium, "Medium", unapplied);
-            ApplyRole(root, LightClassName, fontAsset.ResolveLight(), fontAsset.Light, "Light", unapplied);
-            ApplyRole(root, CondensedClassName, fontAsset.ResolveCondensed(), fontAsset.Condensed, "Condensed", unapplied);
+            var filled = FilledSlots(fontAsset);
+            if (filled == null) return;
 
-            if (unapplied.Count > 0)
-            {
-                SusLog.Warn(
-                    $"[SusFontService] SusFontAsset '{fontAsset.name}' fills {string.Join(", ", unapplied)} " +
-                    $"but no element under '{root.name}' carries the matching marker USS class " +
-                    "(sus-font-heading / -mono / -bold / -medium / -light / -condensed — see " +
-                    "SusFontService.<Role>ClassName). Only Regular is applied by root inheritance; " +
-                    "these slots need markup to opt in via that class, or they silently do nothing.");
-            }
+            SusLog.Warn(
+                $"[SusFontService] SusFontAsset '{fontAsset.name}' fills {filled} but a font set is " +
+                "no longer applied from C# (T-2767): an inline -unity-font-definition outranks every " +
+                "USS rule, so nothing downstream could restyle it. Export the set once - " +
+                "Window > SUS > Fonts > Export Font Set to USS - which writes " +
+                "Assets/Resources/SusRuntime/_font.uss with --sus-font-family-*; the whole cascade " +
+                "reads it, including the marker classes sus-font-heading / -mono / -bold / " +
+                "-medium / -light / -condensed (SusFontService.ClassNameFor).");
         }
 
         /// <summary>
-        /// Applies <paramref name="resolved"/> to every descendant of <paramref name="root"/>
-        /// tagged with <paramref name="className"/>. Records <paramref name="slotName"/> in
-        /// <paramref name="unapplied"/> when <paramref name="ownSlot"/> is filled but no element
-        /// matched (so the caller can warn once, listing every unreachable slot together).
-        /// </summary>
-        private static void ApplyRole(
-            VisualElement root, string className, FontDefinition resolved,
-            FontDefinition ownSlot, string slotName, List<string> unapplied)
-        {
-            bool any = false;
-            root.Query<VisualElement>(className: className).ForEach(el =>
-            {
-                ApplyFontDefinition(el, resolved);
-                any = true;
-            });
-            if (!any && SusFontAsset.HasFont(ownSlot))
-                unapplied.Add(slotName);
-        }
-
-        /// <summary>
-        /// Also applies the body font — and every marker-tagged role, per <see cref="ApplyFonts"/>
-        /// — to an overlay host (popups, tooltips, modals) so reparented elements inherit the
-        /// custom typeface. Does not repeat the unapplied-slot warning (ApplyFonts already did).
+        /// Kept for API compatibility. Does nothing: the OverlayHost lives in the same panel as
+        /// the app root, so it inherits the USS-declared body typeface and resolves the same
+        /// marker classes - the reparenting hole this method used to plug existed only because
+        /// the font was an inline style on the app root.
         /// </summary>
         public static void ApplyToOverlayHost(VisualElement root, SusFontAsset fontAsset)
         {
-            if (root == null || fontAsset == null) return;
-            var overlayHost = root.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
-            if (overlayHost == null && root.panel?.visualTree != null)
-                overlayHost = root.panel.visualTree.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
-            if (overlayHost == null) return;
-
-            ApplyFontDefinition(overlayHost, fontAsset.Regular);
-            var discard = new List<string>();
-            ApplyRole(overlayHost, HeadingClassName, fontAsset.ResolveHeading(), fontAsset.Heading, "Heading", discard);
-            ApplyRole(overlayHost, MonoClassName, fontAsset.ResolveMono(), fontAsset.Mono, "Mono", discard);
-            ApplyRole(overlayHost, BoldClassName, fontAsset.ResolveBold(), fontAsset.Bold, "Bold", discard);
-            ApplyRole(overlayHost, MediumClassName, fontAsset.ResolveMedium(), fontAsset.Medium, "Medium", discard);
-            ApplyRole(overlayHost, LightClassName, fontAsset.ResolveLight(), fontAsset.Light, "Light", discard);
-            ApplyRole(overlayHost, CondensedClassName, fontAsset.ResolveCondensed(), fontAsset.Condensed, "Condensed", discard);
         }
 
         /// <summary>
-        /// Applies a single <see cref="FontDefinition"/> to one element via
-        /// <c>-unity-font-definition</c>. Prefers an SDF <c>FontAsset</c>, falling
-        /// back to a legacy <see cref="Font"/>. No-op if neither is set.
-        /// </summary>
-        public static void ApplyFontDefinition(VisualElement el, FontDefinition fd)
-        {
-            if (el == null) return;
-            if (fd.fontAsset != null)
-                el.style.unityFontDefinition = FontDefinition.FromSDFFont(fd.fontAsset);
-            else if (fd.font != null)
-                el.style.unityFontDefinition = FontDefinition.FromFont(fd.font);
-        }
-
-        /// <summary>
-        /// Reverts <paramref name="root"/> to the USS-defined font.
+        /// Removes any inline <c>-unity-font-definition</c> left on <paramref name="root"/> by
+        /// project code, handing the element back to the USS cascade.
         /// </summary>
         public static void ResetToDefault(VisualElement root)
         {
             if (root == null) return;
             root.style.unityFontDefinition = StyleKeyword.Null;
+        }
+
+        /// <summary>Human-readable list of the slots <paramref name="asset"/> actually fills,
+        /// or null when it fills none.</summary>
+        private static string FilledSlots(SusFontAsset asset)
+        {
+            var slots = new List<string>();
+            if (SusFontAsset.HasFont(asset.Regular)) slots.Add("Regular");
+            if (SusFontAsset.HasFont(asset.Medium)) slots.Add("Medium");
+            if (SusFontAsset.HasFont(asset.Bold)) slots.Add("Bold");
+            if (SusFontAsset.HasFont(asset.Light)) slots.Add("Light");
+            if (SusFontAsset.HasFont(asset.Heading)) slots.Add("Heading");
+            if (SusFontAsset.HasFont(asset.Mono)) slots.Add("Mono");
+            if (SusFontAsset.HasFont(asset.Condensed)) slots.Add("Condensed");
+            return slots.Count == 0 ? null : string.Join(", ", slots);
         }
     }
 }
