@@ -68,8 +68,15 @@ namespace Sharq.Core.Editor.Tests
             // host (it escaped past it, to panel.visualTree) and IS sitting somewhere under the
             // panel. A test that skipped this check could pass for the wrong reason if a future
             // refactor made ResolveOverlayHost stop escaping at all.
-            Assert.That(_host.Query<Label>(className: CoreRootLeakDemo.MarkerClass).ToList(),
-                Is.Empty, "sanity: this story's popup must land OUTSIDE the host to exercise T-3131");
+            // Counted as "how many landed OUTSIDE this shell", not asserted as "the shell holds
+            // none" (card T-3160): zone C's matrix builds cells from the same story, and since
+            // T-3160 a cell that opens itself lands in the MATRIX's own host — inside this shell,
+            // by design. What T-3131 is about is the popup of the MOUNTED instance escaping PAST
+            // the shell, to panel.visualTree.
+            Assert.That(LeakedLabelCount(_host) -
+                        _host.Query<Label>(className: CoreRootLeakDemo.MarkerClass).ToList().Count,
+                Is.GreaterThanOrEqualTo(1),
+                "sanity: this story's popup must land OUTSIDE the host to exercise T-3131");
             // >= 1, not == 1: AttachToPanelEvent firing more than once for one element while an
             // EditorWindow's panel is still settling is a real, separately-observed quirk of this
             // harness (not the T-3131 bug) — the CONTRACT under test is "Unmount drives this back

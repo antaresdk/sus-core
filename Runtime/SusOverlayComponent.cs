@@ -87,6 +87,26 @@ namespace Sharq.Core
         protected override bool IsRelocating => IsRelocatingToOverlay;
 
         /// <summary>
+        /// True while the host this element sits in is being EMPTIED (<c>OverlayHost.ClearAll</c> /
+        /// <c>ClearCategory</c>) rather than dismissing this one overlay — card T-3160.
+        ///
+        /// <see cref="UnmountSelfFromOverlay"/> answers a dismissal by scheduling a restore into the
+        /// parent this element was teleported from, one frame later (it cannot reparent
+        /// synchronously — see the comments there). Answering a TEARDOWN the same way puts the
+        /// content back on screen a frame after the caller was told the host is empty, and it comes
+        /// back live: re-parented means re-attached, re-attached means <c>Mounted()</c>, and a modal
+        /// whose open prop is still true re-opens itself. That is how the previous Storybook story's
+        /// modal ended up in four kit frames of the 2026-09-09 sweep (showcase-3) even though
+        /// <c>SusStorybookHost.Unmount</c> had cleared every host it can reach (T-3131). A cleared
+        /// host means gone: the element stays detached, and reopening it is the owner's call.
+        /// </summary>
+        private bool HostIsTearingDown()
+        {
+            if (_selfHost != null && _selfHost.IsClearing) return true;
+            return parent is OverlayHost host && host.IsClearing;
+        }
+
+        /// <summary>
         /// Teleports THIS element into its pinned overlay layer, remembering the original
         /// parent for restore. Returns false if no OverlayHost was found (caller may fall
         /// back to inline display).
@@ -146,11 +166,18 @@ namespace Sharq.Core
                 {
                     IsRelocatingToOverlay = false;
                 }
-                if (_selfOriginalParent != null)
+                if (HostIsTearingDown())
                 {
-                    // this branch also runs when the HOST initiated the removal
-                    // (OverlayHost.RemoveFromOverlay/ClearAll called directly, not through
-                    // this component's own Close()/Model=false path) — that path never sets
+                    // Cleared, not dismissed (card T-3160): drop the restore target the way a
+                    // completed restore would, so a later reopen re-captures a live parent.
+                    _selfOriginalParent = null;
+                }
+                else if (_selfOriginalParent != null)
+                {
+                    // this branch also runs when the HOST initiated the removal of THIS ONE
+                    // overlay (OverlayHost.RemoveFromOverlay called directly, not through this
+                    // component's own Close()/Model=false path; a host-wide ClearAll is a teardown
+                    // and takes the branch above instead, card T-3160) — that path never sets
                     // IsRelocatingToOverlay before detaching, so the DetachFromPanelEvent
                     // this element's own RemoveFromHierarchy() fires reaches this method
                     // REENTRANT, synchronously, from inside UIR's own render-tree traversal
@@ -179,7 +206,7 @@ namespace Sharq.Core
                     }).ExecuteLater(0);
                 }
             }
-            else if (parent is OverlayHost && _selfOriginalParent != null)
+            else if (parent is OverlayHost && _selfOriginalParent != null && !HostIsTearingDown())
             {
                 // Stale DOM on host without stack entry. Defer restore — Unmounted
                 // may run inside DetachFromPanel where hierarchy mutation is illegal.

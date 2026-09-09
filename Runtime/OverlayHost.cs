@@ -387,8 +387,16 @@ namespace Sharq.Core
         public void ClearCategory(OverlayCategory category)
         {
             var snapshot = _stack.Where(e => e.Category == category).ToList();
-            foreach (var entry in snapshot)
-                RemoveFromOverlay(entry);
+            IsClearing = true;
+            try
+            {
+                foreach (var entry in snapshot)
+                    RemoveFromOverlay(entry);
+            }
+            finally
+            {
+                IsClearing = false;
+            }
             UninstallClickGuard();
         }
 
@@ -398,10 +406,35 @@ namespace Sharq.Core
         public void ClearAll()
         {
             var snapshot = new List<OverlayEntry>(_stack);
-            foreach (var entry in snapshot)
-                RemoveFromOverlay(entry);
+            IsClearing = true;
+            try
+            {
+                foreach (var entry in snapshot)
+                    RemoveFromOverlay(entry);
+            }
+            finally
+            {
+                IsClearing = false;
+            }
             UninstallClickGuard();
         }
+
+        /// <summary>
+        /// True only while <see cref="ClearAll"/> / <see cref="ClearCategory"/> is emptying this
+        /// host — i.e. while the removal is a TEARDOWN of the host, not the dismissal of one
+        /// overlay (card T-3160).
+        ///
+        /// The two are not the same thing for a self-teleporting overlay
+        /// (<see cref="SusOverlayComponent"/>: every modal, every toast). A dismissal means
+        /// "close and go back where you came from", and
+        /// <c>SusOverlayComponent.UnmountSelfFromOverlay</c> honours it by SCHEDULING a restore
+        /// into the original parent one frame later. A clear means "this host is being emptied":
+        /// answering it with a restore puts the content back on screen a frame after the caller
+        /// was told the host is empty — which is how a torn-down Storybook story came back into
+        /// the next story's canvas and was photographed there (showcase-3, 2026-09-09; T-3131 could
+        /// not see it because a synchronous test looks before the deferred restore fires).
+        /// </summary>
+        internal bool IsClearing { get; private set; }
 
         /// <summary>
         /// Returns the number of active overlays.

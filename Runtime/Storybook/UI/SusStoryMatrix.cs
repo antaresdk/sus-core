@@ -33,6 +33,17 @@ namespace Sharq.Core.Storybook.UI
         public const string DefaultRow = "default";
 
         /// <summary>
+        /// Name of the matrix's own <see cref="OverlayHost"/> (card T-3160). Deliberately NOT
+        /// <see cref="OverlayHost.OverlayHostName"/>: that name is what
+        /// <c>SusBootstrap.GetOrCreateOverlay</c> and
+        /// <c>SusOverlayComponent.MountSelfInOverlay</c> look for when they search a WHOLE panel
+        /// for "the" host — and a matrix host answering that search would adopt popups belonging
+        /// to the application. Cells find this host by TYPE, walking up
+        /// (<c>SusBootstrap.FindOverlayHost</c>), so it needs no name of that kind.
+        /// </summary>
+        public const string OverlayName = "sus-storybook-matrix-overlay";
+
+        /// <summary>
         /// Prop the rows come from. The plan names <c>Variant</c>; it is a property rather than a
         /// constant so a rig can point the matrix at another closed axis without a fork.
         /// </summary>
@@ -42,6 +53,7 @@ namespace Sharq.Core.Storybook.UI
         readonly ScrollView _scroll = new(ScrollViewMode.Horizontal);
         readonly VisualElement _grid = new();
         readonly Label _note = new();
+        readonly OverlayHost _overlay = new() { name = OverlayName };
 
         readonly List<string> _rows = new();
         readonly List<string> _columns = new();
@@ -68,6 +80,14 @@ namespace Sharq.Core.Storybook.UI
             Add(_toggle);
             Add(_scroll);
             Add(_note);
+            // Card T-3160. A cell is a REAL instance built by the story's own Create()+Configure(),
+            // so a story that is open at t=0 (every modal story: Model = true) makes every cell
+            // open ITSELF at mount. Without a host of its own here, the nearest OverlayHost such a
+            // cell can reach is the APPLICATION's root one — the showcase sweep shot four modals
+            // carrying sus-sb-matrix__item at 0;0;1280;720, over the frames of later stories
+            // (showcase-3, 2026-09-09). With it, the cell's popup stays inside the matrix box and
+            // dies with the grid: ClearCells() empties this host right after it empties the grid.
+            Add(_overlay);
 
             Reset();
         }
@@ -116,6 +136,12 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>Footnote under the grid; empty when every state could be drawn.</summary>
         public string NoteText => _note.text;
+
+        /// <summary>
+        /// The matrix's own overlay host (card T-3160) — where a cell that opens itself lands,
+        /// instead of in the application root. Emptied by <see cref="Clear"/>.
+        /// </summary>
+        public OverlayHost Overlay => _overlay;
 
         // ── building ─────────────────────────────────────────────────────────
 
@@ -243,7 +269,14 @@ namespace Sharq.Core.Storybook.UI
 
         void ClearCells()
         {
+            // Grid first, host second, and the order is the point (card T-3160). A cell that
+            // teleported itself into the host answers a host-initiated removal by SCHEDULING a
+            // restore into its original parent (SusOverlayComponent.UnmountSelfFromOverlay) — so
+            // that parent, the cell, must already be detached when the host is emptied. A
+            // detached element's scheduler never fires, and the restore dies with it; the other
+            // order would put the cell's instance back on screen one frame later.
             _grid.Clear();
+            _overlay.ClearAll();
             _built = false;
         }
 
