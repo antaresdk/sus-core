@@ -428,9 +428,32 @@ namespace Sharq.Core.Storybook
         /// <summary>The generated control panel of zone D, or null while nothing is mounted.</summary>
         public SusControlPanel Controls => _controls;
 
+        /// <summary>
+        /// Zone D, but NOT before the story has actually mounted (T-3096). Every control snapshots
+        /// <c>SusPropInfo.Dead</c> when it is built, and <c>Mounted()</c> — where a component
+        /// registers the <c>Watch</c>es of its content props — runs a frame LATER than the
+        /// constructor. Building the panel inside <see cref="Mount"/> therefore judged an
+        /// unmounted instance and printed "dead props: Text · PrependIcon · AppendIcon · Icon" on
+        /// a perfectly live SusButton (kadr kit-button.png, T-3041): four props whose only readers
+        /// live in Mounted(), against thirteen that Build()'s :class bindings already read. The
+        /// panel now waits for the mount signal, which is what the snapshot always assumed.
+        /// </summary>
         void BuildControls(SusStoryEntry entry, SusComponent component, SusStoryContext story, SusStoryRoute route)
         {
             _zonePanel.Clear();
+
+            if (!component.IsMounted)
+            {
+                _zonePanel.Add(SlotHint("zone D — waiting for the story to mount"));
+                component.MountCompleted += () =>
+                {
+                    // The story may have been swapped while the frame passed.
+                    if (_disposed || !ReferenceEquals(_current, component)) return;
+                    BuildControls(entry, component, story, route);
+                };
+                return;
+            }
+
             _controls = new SusControlPanel(component, entry.Name, story, route);
             _controls.ValueChanged += _ => OnControlValueChanged();
             _zonePanel.Add(_controls);
@@ -516,7 +539,18 @@ namespace Sharq.Core.Storybook
             _sizes.Track(null);
             _probe.Clear();   // card T-3040: reset on story change
             _sizes.SetOverlayOpen(false);
-            if (_canvasOverlay != null) _canvasOverlay.ClearAll();
+            // T-3131: a story that opens an overlay before _canvasOverlay exists (ModalStory
+            // sets Model=true from Configure(), which runs during entry.Instantiate() — BEFORE
+            // Mount() adds the component to _canvas and calls GetOrCreateOverlay(_canvas)) never
+            // resolves to _canvasOverlay at all. SusBootstrap.ResolveOverlayHost walks ancestors,
+            // finds none yet, and falls back to panel.visualTree — the document root, an ANCESTOR
+            // of this host, not a descendant — so the modal lands in a second, ROOT OverlayHost
+            // that _canvasOverlay.ClearAll() alone never touches. Clear both, same two-step lookup
+            // SusThemeService.SetTheme uses for the same host (descendant Q<>, then panel.visualTree
+            // Q<>) — env axis state (breakpoint/density/theme/scale/input) is deliberately NOT
+            // reset here: it is core-service state the env bar only reflects, not per-story data
+            // (class doc above, plan §4.4).
+            ClearAllOverlayHosts();
             if (_current != null)
             {
                 _current.RemoveFromHierarchy();
@@ -524,6 +558,22 @@ namespace Sharq.Core.Storybook
             }
             _canvas.Clear();
             _canvasOverlay = null;
+        }
+
+        /// <summary>
+        /// Empties every <see cref="OverlayHost"/> this shell can reach: the ones nested inside it
+        /// (normally just <see cref="_canvasOverlay"/>) AND the one that may have been created on
+        /// <c>panel.visualTree</c> — an ancestor of this host, not a descendant, and therefore
+        /// invisible to any query rooted on <c>this</c> (T-3131). Leaves the hosts themselves in
+        /// place (idempotent, matches <see cref="OverlayHost.ClearAll"/> semantics); only their
+        /// content is torn down.
+        /// </summary>
+        void ClearAllOverlayHosts()
+        {
+            foreach (var host in this.Query<OverlayHost>().ToList()) host.ClearAll();
+            var tree = panel?.visualTree;
+            if (tree == null || ReferenceEquals(tree, this)) return;
+            foreach (var host in tree.Query<OverlayHost>().ToList()) host.ClearAll();
         }
 
         void ShowNoStories()

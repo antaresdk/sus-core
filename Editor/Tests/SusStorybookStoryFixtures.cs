@@ -159,6 +159,46 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
+    /// <summary>
+    /// T-3131 regression fixture: opens its overlay from <see cref="AttachToPanelEvent"/>,
+    /// exactly like the real <c>SusModal</c> does for "Model=true before Mounted" (its own
+    /// comment: "Watch(Model) is not immediate and runs in Created — OpenOverlay needs parent
+    /// (Mounted)"). That timing is what makes <see cref="SusBootstrap.ResolveOverlayHost"/>
+    /// walk past a <see cref="SusStorybookHost"/> whose <c>_canvasOverlay</c> does not exist YET
+    /// (Mount() adds the component to the canvas, and only THEN calls
+    /// <c>GetOrCreateOverlay(_canvas)</c>) and fall back to <c>panel.visualTree</c> — the
+    /// document root, an ANCESTOR of the host, not a descendant of it.
+    /// </summary>
+    public sealed class CoreRootLeakDemo : SusComponent
+    {
+        public const string MarkerClass = "sus-demo-root-leak__panel";
+
+        protected override void Build()
+        {
+            RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                var host = SusBootstrap.ResolveOverlayHost(this);
+                if (host == null) return;
+                var floating = new UnityEngine.UIElements.Label("leaked");
+                floating.AddToClassList(MarkerClass);
+                host.AddToOverlay(floating, OverlayCategory.Dropdown);
+            });
+        }
+    }
+
+    [SusStory("core/overlay/root-leak",
+        Name = "RootLeak",
+        Purpose = "T-3131 regression: proves SusStorybookHost.Unmount also clears an overlay " +
+                  "that escaped to panel.visualTree, not only _canvasOverlay")]
+    public sealed class CoreRootLeakStory : ISusStory
+    {
+        public SusComponent Create() => new CoreRootLeakDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
     // ── one story born from DATA, to prove the provider path ────────────────
 
     /// <summary>
