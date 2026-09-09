@@ -511,7 +511,7 @@ namespace Sharq.Core.Editor
 "| I want to change | Edit file | How is it connected |\n" +
 "|---|---|---|\n" +
 "| Colors, sizes, radii | `Theme/Resources/branding.uss` | `.UseCustomStyles(\\\"branding\\\")` |\n" +
-"| Fonts | `Fonts/AppFonts.asset` (Inspector) | `.UseFonts(_fonts)` |\n" +
+"| Fonts | `Fonts/AppFonts.asset` (Inspector) | `Window > SUS > Fonts > Export Font Set to USS` |\n" +
 "| Icons | `Icons/Resources/SusRuntime/Icons/app/{weight}/*.svg` | `.UseIcons(new ResourcesFolderIconProvider(\"app\"))` |\n" +
 "| Your component | add `.sharq` under `Components/` | reference them in your screens |\n" +
 "\n" +
@@ -520,8 +520,12 @@ namespace Sharq.Core.Editor
 "- **branding.uss** loaded AFTER the entire cascade of tokens (core L1–L3 + downstream L4/L5)\n" +
 "  to root and OverlayHost - overrides only declared variables,\n" +
 "  including popups/tooltips. Layers: `Packages/com.sharq-it.sus.core/Docs/DESIGN_TOKENS.md`.\n" +
-"- **AppFonts.asset** — assign fonts to Inspector; applied to the root and\n" +
-"  overlays via `-unity-font-definition`.\n" +
+"- **AppFonts.asset** — fill the slots in the Inspector, then run\n" +
+"  `Window > SUS > Fonts > Export Font Set to USS` (writes\n" +
+"  `Assets/Resources/SusRuntime/_font.uss`); the cascade picks up the exported tokens\n" +
+"  automatically, including popups/overlays. `.UseFonts(_fonts)` no longer writes any\n" +
+"  style itself — exporting is the step that reaches the tree. Details:\n" +
+"  `Packages/com.sharq-it.sus.core/Documentation~/font-extension.md`.\n" +
 "- **Icons** - put `.svg` in `Icons/Resources/SusRuntime/Icons/app/regular/`\n" +
 "  (or `bold/`, `fill/`, ...). Usage: `new SusIconElement { Name = { Value = \"app-logo\" } }`\n" +
 "  or `Icon=\"app-logo\"` in Sharq components. Your icons overlap the built-in ones.\n" +
