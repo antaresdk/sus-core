@@ -413,8 +413,11 @@ namespace Sharq.Core.Storybook
             _sizes.Track(component);
 
             // Zone E, card T-3040: the feed subscribes to every declared event of THIS instance
-            // and forgets the previous story's session.
-            _probe.Attach(entry, component, _canvas);
+            // and forgets the previous story's session. Zone D's panel rides along (card T-3143)
+            // so the session report can read props/controls/exclusions/manual controls without
+            // plumbing SusStoryContext a second time; when the panel is still waiting on the
+            // mount signal (T-3096) it comes in null here and BuildControls hands it over later.
+            _probe.Attach(entry, component, _canvas, _controls);
 
             // UI Toolkit raises no event when an overlay gains a child, so the stage looks. The
             // tick is cheap (two class flips) and stops with the story.
@@ -457,6 +460,11 @@ namespace Sharq.Core.Storybook
             _controls = new SusControlPanel(component, entry.Name, story, route);
             _controls.ValueChanged += _ => OnControlValueChanged();
             _zonePanel.Add(_controls);
+
+            // The deferred branch above builds the panel a frame after Attach() ran with panel
+            // still null (T-3096); hand it to zone E now so the session report it writes on
+            // Clear() sees real coverage instead of "panel was never built" (card T-3143).
+            if (ReferenceEquals(_current, component)) _probe.Panel = _controls;
         }
 
         // A control write must not remount the story - that would throw away the very value just

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using UnityEngine.UIElements;
+using Sharq.Core.Storybook.Controls;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using Sharq.Core.Diagnostics;   // SusUiProbe compiles only in the editor and in dev builds
 #endif
@@ -63,6 +65,7 @@ namespace Sharq.Core.Storybook.Probe
         SusStoryEntry _entry;
         SusComponent _instance;
         VisualElement _canvas;
+        SusControlPanel _panel;   // card T-3143: zone D's ledger, reused instead of re-plumbing SusStoryContext
         SusStoryFrameResult _frameResult = SusStoryFrameResult.Unavailable;
         bool _disposed;
 
@@ -107,6 +110,19 @@ namespace Sharq.Core.Storybook.Probe
 
         /// <summary>Story the probe is attached to, or null.</summary>
         public SusStoryEntry Story => _entry;
+
+        /// <summary>
+        /// Zone D's control panel for the currently attached story, or null. Settable
+        /// separately from <see cref="Attach"/> because the shell builds the panel lazily —
+        /// <see cref="SusStorybookHost"/> waits a frame for <c>component.MountCompleted</c>
+        /// before <c>SusControlPanel</c> exists (T-3096) — so the report must pick up the panel
+        /// whenever it becomes ready, not only at attach time (card T-3143).
+        /// </summary>
+        public SusControlPanel Panel
+        {
+            get => _panel;
+            set => _panel = value;
+        }
 
         /// <summary>
         /// Where the anomalies come from. Defaults to <c>SusUiProbe.GetAnomalies</c> —
@@ -174,14 +190,22 @@ namespace Sharq.Core.Storybook.Probe
         /// unfired list, anomalies) and subscribes to every event of the new instance. This is
         /// the reset the mock-up asks for when the story changes — a chip from the previous
         /// component would be a lie about this one.
+        ///
+        /// <paramref name="panel"/> is zone D's control panel for the SAME instance, optional and
+        /// null by default so every existing caller (three EditMode tests, T-3040) keeps
+        /// compiling unchanged. The shell (<see cref="SusStorybookHost"/>) passes its own
+        /// <c>SusControlPanel</c> — built moments earlier from the same <c>SusStoryContext</c> —
+        /// so <see cref="BuildReport"/> can read props/controls/exclusions/manual controls without
+        /// a second wire to the ledger (card T-3143; the panel already paid that cost).
         /// </summary>
-        public void Attach(SusStoryEntry entry, SusComponent instance, VisualElement canvas)
+        public void Attach(SusStoryEntry entry, SusComponent instance, VisualElement canvas, SusControlPanel panel = null)
         {
             if (_disposed) return;
 
             _entry = entry;
             _instance = instance;
             _canvas = canvas;
+            _panel = panel;
             _events.Attach(instance);
 
             SusStoryQa.NotifyMounted(entry, instance, canvas);
@@ -199,6 +223,7 @@ namespace Sharq.Core.Storybook.Probe
             _entry = null;
             _instance = null;
             _canvas = null;
+            _panel = null;
             _events.Reset();
             _frameResult = SusStoryFrameResult.Unavailable;
             SetAnomalies(Array.Empty<string>());
@@ -229,7 +254,32 @@ namespace Sharq.Core.Storybook.Probe
                 new List<string>(_events.Calls),
                 new List<string>(_events.Unfired),
                 new List<string>(_anomalies),
-                _frameResult);
+                _frameResult,
+                props: ReadProps(),
+                controls: _panel == null ? Array.Empty<string>() : _panel.Controls.Select(c => c.Prop.Name).ToList(),
+                uncovered: _panel == null ? Array.Empty<string>() : new List<string>(_panel.Uncovered),
+                excluded: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.Exclusions.Keys),
+                manualControls: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.ManualControls.Keys));
+
+        /// <summary>
+        /// Every prop the mounted instance declares. Read straight off <see cref="_instance"/>
+        /// (not off the panel) so the numerator of R134 L1 exists even when zone D failed to
+        /// build a panel for some other reason — the count of props a component HAS does not
+        /// depend on whether a control panel exists to show them.
+        /// </summary>
+        IReadOnlyList<string> ReadProps()
+        {
+            if (_instance == null) return Array.Empty<string>();
+            try
+            {
+                return _instance.DescribeProps().Select(p => p.Name).ToList();
+            }
+            catch (Exception e)
+            {
+                SusLog.Error("[storybook] could not describe props for report: " + e);
+                return Array.Empty<string>();
+            }
+        }
 
         // ── internals ────────────────────────────────────────────────────────
 
@@ -332,6 +382,7 @@ namespace Sharq.Core.Storybook.Probe
             _entry = null;
             _instance = null;
             _canvas = null;
+            _panel = null;
         }
     }
 }

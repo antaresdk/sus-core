@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,6 +8,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
+using Sharq.Core.Storybook.Controls;
 using Sharq.Core.Storybook.Probe;
 
 namespace Sharq.Core.Editor.Tests
@@ -322,7 +324,149 @@ namespace Sharq.Core.Editor.Tests
             public void StoryFinished(SusStoryProbeReport report) => Reports.Add(report);
         }
 
+        // ── zone D coverage rides along the session report (card T-3143) ───
+        //
+        // SusStoryProbeReport carried only events/health/frame until now: props/controls were
+        // known to SusControlPanel (card T-3034) but never reached the report, so R134 layer 1
+        // (control-gap: a prop with neither a control nor a declared exclusion) could never be
+        // judged from a real sweep. Attach() now takes the SAME SusControlPanel zone D just
+        // built for this instance (cheaper than plumbing SusStoryContext a second time) and
+        // BuildReport() reads props/controls/uncovered/excluded/manualControls straight off it.
+
+        [Test]
+        public void BuildReport_WithNoPanel_ReportsEmptyCoverageInsteadOfThrowing()
+        {
+            var demo = new ProbeEventDemo();
+            using var probe = Attached(demo);   // three-arg Attach: every pre-T-3143 caller
+
+            var report = probe.BuildReport();
+
+            CollectionAssert.IsEmpty(report.Props, "ProbeEventDemo declares no [CreateProperty] prop");
+            CollectionAssert.IsEmpty(report.Controls);
+            CollectionAssert.IsEmpty(report.Uncovered);
+            CollectionAssert.IsEmpty(report.Excluded);
+            CollectionAssert.IsEmpty(report.ManualControls);
+        }
+
+        [Test]
+        public void BuildReport_WithAPanel_CountsMatchThePanelExactly()
+        {
+            var component = new SusIntrospectionFixture();
+            var story = new SusStoryContext(Entry(Counter), component, null);
+            story.Exclude("DeadProp", "kept for the API, driven by nothing");
+            story.AddManualControl("Variant", "story drives it with its own picker");
+
+            using var panel = new SusControlPanel(component, "Fixture", story, null);
+            var stage = new VisualElement();
+            stage.Add(component);
+
+            using var probe = new SusStoryProbe();
+            probe.Attach(Entry(Counter), component, stage, panel);
+
+            var report = probe.BuildReport();
+
+            Assert.AreEqual(component.DescribeProps().Count, report.Props.Count,
+                "props is the same N the panel's own footer counts (\"props N · controls M\")");
+            CollectionAssert.AreEquivalent(panel.Controls.Select(c => c.Prop.Name), report.Controls);
+            CollectionAssert.AreEquivalent(panel.Uncovered, report.Uncovered);
+            Assert.AreEqual(1, report.Excluded.Count);
+            Assert.AreEqual("DeadProp", report.Excluded[0],
+                "the session report needs the PLAIN prop name (ctx.Exclusions.Keys), not panel.Excluded's "
+                + "\"name (reason)\" display text — story-contract.mjs matches it against props verbatim");
+            Assert.AreEqual(1, report.ManualControls.Count);
+            Assert.AreEqual("Variant", report.ManualControls[0]);
+
+            // R134 L1 gap = props − (controls ∪ excluded ∪ manualControls), exactly as the
+            // corpus-wide sweep gate computes it from this same JSON shape.
+            var covered = new HashSet<string>(report.Controls);
+            covered.UnionWith(report.Excluded);
+            covered.UnionWith(report.ManualControls);
+            var gap = report.Props.Where(p => !covered.Contains(p)).ToList();
+            CollectionAssert.IsEmpty(gap, "a story with a control, an exclusion or a manual control " +
+                "for every prop must measure zero gap");
+        }
+
+        [Test]
+        public void BuildReport_APropWithNoControlAndNoException_ShowsUpInUncoveredNotInControls()
+        {
+            SusControlFactory.Register(new SilentProbeProvider("Text"));
+            try
+            {
+                var component = new SusIntrospectionFixture();
+                using var panel = new SusControlPanel(component, "Fixture");
+                var stage = new VisualElement();
+                stage.Add(component);
+
+                using var probe = new SusStoryProbe();
+                probe.Attach(Entry(Counter), component, stage, panel);
+
+                var report = probe.BuildReport();
+
+                CollectionAssert.Contains(report.Uncovered, "Text");
+                CollectionAssert.DoesNotContain(report.Controls, "Text");
+            }
+            finally
+            {
+                SusControlFactory.ClearProviders();
+            }
+        }
+
+        /// <summary>Claims a prop and builds nothing — the hole R134 L1 hunts (mirrors SusControlPanelTests).</summary>
+        sealed class SilentProbeProvider : ISusControlProvider
+        {
+            readonly string _prop;
+            public SilentProbeProvider(string prop) => _prop = prop;
+            public bool CanBuild(SusPropInfo prop) => prop.Name == _prop;
+            public SusControl Build(SusPropInfo prop, SusControlContext context) => null;
+        }
+
         // ── through the shell ────────────────────────────────────────────────
+
+        [UnityTest]
+        public IEnumerator The_shell_hands_zone_D_s_panel_to_zone_E_for_the_session_report()
+        {
+            // Zone D is derived from a MOUNTED instance (T-3096), and Mounted() is deferred to
+            // the panel's scheduler ("next frame so child elements are fully attached" —
+            // SusComponent's constructor, StartingIn(0)) even with a REAL panel — a detached
+            // EditMode host never reaches Mounted() at all (SusZoneDMountTimingTests), so a real
+            // one is needed here (EditorWindow, same technique as
+            // SusStorybookHostOverlayTeardownTests) AND a frame must actually pass, hence
+            // [UnityTest] + yield instead of a plain [Test]. Under -batchmode -nographics there
+            // is no device to init the window's view (T-1731), so this is Inconclusive there.
+            Assume.That(!UnityEngine.Application.isBatchMode,
+                "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
+
+            var window = UnityEditor.EditorWindow.CreateInstance<UnityEditor.EditorWindow>();
+            try
+            {
+                window.Show();
+                using var host = new SusStorybookHost();
+                window.rootVisualElement.Add(host);
+
+                host.ShowStoryById(Counter);
+
+                var story = host.QaCanvas.Children().OfType<SusComponent>().First();
+                for (int i = 0; i < 60 && !story.IsMounted; i++) yield return null;
+
+                Assert.IsTrue(story.IsMounted, "the story reaches Mounted() within 60 frames of a real panel");
+                Assert.IsNotNull(host.Controls, "and zone D is built only once it does (T-3096)");
+                Assert.AreSame(host.Controls, host.Probe.Panel,
+                    "zone E reads the SAME SusControlPanel instance zone D just built (card T-3143), " +
+                    "not a second copy plumbed through SusStoryContext");
+
+                var report = host.Probe.BuildReport();
+
+                CollectionAssert.AreEquivalent(new[] { "Label", "Count" }, report.Props);
+                CollectionAssert.AreEquivalent(new[] { "Label", "Count" }, report.Controls);
+                CollectionAssert.Contains(report.Excluded, "OnCount",
+                    "CoreCounterStory excludes \"OnCount\" from its ledger; the session report names it verbatim");
+                CollectionAssert.IsEmpty(report.ManualControls);
+            }
+            finally
+            {
+                if (window != null) window.Close();
+            }
+        }
 
         [Test]
         public void The_shell_wires_zone_E_to_the_story_it_mounted()

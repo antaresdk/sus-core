@@ -18,7 +18,12 @@ namespace Sharq.Core.Storybook.Probe
             IReadOnlyList<string> firedCalls,
             IReadOnlyList<string> unfiredEvents,
             IReadOnlyList<string> anomalies,
-            SusStoryFrameResult frame)
+            SusStoryFrameResult frame,
+            IReadOnlyList<string> props = null,
+            IReadOnlyList<string> controls = null,
+            IReadOnlyList<string> uncovered = null,
+            IReadOnlyList<string> excluded = null,
+            IReadOnlyList<string> manualControls = null)
         {
             StoryId = storyId;
             DeclaredEvents = declaredEvents ?? Array.Empty<string>();
@@ -26,6 +31,11 @@ namespace Sharq.Core.Storybook.Probe
             UnfiredEvents = unfiredEvents ?? Array.Empty<string>();
             Anomalies = anomalies ?? Array.Empty<string>();
             Frame = frame;
+            Props = props ?? Array.Empty<string>();
+            Controls = controls ?? Array.Empty<string>();
+            Uncovered = uncovered ?? Array.Empty<string>();
+            Excluded = excluded ?? Array.Empty<string>();
+            ManualControls = manualControls ?? Array.Empty<string>();
         }
 
         /// <summary>Story address the report is about.</summary>
@@ -45,6 +55,38 @@ namespace Sharq.Core.Storybook.Probe
 
         /// <summary>Frame verdict at the moment of the report.</summary>
         public SusStoryFrameResult Frame { get; }
+
+        /// <summary>
+        /// Every <c>[CreateProperty]</c> prop the mounted instance declares
+        /// (<c>SusComponent.DescribeProps()</c>) — the N of "props N · controls M" (card T-3034)
+        /// and the numerator R134 layer 1 (control-gap) reads from the session report
+        /// (<c>sus-story-session/v1</c>, plan §4.7). Empty when the panel was never built
+        /// (<see cref="SusStoryProbe.Attach"/> got no control panel).
+        /// </summary>
+        public IReadOnlyList<string> Props { get; }
+
+        /// <summary>Props for which zone D actually built a control (<c>SusControlPanel.Controls</c>).</summary>
+        public IReadOnlyList<string> Controls { get; }
+
+        /// <summary>
+        /// Props with neither a control nor a declared exclusion — a hole in the story
+        /// (<c>SusControlPanel.Uncovered</c>). Should read empty on a healthy story; kept
+        /// explicit rather than inferred so the session JSON can say so plainly.
+        /// </summary>
+        public IReadOnlyList<string> Uncovered { get; }
+
+        /// <summary>
+        /// Props the story deliberately left without a control (<c>ctx.Exclusions.Keys</c>) —
+        /// plain prop names, the reason lives in the ledger, not in this list. R134 L1 treats
+        /// membership here as covered, same as a real control.
+        /// </summary>
+        public IReadOnlyList<string> Excluded { get; }
+
+        /// <summary>
+        /// Props the story drives with a hand-written control (<c>ctx.ManualControls.Keys</c>).
+        /// Also counts as covered for R134 L1 — a manual control is still a control.
+        /// </summary>
+        public IReadOnlyList<string> ManualControls { get; }
     }
 
     /// <summary>
