@@ -7,6 +7,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core;
 using Sharq.Core.Storybook;
+using Sharq.Core.Storybook.UI;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -88,13 +89,55 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(_host.Matrix.BuiltCellCount, Is.GreaterThan(0), "sanity: the matrix built cells");
             Assert.That(MarkersInPanel(), Is.GreaterThan(1), "sanity: the cells are real instances");
-            Assert.That(_host.Matrix.Overlay.Count, Is.EqualTo(_host.Matrix.BuiltCellCount),
-                "T-3160: every cell that opens itself lands in the MATRIX's own host");
+            Assert.That(_host.Matrix.HostedCellCount, Is.EqualTo(_host.Matrix.BuiltCellCount),
+                "T-3160: every cell that opens itself lands in a host of the MATRIX — since " +
+                "T-3189 that is the CELL's own host rather than the matrix-wide one, so the " +
+                "count is taken over both");
             Assert.That(_appOverlay.Count, Is.Zero,
                 "T-3160: no cell may end up in the application's root overlay host");
             Assert.That(MarkersOutsideHost(), Is.Zero,
                 "T-3160: a matrix cell's overlay belongs to the cell, not to panel.visualTree — " +
                 "found at: " + Dump(_window.rootVisualElement.panel.visualTree));
+        }
+
+        /// <summary>
+        /// Card T-3189: a cell that opens itself stays inside ITS OWN cell. An
+        /// <see cref="OverlayHost"/> is <c>position: absolute</c> with zero insets, so with one
+        /// host for the whole matrix (T-3160) every teleporting cell stretched over the entire
+        /// grid — four columns replaced by one full-width dialog stacked four deep. The
+        /// 2026-09-10 kit sweep read that as a GHOST of an earlier story on
+        /// <c>kit/molecules/modal</c> and <c>kit/molecules/tutorial-modal</c>; it was the current
+        /// story's own matrix, drawn over itself.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator A_cell_that_opens_itself_stays_inside_its_own_cell()
+        {
+            Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
+            yield return null;
+            yield return null;
+
+            var cells = _host.Matrix.Query<VisualElement>(className: "sus-sb-matrix__cell").ToList();
+            Assert.That(cells.Count, Is.EqualTo(_host.Matrix.BuiltCellCount),
+                "sanity: one box per built cell");
+            Assert.That(_host.Matrix.HostedCellCount, Is.EqualTo(cells.Count),
+                "sanity: every cell instance did teleport into a host");
+
+            var matrixBox = _host.Matrix.worldBound;
+            foreach (var cell in cells)
+            {
+                var host = cell.Query<OverlayHost>(name: SusStoryMatrix.CellOverlayName).First();
+                Assert.IsNotNull(host, "T-3189: every cell owns an overlay host");
+                Assert.That(host.childCount, Is.EqualTo(1),
+                    "T-3189: the cell's own instance lands in the CELL's host, not in a shared one");
+
+                var content = host.ElementAt(0);
+                Assert.That(content.worldBound.width,
+                    Is.LessThanOrEqualTo(cell.worldBound.width + 2f),
+                    "T-3189: a miniature may not be wider than its cell — " +
+                    "cell " + cell.worldBound.width.ToString("0") +
+                    ", content " + content.worldBound.width.ToString("0") +
+                    ", matrix " + matrixBox.width.ToString("0"));
+            }
         }
 
         [UnityTest]

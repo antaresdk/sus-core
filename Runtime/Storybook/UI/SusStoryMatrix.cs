@@ -44,6 +44,22 @@ namespace Sharq.Core.Storybook.UI
         public const string OverlayName = "sus-storybook-matrix-overlay";
 
         /// <summary>
+        /// Name of the overlay host EVERY CELL owns (card T-3189). One host for the whole matrix
+        /// (T-3160) kept the cells out of the application root, but it did not keep them apart
+        /// from each other: an <see cref="OverlayHost"/> is <c>position: absolute</c> with zero
+        /// insets, so a cell instance that teleports into the MATRIX's host stretches over the
+        /// whole matrix box — every column at once, one on top of another. The 2026-09-10 kit
+        /// sweep photographed exactly that: on <c>kit/molecules/modal</c> and
+        /// <c>kit/molecules/tutorial-modal</c> the grid of four state columns was replaced by a
+        /// single full-width dialog, and the frames were read as a GHOST of an earlier story
+        /// (showcase-3, card T-3189) — it was the current story's own matrix, drawn over itself.
+        /// Same name shape as <see cref="OverlayName"/>, and for the same reason: never
+        /// <see cref="OverlayHost.OverlayHostName"/>, or a panel-wide search for "the" host would
+        /// hand application popups to a miniature.
+        /// </summary>
+        public const string CellOverlayName = "sus-storybook-matrix-cell-overlay";
+
+        /// <summary>
         /// Prop the rows come from. The plan names <c>Variant</c>; it is a property rather than a
         /// constant so a rig can point the matrix at another closed axis without a fork.
         /// </summary>
@@ -142,6 +158,23 @@ namespace Sharq.Core.Storybook.UI
         /// instead of in the application root. Emptied by <see cref="Clear"/>.
         /// </summary>
         public OverlayHost Overlay => _overlay;
+
+        /// <summary>
+        /// Cell instances currently parked in an overlay host that belongs to this matrix — its
+        /// own (<see cref="Overlay"/>) plus the per-cell hosts of <see cref="CellOverlayName"/>
+        /// (card T-3189). What a teardown test counts: "the cells that teleported are inside the
+        /// matrix" is a statement about the matrix, not about which of its hosts caught them.
+        /// </summary>
+        public int HostedCellCount
+        {
+            get
+            {
+                int n = _overlay.childCount;
+                var cellHosts = _grid.Query<OverlayHost>(name: CellOverlayName).ToList();
+                for (int i = 0; i < cellHosts.Count; i++) n += cellHosts[i].childCount;
+                return n;
+            }
+        }
 
         // ── building ─────────────────────────────────────────────────────────
 
@@ -336,6 +369,10 @@ namespace Sharq.Core.Storybook.UI
             item.AddToClassList("sus-sb-matrix__item");
             item.pickingMode = PickingMode.Ignore;
             cell.Add(item);
+            // The cell's OWN host, added after the instance so the back-to-front scan of
+            // SusBootstrap.FindOverlayHost meets it first (card T-3189). A cell that opens itself
+            // now fills its cell instead of the whole matrix.
+            cell.Add(new OverlayHost { name = CellOverlayName });
             return cell;
         }
 
