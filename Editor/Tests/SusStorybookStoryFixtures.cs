@@ -173,12 +173,20 @@ namespace Sharq.Core.Editor.Tests
     {
         public const string MarkerClass = "sus-demo-root-leak__panel";
 
+        bool _opened;
+
         protected override void Build()
         {
+            // AttachToPanelEvent can fire more than once for the same element (an EditorWindow's
+            // panel can churn while the window is still settling) — guard the same way
+            // CoreOverlayDemo.ShowFloating does, so the test asserts a stable count instead of
+            // "however many times this fired".
             RegisterCallback<AttachToPanelEvent>(_ =>
             {
+                if (_opened) return;
                 var host = SusBootstrap.ResolveOverlayHost(this);
                 if (host == null) return;
+                _opened = true;
                 var floating = new UnityEngine.UIElements.Label("leaked");
                 floating.AddToClassList(MarkerClass);
                 host.AddToOverlay(floating, OverlayCategory.Dropdown);

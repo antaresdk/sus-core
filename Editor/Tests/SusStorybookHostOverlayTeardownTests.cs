@@ -70,7 +70,11 @@ namespace Sharq.Core.Editor.Tests
             // refactor made ResolveOverlayHost stop escaping at all.
             Assert.That(_host.Query<Label>(className: CoreRootLeakDemo.MarkerClass).ToList(),
                 Is.Empty, "sanity: this story's popup must land OUTSIDE the host to exercise T-3131");
-            Assert.That(LeakedLabelCount(_host), Is.EqualTo(1), "sanity: the leak must reproduce");
+            // >= 1, not == 1: AttachToPanelEvent firing more than once for one element while an
+            // EditorWindow's panel is still settling is a real, separately-observed quirk of this
+            // harness (not the T-3131 bug) — the CONTRACT under test is "Unmount drives this back
+            // to zero", which holds regardless of how many times it fired going in.
+            Assert.That(LeakedLabelCount(_host), Is.GreaterThanOrEqualTo(1), "sanity: the leak must reproduce");
 
             Assert.IsTrue(_host.ShowStoryById("core/primitives/counter"), "switch away -> Unmount()");
 
