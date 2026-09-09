@@ -32,7 +32,10 @@ namespace Sharq.Core
         /// </summary>
         public bool Active
         {
-            get => _content.style.display != DisplayStyle.None;
+            // T-3129: the setter writes the `sus-hidden` CLASS (T-2749 / R120), so the
+            // getter must read the class — reading the inline display it no longer sets
+            // made Active permanently true.
+            get => !_content.ClassListContains("sus-hidden");
             set => _content.EnableInClassList("sus-hidden", !value);
         }
 

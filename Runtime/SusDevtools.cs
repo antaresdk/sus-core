@@ -70,7 +70,14 @@ namespace Sharq.Core
         /// <summary>
         /// Returns true if the devtools panel is currently visible.
         /// </summary>
-        public static bool IsVisible => _panel?.style.display == DisplayStyle.Flex;
+        /// <remarks>
+        /// T-3129: read the `sus-hidden` CLASS, not the inline display. The T-2749
+        /// codemod (R120/D-069) converted every write here to
+        /// <c>EnableInClassList("sus-hidden", …)</c> but left the two READS on
+        /// <c>style.display</c> — which nothing sets any more, so IsVisible was
+        /// stuck at false and <see cref="Toggle"/> could only ever reveal the panel.
+        /// </remarks>
+        public static bool IsVisible => _panel != null && !_panel.ClassListContains("sus-hidden");
 
 #if UNITY_EDITOR
         // With Domain Reload disabled these survive leaving Play Mode: _panel/_root/_selectedElement
@@ -188,7 +195,7 @@ namespace Sharq.Core
         public static void Toggle()
         {
             if (_panel == null) return;
-            var visible = _panel.style.display == DisplayStyle.Flex;
+            var visible = IsVisible;
             _panel.EnableInClassList("sus-hidden", visible);
             if (!visible)
                 ScanAndShowTree();

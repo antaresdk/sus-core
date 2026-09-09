@@ -38,7 +38,8 @@ namespace Sharq.Core.Runtime.Tests
             var panel = _root.Q("sus-devtools");
             Assert.IsNotNull(panel);
             Assert.IsTrue(panel.ClassListContains("sus-devtools"));
-            Assert.AreEqual(DisplayStyle.None, panel.style.display.value);
+            // T-3129: hidden is the `sus-hidden` CLASS now (T-2749/R120), not an inline display.
+            Assert.IsTrue(panel.ClassListContains("sus-hidden"));
             Assert.IsFalse(SusDevtools.IsVisible);
         }
 
@@ -50,11 +51,11 @@ namespace Sharq.Core.Runtime.Tests
 
             SusDevtools.Toggle();
             Assert.IsTrue(SusDevtools.IsVisible);
-            Assert.AreEqual(DisplayStyle.Flex, _root.Q("sus-devtools").style.display.value);
+            Assert.IsFalse(_root.Q("sus-devtools").ClassListContains("sus-hidden"));
 
             SusDevtools.Toggle();
             Assert.IsFalse(SusDevtools.IsVisible);
-            Assert.AreEqual(DisplayStyle.None, _root.Q("sus-devtools").style.display.value);
+            Assert.IsTrue(_root.Q("sus-devtools").ClassListContains("sus-hidden"));
         }
 
         [Test]

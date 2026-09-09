@@ -121,7 +121,9 @@ namespace Sharq.Core.Runtime.Tests
         {
             var comp = new VisibilityComp();
             // Build: BindVisibility(false) before Add → display:None, then Add parents Content
-            Assert.AreEqual(DisplayStyle.None, comp.Content.style.display.value);
+            // T-3129: BindVisibility's pre-attach branch hides with the `sus-hidden`
+            // class (T-2749/R120), and lifts it again when the getter flips true.
+            Assert.IsTrue(comp.Content.ClassListContains("sus-hidden"));
 
             comp.Visible.Value = true;
             Root.Add(comp);

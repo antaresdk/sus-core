@@ -49,12 +49,13 @@ namespace Sharq.Core.Runtime.Tests
 
             ka.Active = false;
             Assert.IsFalse(ka.Active);
-            Assert.AreEqual(DisplayStyle.None, ka.Content.style.display.value);
+            // T-3129: SusKeepAlive hides with the `sus-hidden` class (T-2749/R120).
+            Assert.IsTrue(ka.Content.ClassListContains("sus-hidden"));
             Assert.AreSame(ka.Content, child.parent, "child stays in DOM when hidden");
 
             ka.Active = true;
             Assert.IsTrue(ka.Active);
-            Assert.AreEqual(DisplayStyle.Flex, ka.Content.style.display.value);
+            Assert.IsFalse(ka.Content.ClassListContains("sus-hidden"));
             Assert.AreSame(ka.Content, child.parent);
         }
 

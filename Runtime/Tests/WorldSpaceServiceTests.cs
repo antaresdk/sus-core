@@ -119,8 +119,10 @@ namespace Sharq.Core.Runtime.Tests
             yield return new WaitForEndOfFrame();
             _svc.TickPositions();
 
-            // Service sets display inline — check style, not resolvedStyle
-            Assert.AreEqual(DisplayStyle.None, el.style.display.value,
+            // T-3129: the service hides with the `sus-hidden` class (T-2749/R120) — the
+            // host here is a bare test panel with no token cascade, so assert the class,
+            // not resolvedStyle.
+            Assert.IsTrue(el.ClassListContains("sus-hidden"),
                 "Element should be hidden when target is behind camera");
 
             Object.DestroyImmediate(targetGo);

@@ -131,6 +131,14 @@ namespace Sharq.Core
                 bool show = getter();
                 if (show)
                 {
+                    // T-3129: the pre-attach branch below hides with the `sus-hidden`
+                    // CLASS (inline display was removed by the T-2749 codemod, R120).
+                    // Showing therefore has to LIFT that class — leaving it on froze
+                    // the element at display:none forever once a v-if flipped
+                    // false→true before its first Add (PreAttachBindFlushTests
+                    // Two/ThreeSiblings, SusFormFieldTests.FormField_StaysReactiveAfterReparent,
+                    // SusHoldButton's completed-phase check icon).
+                    el.EnableInClassList("sus-hidden", false);
                     if (el.style.display == DisplayStyle.None)
                         el.style.display = StyleKeyword.Null;
 

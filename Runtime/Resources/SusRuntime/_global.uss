@@ -17,22 +17,22 @@
 
 /* ── Utility: hide element (display: none; Flex matching) ────
    Sole declaration (T-2653): downstream packages used to carry their own
-   copy of this rule too — dropped, this is the one home; that consolidation
-   stands regardless of the finding below.
+   copy of this rule too — dropped, this is the one home.
 
-   NOT reliable against a downstream component's own companion USS of equal
-   apparent specificity (single class, e.g. { display: flex }). T-2653 tried
-   raising specificity with a compound selector (.sus-hidden.sus-hidden,
-   2 classes vs 1) to force a win against exactly such a rule; measured live
-   it did NOT win — the element stayed display:flex with only "sus-hidden"
-   added to its class list, no inline style (regression-locked by a test in
-   each downstream package that hit this, not just this comment). Left as a
-   plain single-class rule (not deleted): at least one downstream consumer
-   hides purely via this class with no inline fallback and nothing else
-   competes with it on display, so the rule still does its job there —
-   deleting it would silently break that consumer. Do NOT rely on this class
-   alone to hide anything that also carries a component rule setting display:
-   set inline IStyle.display for those instead. ── */
+   How hiding actually works now (T-2643/T-2749 → T-3129). A single global
+   class cannot outrank a component's own companion sheet: UI Toolkit resolves
+   the sheet attached NEAREST to the element last, so `.sus-alert { display:
+   flex }` beat this rule even when it was written as a compound selector
+   (`.sus-hidden.sus-hidden`) — measured live in T-2653. The fix is not here:
+   every sheet that declares `display` carries its own guard block, marked
+   `sus:uss-hide`, of the form `<its own selector>.sus-hidden { display: none }`
+   — same sheet, one class more specific, last in source order, so it wins on
+   both specificity and order.
+
+   So: `sus-hidden` IS the way to hide in SUS — from C#
+   (`EnableInClassList("sus-hidden", …)`), never `IStyle.display` (R120/D-069).
+   This rule remains the base declaration for elements whose sheet says nothing
+   about `display`. ── */
 .sus-hidden {
     display: none;
 }
