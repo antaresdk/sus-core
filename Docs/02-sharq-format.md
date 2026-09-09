@@ -194,9 +194,11 @@ Element is **added/removed** from the hierarchy (`BindVisibility`).
 <ui:Label v-if="IsVisible" :text="Message" />
 ```
 
-### `v-show` — hide via display
+### `v-show` — hide via the `sus-hidden` class
 
-Element stays in the DOM; toggles `DisplayStyle.Flex` / `None`.
+Element stays in the DOM; toggles the `sus-hidden` class, which resolves to
+`display: none` through the component's own USS — the same class-based switch
+described above, never a direct `style.display` write.
 
 ```xml
 <ui:Label v-show="IsActive" :text="Status" />
