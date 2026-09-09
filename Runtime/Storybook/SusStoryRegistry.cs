@@ -219,11 +219,17 @@ namespace Sharq.Core.Storybook
                 else if (TryParseId(attr.Id, out var pkg, out var group, out var slug))
                 {
                     var story = (ISusStory)Activator.CreateInstance(type);
+                    var id = NormalizeId(pkg, group, slug);
                     stories.Add(new SusStoryEntry(
-                        NormalizeId(pkg, group, slug), pkg, group, slug,
+                        id, pkg, group, slug,
                         string.IsNullOrWhiteSpace(attr.Name) ? Humanize(slug) : attr.Name,
                         attr.Purpose, attr.Order, type, asm,
-                        story.Create, story.Configure) { Weight = attr.Weight });   // card T-3038
+                        story.Create, story.Configure)
+                    {
+                        Weight = attr.Weight,                                       // card T-3038
+                        ComponentType = ValidComponent(attr.Component, id),         // card T-3137
+                        NoComponentReason = Trim(attr.NoComponent),
+                    });
                     Remember(pkg, stamp, stamps, known);
                 }
                 else
@@ -257,13 +263,45 @@ namespace Sharq.Core.Storybook
                                 "' is not <package>/<group>/<slug> - skipped.");
                     continue;
                 }
+                var defId = NormalizeId(p, g, s);
                 stories.Add(new SusStoryEntry(
-                    NormalizeId(p, g, s), p, g, s,
+                    defId, p, g, s,
                     string.IsNullOrWhiteSpace(def.Name) ? Humanize(s) : def.Name,
                     def.Purpose, def.Order, type, asm, def.Create, def.Configure)
-                    { Weight = def.Weight });   // card T-3038
+                {
+                    Weight = def.Weight,                                        // card T-3038
+                    ComponentType = ValidComponent(def.Component, defId),       // card T-3137
+                    NoComponentReason = Trim(def.NoComponent),
+                });
                 Remember(p, stamp, stamps, known);
             }
+        }
+
+        static string Trim(string s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim();
+
+        /// <summary>
+        /// The declared <c>Component</c>, or null with a warning when it is not a component
+        /// (card T-3137, plan §4.1a). The whole point of D19 is that the link is a TYPE and not a
+        /// word, so a type that is not a <see cref="SusComponent"/> — a service, a controller, an
+        /// abstract base — must not enter the registry as if it were the story's catalogue face:
+        /// it would move the guess from the blurb into the attribute instead of removing it.
+        /// </summary>
+        static Type ValidComponent(Type declared, string storyId)
+        {
+            if (declared == null) return null;
+            if (!typeof(SusComponent).IsAssignableFrom(declared))
+            {
+                SusLog.Warn("[storybook] story '" + storyId + "': Component = typeof(" +
+                            declared.Name + ") is not a SusComponent - link dropped.");
+                return null;
+            }
+            if (declared.IsAbstract)
+            {
+                SusLog.Warn("[storybook] story '" + storyId + "': Component = typeof(" +
+                            declared.Name + ") is abstract, the catalogue has no such entry - link dropped.");
+                return null;
+            }
+            return declared;
         }
 
         static void Remember(
@@ -352,7 +390,18 @@ namespace Sharq.Core.Storybook
         {
             return stories
                 .GroupBy(s => s.Id, StringComparer.OrdinalIgnoreCase)
-                .Select(g => g.First())                     // duplicate id: first wins, stably
+                .Select(g =>
+                {
+                    // The id is the FULL address (D17), so two stories collide only when they
+                    // claim the very same package/group/slug — and then one of them is LOST.
+                    // Losing it silently is what the tail-keyed map did to four stories for
+                    // months (card T-3137), so the collapse says out loud which types collided.
+                    if (g.Count() > 1)
+                        SusLog.Warn("[storybook] address '" + g.Key + "' is claimed by " +
+                                    string.Join(", ", g.Select(s => s.DeclaringType?.FullName ?? "?")) +
+                                    " - the first wins, the rest are not shown.");
+                    return g.First();
+                })
                 .OrderBy(s => IndexIn(PackageOrder, s.Package))
                 .ThenBy(s => s.Package, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(s => IndexIn(GroupOrder, s.Group))

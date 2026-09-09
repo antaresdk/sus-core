@@ -62,6 +62,28 @@ namespace Sharq.Core.Storybook
         public int Order { get; }
 
         /// <summary>
+        /// The catalogue component this story is the story OF, or null when the story declared it
+        /// has no single one (plan §4.1a, D19). Set by the registry from
+        /// <see cref="SusStoryAttribute.Component"/> after it checked the type really is a
+        /// <see cref="SusComponent"/>: a link that does not point at a component is not a link.
+        /// </summary>
+        public Type ComponentType { get; internal set; }
+
+        /// <summary>
+        /// Why this story names no <see cref="ComponentType"/>, or empty. A story with neither is
+        /// not "a story without a component" — it is a story that never said, and
+        /// <see cref="DeclaresComponentLink"/> is how a caller tells the two apart.
+        /// </summary>
+        public string NoComponentReason { get; internal set; } = string.Empty;
+
+        /// <summary>
+        /// True when the story SAID something about its component link — either it named the
+        /// component or it named the reason there is none.
+        /// </summary>
+        public bool DeclaresComponentLink =>
+            ComponentType != null || !string.IsNullOrWhiteSpace(NoComponentReason);
+
+        /// <summary>
         /// Build cost declared by the story (<see cref="SusStoryAttribute.Weight"/>, card T-3038). Set by the
         /// registry right after construction; <see cref="SusStoryWeight.Normal"/> otherwise.
         /// </summary>

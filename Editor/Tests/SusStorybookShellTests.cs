@@ -63,7 +63,7 @@ namespace Sharq.Core.Editor.Tests
             var nav = new SusStoryNavPanel { ActivePackage = "core" };
             var headers = nav.Query<Label>(className: "sus-sb-nav__group").ToList().Select(l => l.text).ToList();
 
-            Assert.That(headers, Is.EqualTo(new[] { "PRIMITIVES", "OVERLAY" }));
+            Assert.That(headers, Is.EqualTo(new[] { "PRIMITIVES", "OVERLAY", "SHOWCASE" }));
         }
 
         [Test]

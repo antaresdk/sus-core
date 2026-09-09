@@ -41,6 +41,31 @@ namespace Sharq.Core.Storybook
         /// <summary>One line of "what this is for" — shown next to the name (buyer-facing).</summary>
         public string Purpose { get; set; }
 
+        /// <summary>
+        /// The catalogue component this story is the story OF (plan §4.1a, decision D19):
+        /// <c>[SusStory("game/inventory/shell", Component = typeof(SusInventory))]</c>.
+        ///
+        /// Before this property the link "story ↔ component" was GUESSED from the first word of
+        /// <see cref="Purpose"/>, and two whole rule layers (R134 <c>story-orphan</c> and
+        /// <c>ledger-ghost</c>) judged 17 catalogue holes by the first word of an English
+        /// sentence — a sentence that legitimately starts with <c>Layout</c>, <c>Preset</c> or
+        /// <c>Same</c>. A type is the machine side of that link: it is renamed by the compiler,
+        /// not by a proof-reader, and it cannot resolve to a word that is not a component.
+        ///
+        /// A story that shows no single catalogue component (a service demo, a showcase set, a
+        /// screen assembled in C# with no <c>.sharq</c> face) leaves this null and says WHY in
+        /// <see cref="NoComponent"/> — "no face" must be a RECORD, not a silence, or the layer
+        /// cannot tell it from "the face was never named".
+        /// </summary>
+        public Type Component { get; set; }
+
+        /// <summary>
+        /// Why this story names no <see cref="Component"/>. One line, in the same buyer-facing
+        /// English as <see cref="Purpose"/>: what the stage actually shows instead of one
+        /// catalogue component.
+        /// </summary>
+        public string NoComponent { get; set; }
+
         /// <summary>Sort key inside its group; equal orders fall back to <see cref="Name"/>.</summary>
         public int Order { get; set; }
 

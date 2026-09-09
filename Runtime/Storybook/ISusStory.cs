@@ -49,6 +49,20 @@ namespace Sharq.Core.Storybook
         /// <summary>One line of "what this is for".</summary>
         public string Purpose { get; set; }
 
+        /// <summary>
+        /// The catalogue component this story is the story OF — see
+        /// <see cref="SusStoryAttribute.Component"/>. Data-born stories declare the link exactly
+        /// like class-born ones: a provider that generates one story per skin preset knows the
+        /// component it presets better than any blurb-parsing heuristic does.
+        /// </summary>
+        public Type Component { get; set; }
+
+        /// <summary>
+        /// Why this definition names no <see cref="Component"/> — see
+        /// <see cref="SusStoryAttribute.NoComponent"/>.
+        /// </summary>
+        public string NoComponent { get; set; }
+
         /// <summary>Sort key inside its group.</summary>
         public int Order { get; set; }
 

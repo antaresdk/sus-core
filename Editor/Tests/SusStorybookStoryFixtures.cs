@@ -116,6 +116,7 @@ namespace Sharq.Core.Editor.Tests
 
     [SusStory("core/primitives/counter",
         Name = "Counter",
+        Component = typeof(CoreCounterDemo),
         Purpose = "reactive props end to end: Prop<T>, a derived label and one event")]
     public sealed class CoreCounterStory : ISusStory
     {
@@ -132,6 +133,7 @@ namespace Sharq.Core.Editor.Tests
 
     [SusStory("core/primitives/swatch",
         Name = "Swatch",
+        Component = typeof(CoreSwatchDemo),
         Purpose = "closed axes: props clamped by UseAllowed, rendered as segmented controls")]
     public sealed class CoreSwatchStory : ISusStory
     {
@@ -147,6 +149,7 @@ namespace Sharq.Core.Editor.Tests
 
     [SusStory("core/overlay/floating",
         Name = "Floating",
+        Component = typeof(CoreOverlayDemo),
         Purpose = "overlay resolution: the popup must land in the stage canvas, not at the panel root")]
     public sealed class CoreOverlayStory : ISusStory
     {
@@ -196,6 +199,7 @@ namespace Sharq.Core.Editor.Tests
 
     [SusStory("core/overlay/root-leak",
         Name = "RootLeak",
+        NoComponent = "regression fixture: the story is about overlay teardown, not about a component",
         Purpose = "T-3131 regression: proves SusStorybookHost.Unmount also clears an overlay " +
                   "that escaped to panel.visualTree, not only _canvasOverlay")]
     public sealed class CoreRootLeakStory : ISusStory
@@ -223,10 +227,104 @@ namespace Sharq.Core.Editor.Tests
                 Id = "core/primitives/swatch-error",
                 Name = "Swatch (error)",
                 Purpose = "data-born story: the same component pinned to one tone",
+                Component = typeof(CoreSwatchDemo),
                 Order = 10,
                 Create = () => new CoreSwatchDemo(),
                 Configure = ctx => ((CoreSwatchDemo)ctx.Component).Tone.Value = "error",
             };
+        }
+    }
+
+    // ── the component link, card T-3137 (plan §4.1a, D19) ───────────────────
+    // Four fixtures for the four states the link can be in, because the layers that judge the
+    // corpus (R134 story-orphan / ledger-ghost) must tell them apart:
+    //   named  — the story says which component it is the story of;
+    //   waived — the story says it shows no single component, and why;
+    //   silent — the story says nothing (the state that used to be indistinguishable from the
+    //            two above, because the link was read off the first word of Purpose);
+    //   bogus  — the story names a type that is not a component at all.
+
+    /// <summary>A service the storybook can show but the catalogue cannot: not a component.</summary>
+    public sealed class CoreNotAComponent
+    {
+    }
+
+    /// <summary>Scene of a story that is about a SET of things, not about one component.</summary>
+    public sealed class CoreShowcaseDemo : SusComponent
+    {
+        protected override void Build()
+        {
+            Add(new CoreCounterDemo());
+            Add(new CoreSwatchDemo());
+        }
+    }
+
+    [SusStory("core/showcase/set",
+        Name = "Showcase set",
+        Purpose = "counter and swatch in one frame",
+        NoComponent = "showcase set: two components in one frame, the story of neither")]
+    public sealed class CoreShowcaseStory : ISusStory
+    {
+        public SusComponent Create() => new CoreShowcaseDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
+    [SusStory("core/showcase/silent",
+        Name = "Silent",
+        Purpose = "declares neither a component nor a reason there is none")]
+    public sealed class CoreSilentLinkStory : ISusStory
+    {
+        public SusComponent Create() => new CoreCounterDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
+    [SusStory("core/showcase/bogus",
+        Name = "Bogus",
+        Component = typeof(CoreNotAComponent),
+        Purpose = "names a type that is not a SusComponent")]
+    public sealed class CoreBogusLinkStory : ISusStory
+    {
+        public SusComponent Create() => new CoreCounterDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
+    // ── the tail collision, card T-3137 (plan §4.1a) ────────────────────────
+    // Two stories whose LAST segment is the same and whose addresses are not. Keyed by the tail
+    // one of them disappears without a word (that is exactly what happened to menu-button, menu,
+    // unit-card and shop in the live corpus); keyed by the full address both are registered.
+
+    [SusStory("core/primitives/twin",
+        Name = "Twin (primitives)",
+        Component = typeof(CoreCounterDemo),
+        Purpose = "same last segment as core/overlay/twin, different address")]
+    public sealed class CorePrimitivesTwinStory : ISusStory
+    {
+        public SusComponent Create() => new CoreCounterDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
+    [SusStory("core/overlay/twin",
+        Name = "Twin (overlay)",
+        Component = typeof(CoreOverlayDemo),
+        Purpose = "same last segment as core/primitives/twin, different address")]
+    public sealed class CoreOverlayTwinStory : ISusStory
+    {
+        public SusComponent Create() => new CoreOverlayDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
         }
     }
 }

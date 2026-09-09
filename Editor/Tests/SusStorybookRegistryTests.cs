@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using NUnit.Framework;
 using Sharq.Core.Storybook;
@@ -78,11 +79,13 @@ namespace Sharq.Core.Editor.Tests
             var groups = core.Groups.Select(g => g.Id).ToList();
             // "primitives" precedes "overlay" in the declared group order, not alphabetically —
             // the shell shows the building blocks before the things layered on top of them.
-            Assert.That(groups, Is.EqualTo(new[] { "primitives", "overlay" }));
+            Assert.That(groups, Is.EqualTo(new[] { "primitives", "overlay", "showcase" }));
 
             var primitives = core.Groups.First(g => g.Id == "primitives");
+            // Order first, then name: the three Order = 0 stories sort by name, the
+            // provider-born one declares Order = 10 and lands last.
             Assert.That(primitives.Stories.Select(s => s.Slug).ToList(),
-                Is.EqualTo(new[] { "counter", "swatch", "swatch-error" }));
+                Is.EqualTo(new[] { "counter", "swatch", "twin", "swatch-error" }));
         }
 
         [Test]
@@ -167,6 +170,113 @@ namespace Sharq.Core.Editor.Tests
             // that handed back a cached element would make every cell the same element.
             var entry = SusStoryRegistry.Find("core/primitives/swatch");
             Assert.That(entry.Create(), Is.Not.SameAs(entry.Create()));
+        }
+
+        // -- the component link (card T-3137, plan 4.1a / D19) ---------------
+
+        [Test]
+        public void Entry_carries_the_component_the_attribute_named()
+        {
+            var entry = SusStoryRegistry.Find("core/primitives/counter");
+
+            Assert.That(entry.ComponentType, Is.EqualTo(typeof(CoreCounterDemo)));
+            Assert.That(entry.NoComponentReason, Is.Empty);
+            Assert.That(entry.DeclaresComponentLink, Is.True);
+        }
+
+        [Test]
+        public void A_data_born_story_carries_the_component_too()
+        {
+            // The provider path must not be the hole in the link: a skin-preset provider knows
+            // its component, and a story generated from data is a story like any other.
+            var entry = SusStoryRegistry.Find("core/primitives/swatch-error");
+
+            Assert.That(entry.ComponentType, Is.EqualTo(typeof(CoreSwatchDemo)));
+            Assert.That(entry.DeclaresComponentLink, Is.True);
+        }
+
+        [Test]
+        public void A_story_with_no_component_says_so_with_a_reason()
+        {
+            // "No catalogue face" is a RECORD, not a silence: the layer that hunts orphaned
+            // catalogue entries has to tell "shows a set of components" from "nobody said".
+            var entry = SusStoryRegistry.Find("core/showcase/set");
+
+            Assert.That(entry.ComponentType, Is.Null);
+            Assert.That(entry.NoComponentReason, Is.Not.Empty);
+            Assert.That(entry.DeclaresComponentLink, Is.True);
+        }
+
+        [Test]
+        public void A_story_that_says_nothing_is_not_the_same_as_one_that_waived_the_link()
+        {
+            var silent = SusStoryRegistry.Find("core/showcase/silent");
+
+            Assert.That(silent.ComponentType, Is.Null);
+            Assert.That(silent.NoComponentReason, Is.Empty);
+            Assert.That(silent.DeclaresComponentLink, Is.False,
+                "a story that declared neither must be distinguishable from one that declared why it has none");
+        }
+
+        [Test]
+        public void A_component_that_is_not_a_component_is_dropped_not_believed()
+        {
+            // Moving the guess from the blurb into the attribute would buy nothing: a type that
+            // is not a SusComponent cannot be a catalogue face, and the registry says so out loud
+            // instead of registering the link.
+            var entry = SusStoryRegistry.Find("core/showcase/bogus");
+
+            Assert.That(entry, Is.Not.Null, "the story itself still registers");
+            Assert.That(entry.ComponentType, Is.Null);
+            Assert.That(entry.DeclaresComponentLink, Is.False);
+        }
+
+        [Test]
+        public void Every_component_link_points_at_a_buildable_component()
+        {
+            // The link is machine-checkable, and this is the check: a named component is a
+            // concrete SusComponent. Anything else would leave the layers judging a word again.
+            foreach (var entry in SusStoryRegistry.Stories)
+            {
+                if (entry.ComponentType == null) continue;
+                Assert.That(typeof(SusComponent).IsAssignableFrom(entry.ComponentType), Is.True,
+                    entry.Id + " names " + entry.ComponentType.Name);
+                Assert.That(entry.ComponentType.IsAbstract, Is.False, entry.Id);
+            }
+        }
+
+        // -- the address is the id, and it is one (D17) ----------------------
+
+        [Test]
+        public void Two_stories_that_share_a_last_segment_both_register()
+        {
+            // The live corpus lost four stories to exactly this: menu-button, menu, unit-card and
+            // shop each exist in two groups, and a map keyed by the tail kept the first only.
+            var ids = SusStoryRegistry.LastRegisteredStoryIds;
+
+            Assert.That(ids, Contains.Item("core/primitives/twin"));
+            Assert.That(ids, Contains.Item("core/overlay/twin"));
+
+            Assert.That(SusStoryRegistry.Find("core/primitives/twin").ComponentType,
+                Is.EqualTo(typeof(CoreCounterDemo)));
+            Assert.That(SusStoryRegistry.Find("core/overlay/twin").ComponentType,
+                Is.EqualTo(typeof(CoreOverlayDemo)),
+                "the second twin is a different story, not a shadow of the first");
+        }
+
+        [Test]
+        public void No_story_is_lost_to_a_key_collision()
+        {
+            var ids = SusStoryRegistry.Stories.Select(s => s.Id).ToList();
+
+            Assert.That(ids.Distinct(StringComparer.OrdinalIgnoreCase).Count(), Is.EqualTo(ids.Count),
+                "every registered story has its own address");
+            Assert.That(ids.Count, Is.EqualTo(SusStoryRegistry.LastRegisteredStoryIds.Count));
+
+            // ...while the tails DO collide - otherwise this fixture would prove nothing.
+            var tails = ids.Select(id => id.Substring(id.LastIndexOf('/') + 1)).ToList();
+            Assert.That(tails.Distinct(StringComparer.OrdinalIgnoreCase).Count(), Is.LessThan(tails.Count),
+                "the fixture must contain a tail collision for this test to mean anything");
         }
     }
 }
