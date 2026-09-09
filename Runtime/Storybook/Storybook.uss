@@ -162,7 +162,7 @@
     background-color: var(--sus-bg-surface-variant);
 }
 
-.sus-sb-nav__search:focus-within {
+.sus-sb-nav__search--focus {
     border-color: var(--sus-border-focus);
 }
 

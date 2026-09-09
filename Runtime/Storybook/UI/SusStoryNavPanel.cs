@@ -47,6 +47,10 @@ namespace Sharq.Core.Storybook.UI
 
             _search.AddToClassList("sus-sb-nav__search-input");
             _search.RegisterValueChangedCallback(_ => ApplyFilter());
+            // UI Toolkit has no ":focus-within" pseudo-class (T-3077) — the focus ring on the
+            // wrapping box is driven from here via FocusIn/FocusOut instead of USS alone.
+            _search.RegisterCallback<FocusInEvent>(_ => searchBox.AddToClassList("sus-sb-nav__search--focus"));
+            _search.RegisterCallback<FocusOutEvent>(_ => searchBox.RemoveFromClassList("sus-sb-nav__search--focus"));
 
             _searchPlaceholder.AddToClassList("sus-sb-nav__search-placeholder");
             _searchPlaceholder.pickingMode = PickingMode.Ignore;
