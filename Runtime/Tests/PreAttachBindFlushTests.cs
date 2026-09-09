@@ -107,13 +107,16 @@ namespace Sharq.Core.Runtime.Tests
             var comp = new ShowComp();
             // Mimic SetChildProp / parent wiring before hierarchy attach
             comp.Visible.Value = true;
-            Assert.AreEqual(DisplayStyle.None, comp.Content.style.display.value,
+            // T-3141: v-show hides with the `sus-hidden` CLASS (as v-if does since T-3129).
+            // Pre-attach there is no panel, so there is no resolvedStyle to read yet - the
+            // class IS the state at this point; the OUTCOME is asserted after the flush below.
+            Assert.IsTrue(comp.Content.ClassListContains("sus-hidden"),
                 "pre-attach schedule must not have applied yet (or initial false still showing)");
 
             Root.Add(comp);
             yield return WaitFrame();
 
-            Assert.AreEqual(DisplayStyle.Flex, comp.Content.style.display.value);
+            Assert.AreEqual(DisplayStyle.Flex, comp.Content.resolvedStyle.display);
         }
 
         [UnityTest]
@@ -168,7 +171,7 @@ namespace Sharq.Core.Runtime.Tests
             Root.Add(comp);
             yield return WaitFrame();
 
-            Assert.AreEqual(DisplayStyle.None, comp.Content.style.display.value);
+            Assert.AreEqual(DisplayStyle.None, comp.Content.resolvedStyle.display);
         }
 
         // ─── T-587: sibling attach-flush race ──────────────────────────────

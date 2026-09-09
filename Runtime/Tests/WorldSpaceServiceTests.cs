@@ -95,8 +95,11 @@ namespace Sharq.Core.Runtime.Tests
             _svc.TickPositions();
 
             Assert.AreEqual(2, _svc.Count);
-            Assert.AreEqual(DisplayStyle.Flex, el1.style.display.value);
-            Assert.AreEqual(DisplayStyle.Flex, el2.style.display.value);
+            // T-3141: the service hides with the `sus-hidden` class (T-3129) and writes no
+            // inline display at all - reading style.display here asserted the StyleEnum
+            // DEFAULT and was green no matter what the service did. Assert the class.
+            Assert.IsFalse(el1.ClassListContains("sus-hidden"));
+            Assert.IsFalse(el2.ClassListContains("sus-hidden"));
 
             Object.DestroyImmediate(t1);
             Object.DestroyImmediate(t2);

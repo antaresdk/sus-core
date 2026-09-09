@@ -171,8 +171,19 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// v-show: toggle display style reactively (None / Flex).
+        /// v-show: toggle visibility reactively via the <c>sus-hidden</c> CLASS.
         /// </summary>
+        /// <remarks>
+        /// T-3141 (plan ARCH-20260909-SUS-HIDDEN, D2): hiding has ONE carrier of truth
+        /// across every path — the <c>sus-hidden</c> class, backed in the cascade by the
+        /// per-sheet guard (<c>sus:uss-hide</c>: <c>.sus-alert.sus-hidden { display: none }</c>,
+        /// 299 markers as of 2026-09-09). Before this, v-if hid with the class (T-3129) while
+        /// v-show wrote inline display in this very file: an element under BOTH directives got
+        /// hidden by a class and shown by an inline write, and dropping one is not equivalent
+        /// to dropping the other. Inline display survives only as the LIFT of foreign legacy
+        /// on show, exactly as in <see cref="BindVisibility"/> — removing the class WITHOUT
+        /// the lift reproduces the PreAttachBindFlushTests Two/ThreeSiblings regression.
+        /// </remarks>
         protected WatchHandle BindShow(VisualElement el, Func<bool> getter)
         {
             if (el == null) throw new ArgumentNullException(nameof(el));
@@ -180,9 +191,10 @@ namespace Sharq.Core
 
             var h = ReactiveEffect(() =>
             {
-                el.style.display = getter()
-                    ? DisplayStyle.Flex
-                    : DisplayStyle.None;
+                bool show = getter();
+                el.EnableInClassList("sus-hidden", !show);
+                if (show && el.style.display == DisplayStyle.None)
+                    el.style.display = StyleKeyword.Null;
             });
 
             TrackBinding(h);

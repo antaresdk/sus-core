@@ -24,7 +24,10 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreSame(child, ka.Content.ElementAt(0));
             Assert.AreSame(ka.Content, child.parent);
             Assert.IsTrue(ka.Active);
-            Assert.AreNotEqual(DisplayStyle.None, ka.Content.style.display.value);
+            // T-3141: EditMode, element detached from any panel - there is no cascade to
+            // resolve, so the `sus-hidden` class is the state (SusKeepAlive stopped writing
+            // inline display in T-3129, which made the old style.display read vacuous).
+            Assert.IsFalse(ka.Content.ClassListContains("sus-hidden"));
         }
 
         [Test]

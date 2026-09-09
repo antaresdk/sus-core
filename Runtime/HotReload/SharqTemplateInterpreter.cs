@@ -109,8 +109,7 @@ namespace Sharq.Core
                 return false;
 
             if (root.Attributes.TryGetValue("v-show", out var showExpr))
-                component.style.display = EvalBool(showExpr, ctx)
-                    ? DisplayStyle.Flex : DisplayStyle.None;
+                ApplyShow(component, EvalBool(showExpr, ctx));
 
             foreach (var child in root.Children)
             {
@@ -159,8 +158,7 @@ namespace Sharq.Core
 
             // v-show
             if (node.Attributes.TryGetValue("v-show", out var showExpr))
-                el.style.display = EvalBool(showExpr, ctx)
-                    ? DisplayStyle.Flex : DisplayStyle.None;
+                ApplyShow(el, EvalBool(showExpr, ctx));
 
             // Recurse children
             foreach (var child in node.Children)
@@ -171,6 +169,21 @@ namespace Sharq.Core
 
             parent.Add(el);
             return true;
+        }
+
+        /// <summary>
+        /// v-show for the interpreted (hot-reload) path — the SAME mechanism the compiled
+        /// path uses (<c>SusComponent.BindShow</c>): the <c>sus-hidden</c> CLASS, plus the
+        /// lift of foreign inline legacy on show. T-3141, plan ARCH-20260909-SUS-HIDDEN D2:
+        /// one and the same .sharq must behave identically whether it was compiled or
+        /// interpreted; the root component here outlives a hot-reload and can still carry an
+        /// inline display written by an older build, hence the lift on both call sites.
+        /// </summary>
+        private static void ApplyShow(VisualElement el, bool show)
+        {
+            el.EnableInClassList("sus-hidden", !show);
+            if (show && el.style.display == DisplayStyle.None)
+                el.style.display = StyleKeyword.Null;
         }
 
         // ─── Element creation ─────────────────────────────────────────────
