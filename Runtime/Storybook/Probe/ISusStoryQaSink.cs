@@ -65,7 +65,12 @@ namespace Sharq.Core.Storybook.Probe
         /// </summary>
         public IReadOnlyList<string> Props { get; }
 
-        /// <summary>Props for which zone D actually built a control (<c>SusControlPanel.Controls</c>).</summary>
+        /// <summary>
+        /// Props for which zone D actually built a control
+        /// (<c>SusControlPanel.ControlledProps</c> — the build-time snapshot, not the live
+        /// <c>Controls</c> list, which teardown empties before this report is handed out; card
+        /// T-3184).
+        /// </summary>
         public IReadOnlyList<string> Controls { get; }
 
         /// <summary>

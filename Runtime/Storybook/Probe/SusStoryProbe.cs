@@ -256,7 +256,12 @@ namespace Sharq.Core.Storybook.Probe
                 new List<string>(_anomalies),
                 _frameResult,
                 props: ReadProps(),
-                controls: _panel == null ? Array.Empty<string>() : _panel.Controls.Select(c => c.Prop.Name).ToList(),
+                // ControlledProps, not Controls.Select(...): the report is built during teardown
+                // (SusStorybookHost.Unmount disposes zone D, THEN calls Clear() which notifies the
+                // sinks), and Dispose empties the live control list. Reading the snapshot makes the
+                // report independent of teardown order — card T-3184, where that order turned a
+                // fully covered 96-story sweep into 86 phantom R134 L1 control-gaps.
+                controls: _panel == null ? Array.Empty<string>() : new List<string>(_panel.ControlledProps),
                 uncovered: _panel == null ? Array.Empty<string>() : new List<string>(_panel.Uncovered),
                 excluded: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.Exclusions.Keys),
                 manualControls: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.ManualControls.Keys));

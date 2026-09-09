@@ -411,6 +411,37 @@ namespace Sharq.Core.Editor.Tests
             }
         }
 
+        [Test]
+        public void BuildReport_AfterThePanelWasDisposed_StillNamesTheControlsItBuilt()
+        {
+            // The order teardown actually runs in (SusStorybookHost.Unmount): zone D is disposed
+            // FIRST, and only then does _probe.Clear() build the report the QA sinks receive.
+            // Until card T-3184 the report read Controls off the live list, which Dispose empties,
+            // so a sweep of 96 fully covered stories wrote "controls: []" for 95 of them and R134
+            // layer 1 accused 86 stories of holes that were never there.
+            var component = new SusIntrospectionFixture();
+            var panel = new SusControlPanel(component, "Fixture");
+            var built = panel.ControlledProps.ToList();
+            CollectionAssert.IsNotEmpty(built,
+                "premise: the factory covers this fixture's props, so there IS something to lose");
+
+            var stage = new VisualElement();
+            stage.Add(component);
+            using var probe = new SusStoryProbe();
+            probe.Attach(Entry(Counter), component, stage, panel);
+
+            panel.Dispose();
+            CollectionAssert.IsEmpty(panel.Controls,
+                "Dispose empties the live control list — that part is by design, the controls are gone");
+
+            var report = probe.BuildReport();
+
+            CollectionAssert.AreEquivalent(built, report.Controls,
+                "the report says what zone D BUILT, not what is still alive at teardown time");
+            CollectionAssert.IsEmpty(report.Uncovered,
+                "and the hole list, which Dispose never touched, keeps agreeing with it");
+        }
+
         /// <summary>Claims a prop and builds nothing — the hole R134 L1 hunts (mirrors SusControlPanelTests).</summary>
         sealed class SilentProbeProvider : ISusControlProvider
         {
@@ -465,6 +496,52 @@ namespace Sharq.Core.Editor.Tests
             finally
             {
                 if (window != null) window.Close();
+            }
+        }
+
+        [Test]
+        public void Leaving_a_story_hands_the_sink_a_report_that_still_names_the_controls()
+        {
+            // The sweep's report is written on story CHANGE, through the QA sink, and nothing
+            // measured THAT path until card T-3184: every other BuildReport test asks the probe
+            // directly, with the panel still alive. The corpus-wide symptom was the session JSON
+            // of 2026-09-09 — one non-empty `controls` in 96 stories, and it was the LAST story,
+            // the only one the sweep never unmounted.
+            //
+            // The teardown ORDER is reproduced by hand instead of through SusStorybookHost:
+            // Unmount() disposes zone D and only then calls _probe.Clear(), and driving the real
+            // shell needs a real EditorWindow (a detached EditMode host never reaches Mounted()),
+            // which this editor answers with an engine-level "[Assert] Access version should be
+            // odd when acquiring lock" that fails any test that opens one. The order is the whole
+            // claim; the two lines below ARE SusStorybookHost.Unmount, in its own sequence.
+            var sink = new RecordingSink();
+            SusStoryQa.Register(sink);
+            try
+            {
+                var component = new SusIntrospectionFixture();
+                var story = new SusStoryContext(Entry(Counter), component, null);
+                var panel = new SusControlPanel(component, "Fixture", story, null);
+                var built = panel.ControlledProps.ToList();
+                CollectionAssert.IsNotEmpty(built, "premise: zone D built controls for this fixture");
+
+                var stage = new VisualElement();
+                stage.Add(component);
+                using var probe = new SusStoryProbe();
+                probe.Attach(Entry(Counter), component, stage, panel);
+
+                panel.Dispose();   // SusStorybookHost.Unmount, line 1: zone D goes first
+                probe.Clear();     // line 2: and THIS is what hands the sink its session row
+
+                var report = sink.Reports.FirstOrDefault(r => r.StoryId == Counter);
+                Assert.IsNotNull(report, "leaving a story notifies the QA sinks");
+                CollectionAssert.AreEquivalent(built, report.Controls,
+                    "the row a sweep writes to disk must carry the controls the buyer had, "
+                    + "not the empty list Dispose leaves behind (R134 L1 reads exactly this field)");
+                CollectionAssert.IsEmpty(report.Uncovered);
+            }
+            finally
+            {
+                SusStoryQa.Unregister(sink);
             }
         }
 

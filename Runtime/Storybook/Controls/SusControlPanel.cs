@@ -42,6 +42,7 @@ namespace Sharq.Core.Storybook.Controls
         };
 
         readonly List<SusControl> _controls = new();
+        readonly List<string> _controlledProps = new();
         readonly Dictionary<string, string> _defaults = new(StringComparer.Ordinal);
         readonly List<string> _uncovered = new();
         readonly List<string> _dead = new();
@@ -126,6 +127,26 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>Controls in panel order.</summary>
         public IReadOnlyList<SusControl> Controls => _controls;
+
+        /// <summary>
+        /// Names of the props zone D actually built a control for — the SAME set as
+        /// <see cref="Controls"/>, but snapshotted at build time and kept for the life of the
+        /// object, <see cref="Dispose"/> included.
+        ///
+        /// It exists because the session report of plan §4.7 is written during teardown, and
+        /// teardown had an order (card T-3184). <c>SusStorybookHost.Unmount</c> disposes zone D
+        /// and only then calls <c>_probe.Clear()</c>, which is what hands the finished report to
+        /// the QA sinks; <see cref="Dispose"/> empties <see cref="Controls"/>, so every report
+        /// but the last one of a session named ZERO controls for a panel that had built them all.
+        /// Measured on the live sweep of 2026-09-09
+        /// (<c>sus-dev/docs/qa/reports/storybook-session.json</c>): 96 stories, 88 with props,
+        /// exactly ONE (the last, never unmounted) with a non-empty <c>controls</c> — and R134
+        /// layer 1 read that as 86 stories whose props have no control. The panel was fine; the
+        /// list was gone. A report about what the buyer just saw must not depend on whether the
+        /// thing he saw has been torn down yet, so the answer is snapshotted rather than derived
+        /// from live objects.
+        /// </summary>
+        public IReadOnlyList<string> ControlledProps => _controlledProps;
 
         /// <summary>Props the component declares - the N of "props N · controls M".</summary>
         public int PropCount { get; private set; }
@@ -241,6 +262,7 @@ namespace Sharq.Core.Storybook.Controls
 
                 control.ValueChanged += OnControlChanged;
                 _controls.Add(control);
+                _controlledProps.Add(prop.Name);   // survives Dispose — card T-3184
 
                 if (!buckets.TryGetValue(prop.Group, out var bucket))
                 {
