@@ -73,6 +73,9 @@ namespace Sharq.Core.Storybook
         readonly Label _stageEmptyText = new();
 
         OverlayHost _canvasOverlay;
+        // What the CURRENT story asked the stage to put beside its component (card T-3168): the
+        // engine parented these, so the engine — and nothing else — takes them away again.
+        readonly List<VisualElement> _scene = new();
         SusControlPanel _controls;
         IVisualElementScheduledItem _shareReset;
         IVisualElementScheduledItem _overlayWatch;   // card T-3038
@@ -401,6 +404,7 @@ namespace Sharq.Core.Storybook
 
             _current = component;
             _canvas.Add(component);
+            MountScene(story, component);
 
             // The story's popups belong to the canvas, not to the panel root (T-3032).
             _canvasOverlay = SusBootstrap.GetOrCreateOverlay(_canvas);
@@ -426,6 +430,37 @@ namespace Sharq.Core.Storybook
             SyncOverlay();
 
             SetStageEmpty(false);
+        }
+
+        /// <summary>
+        /// Parents the scenery the story declared through <see cref="SusStoryContext.AddSibling"/>
+        /// (card T-3168) — trigger buttons, demo stages, captions — around the mounted instance,
+        /// and remembers each one so <see cref="Unmount"/> can take back exactly what it gave.
+        ///
+        /// Doing it here, once, is the whole point: the stories that used to do it themselves had
+        /// to wait for <c>AttachToPanelEvent</c> to have a parent at all, and that event fires
+        /// again every time the component re-attaches — including when it teleports into an
+        /// <see cref="OverlayHost"/> to open. Each of those re-fires inserted another copy, in a
+        /// place the story never meant and no teardown could reach.
+        /// </summary>
+        void MountScene(SusStoryContext story, SusComponent component)
+        {
+            var scene = story?.Scene;
+            if (scene == null) return;
+
+            for (int i = 0; i < scene.Count; i++)
+            {
+                var piece = scene[i];
+                if (piece?.Element == null) continue;
+
+                int at = _canvas.IndexOf(component);
+                if (at < 0) at = _canvas.childCount;
+                else if (piece.After) at += 1;
+
+                if (at > _canvas.childCount) at = _canvas.childCount;
+                _canvas.Insert(at, piece.Element);
+                _scene.Add(piece.Element);
+            }
         }
 
         /// <summary>The generated control panel of zone D, or null while nothing is mounted.</summary>
@@ -558,7 +593,23 @@ namespace Sharq.Core.Storybook
             // Q<>) — env axis state (breakpoint/density/theme/scale/input) is deliberately NOT
             // reset here: it is core-service state the env bar only reflects, not per-story data
             // (class doc above, plan §4.4).
+            // Hosts FIRST, story elements second — the opposite of SusStoryMatrix.ClearCells, and
+            // for a reason that only holds here (card T-3168). A self-teleporting component sits
+            // in the host while its ORIGINAL parent, the canvas, is a fixture of the shell that
+            // outlives every story: detaching the component before the host is emptied is a
+            // dismissal, not a teardown, so SusOverlayComponent schedules a restore into that
+            // still-living canvas and the previous story reappears there one frame later
+            // (SusStoryMatrixOverlayTeardownTests catches exactly this). Going through
+            // ClearAll first means the removal carries IsClearing, which is the signal that
+            // suppresses the restore (T-3160). The matrix can afford the other order because a
+            // cell's original parent is the grid it is about to throw away.
             ClearAllOverlayHosts();
+            // Scenery is plain elements the engine parented (MountScene) — no restore logic
+            // anywhere near them, so their turn comes after the hosts either way. Removed by
+            // reference rather than by clearing the canvas, because a story's own code may have
+            // moved a piece elsewhere in the panel.
+            for (int i = 0; i < _scene.Count; i++) _scene[i]?.RemoveFromHierarchy();
+            _scene.Clear();
             if (_current != null)
             {
                 _current.RemoveFromHierarchy();

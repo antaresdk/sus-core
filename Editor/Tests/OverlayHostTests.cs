@@ -126,6 +126,47 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreEqual(0, _host.Count);
         }
 
+        /// <summary>
+        /// Card T-3168: "cleared" has to mean the host is EMPTY, not "the stack is empty". A host
+        /// has no chrome of its own (its click guard is a callback, not an element), so a child
+        /// nobody registered through <see cref="OverlayHost.AddToOverlay"/> is content whose owner
+        /// is gone: an attractor particle layer, a ring cursor, a busy sheet, or — the live case —
+        /// a Storybook story's trigger button, inserted beside a component that had already
+        /// teleported itself in here. Those survived every teardown and were photographed on
+        /// later stories (showcase-3, 2026-09-09).
+        /// </summary>
+        [Test]
+        public void ClearAll_RemovesChildrenThatNeverWentThroughAddToOverlay()
+        {
+            _host.AddToOverlay(new VisualElement(), OverlayCategory.Modal);
+            var stray = new VisualElement { name = "stray" };
+            _host.Add(stray);   // straight into the hierarchy, no stack entry
+
+            Assert.AreEqual(2, _host.childCount, "sanity: both the overlay and the stray are here");
+
+            _host.ClearAll();
+
+            Assert.AreEqual(0, _host.Count, "no stack entries left");
+            Assert.AreEqual(0, _host.childCount, "and no children left either");
+            Assert.IsNull(stray.parent);
+        }
+
+        [Test]
+        public void ClearCategory_LeavesUnregisteredChildrenAlone()
+        {
+            // The narrow sweep stays narrow: only ClearAll promises an empty host, because only
+            // ClearAll is a teardown. ClearCategory dismisses one KIND of overlay while the rest
+            // of the screen — including a service's own layer — keeps living.
+            _host.AddToOverlay(new VisualElement(), OverlayCategory.Tooltip);
+            var layer = new VisualElement { name = "service-layer" };
+            _host.Add(layer);
+
+            _host.ClearCategory(OverlayCategory.Tooltip);
+
+            Assert.AreEqual(0, _host.Count);
+            Assert.AreSame(_host, layer.parent, "a category sweep is not a teardown");
+        }
+
         [Test]
         public void ClearCategory_RemovesOnlyMatchingEntries()
         {

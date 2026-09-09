@@ -211,6 +211,75 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
+    // ── scenery beside the component, card T-3168 ───────────────────────────
+    // Both stories show the SAME component — <see cref="CoreMatrixModalDemo"/>, the
+    // self-teleporting modal that is already open when it mounts (T-3160) — and differ only in
+    // HOW they put a trigger beside it. That is the whole comparison the card is about.
+
+    /// <summary>Marker of the scenery both T-3168 fixtures put beside their component.</summary>
+    public static class CoreScenery
+    {
+        public const string MarkerClass = "sus-demo-scenery";
+
+        public static Label Trigger()
+        {
+            var trigger = new Label("open");
+            trigger.AddToClassList(MarkerClass);
+            return trigger;
+        }
+    }
+
+    /// <summary>
+    /// The GOOD citizen: it DECLARES its scenery and lets the engine parent it
+    /// (<see cref="SusStoryContext.AddSibling"/>, card T-3168). One declaration, one element on
+    /// the canvas, no matter how many times the component re-attaches on its way into the
+    /// overlay host.
+    /// </summary>
+    [SusStory("core/overlay/scenery",
+        Name = "Scenery",
+        Component = typeof(CoreMatrixModalDemo),
+        Purpose = "T-3168: scenery declared through ctx.AddSibling is placed once and removed on demount")]
+    public sealed class CoreSceneryStory : ISusStory
+    {
+        public SusComponent Create() => new CoreMatrixModalDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            ((CoreMatrixModalDemo)ctx.Component).Model.Value = true;
+            ctx.AddSibling(CoreScenery.Trigger());
+        }
+    }
+
+    /// <summary>
+    /// The story as the six kit stories used to be written (card T-3168): it waits for the
+    /// component to have a parent and inserts the scenery itself. The component teleports into an
+    /// <see cref="OverlayHost"/> when it opens, which is a detach and a second attach — so the
+    /// hook fires again and inserts a SECOND copy as an untracked child of that host, where
+    /// <c>OverlayHost.ClearAll</c> used to leave it standing for every story that came after.
+    /// Kept as a fixture on purpose: the engine's safety net has to hold for stories nobody has
+    /// migrated, including stories in projects that are not ours.
+    /// </summary>
+    [SusStory("core/overlay/scenery-diy",
+        Name = "Scenery (DIY)",
+        Component = typeof(CoreMatrixModalDemo),
+        Purpose = "T-3168: scenery a story parents itself still has to be gone after a demount")]
+    public sealed class CoreSceneryDiyStory : ISusStory
+    {
+        public SusComponent Create() => new CoreMatrixModalDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            var component = ctx.Component;
+            ((CoreMatrixModalDemo)component).Model.Value = true;
+            component.RegisterCallback<AttachToPanelEvent>(_ =>
+            {
+                var parent = component.parent;
+                if (parent == null) return;
+                parent.Insert(parent.IndexOf(component), CoreScenery.Trigger());
+            });
+        }
+    }
+
     // ── one story born from DATA, to prove the provider path ────────────────
 
     /// <summary>

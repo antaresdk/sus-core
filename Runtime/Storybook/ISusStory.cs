@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine.UIElements;
 
 namespace Sharq.Core.Storybook
 {
@@ -85,6 +86,7 @@ namespace Sharq.Core.Storybook
     {
         readonly Dictionary<string, string> _exclusions = new(StringComparer.Ordinal);
         readonly Dictionary<string, string> _manual = new(StringComparer.Ordinal);   // card T-3034
+        readonly List<SusStorySceneElement> _scene = new();                          // card T-3168
 
         public SusStoryContext(SusStoryEntry entry, SusComponent component, Nav.SusStoryRoute route)
         {
@@ -135,11 +137,66 @@ namespace Sharq.Core.Storybook
             _manual[propName] = reason ?? string.Empty;
         }
 
+        /// <summary>
+        /// Everything this story asked the stage to put NEXT TO the component, in the order it
+        /// asked (card T-3168). The engine parents these; the story never does.
+        /// </summary>
+        public IReadOnlyList<SusStorySceneElement> Scene => _scene;
+
+        /// <summary>
+        /// Adds one element BESIDE the component — a trigger button, a demo stage, a caption:
+        /// the scenery a story needs on the canvas but that does not belong INSIDE the component
+        /// under test.
+        ///
+        /// Why this exists (card T-3168): a story has no parent to insert into while
+        /// <see cref="ISusStory.Configure"/> runs, so six kit stories used to wait for
+        /// <c>AttachToPanelEvent</c> and then insert into <c>Component.parent</c>. That event
+        /// fires on EVERY attach, and a self-teleporting component (every modal, every tour)
+        /// attaches a second time INSIDE an <see cref="OverlayHost"/> when it opens — so the
+        /// scenery was inserted again, this time as an untracked child of the overlay host, where
+        /// no teardown could see it. Two of the seven contaminated kit frames of 2026-09-09 were
+        /// four copies of one "Open modal" trigger; the rest were another story's tutorial stage
+        /// surviving several story switches (showcase-3).
+        ///
+        /// Declaring the scenery instead of parenting it makes the engine the only thing that
+        /// touches the hierarchy: it inserts once, next to the mounted instance, and
+        /// <c>SusStorybookHost.Unmount</c> removes exactly what it inserted.
+        /// </summary>
+        /// <param name="element">The scenery element. Ignored when null.</param>
+        /// <param name="after">
+        /// False (default) puts it BEFORE the component — the usual place for a trigger; true puts
+        /// it after, for a caption or a second demo row.
+        /// </param>
+        public void AddSibling(VisualElement element, bool after = false)
+        {
+            if (element == null) return;
+            _scene.Add(new SusStorySceneElement(element, after));
+        }
+
         /// <summary>Value of one deep-link query key, or null.</summary>
         public string Query(string key)
         {
             if (Route == null || key == null) return null;
             return Route.Query.TryGetValue(key, out var v) ? v : null;
         }
+    }
+
+    /// <summary>
+    /// One piece of scenery a story declared through <see cref="SusStoryContext.AddSibling"/>
+    /// (card T-3168): the element, and which side of the component it goes on.
+    /// </summary>
+    public sealed class SusStorySceneElement
+    {
+        public SusStorySceneElement(VisualElement element, bool after)
+        {
+            Element = element;
+            After = after;
+        }
+
+        /// <summary>The scenery element itself.</summary>
+        public VisualElement Element { get; }
+
+        /// <summary>True when it belongs after the component rather than before it.</summary>
+        public bool After { get; }
     }
 }

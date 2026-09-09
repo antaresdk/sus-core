@@ -400,9 +400,27 @@ namespace Sharq.Core
             UninstallClickGuard();
         }
 
-        /// <summary>Removes every overlay, regardless of category. See <see cref="ClearCategory"/>
-        /// for why this routes through <see cref="RemoveFromOverlay(OverlayEntry)"/> one entry
-        /// at a time instead of a hand-rolled detach loop.</summary>
+        /// <summary>
+        /// Removes every overlay, regardless of category, and leaves the host EMPTY. See
+        /// <see cref="ClearCategory"/> for why the tracked entries go one at a time through
+        /// <see cref="RemoveFromOverlay(OverlayEntry)"/> instead of a hand-rolled detach loop.
+        ///
+        /// "Empty" includes children that never went through
+        /// <see cref="AddToOverlay"/> (card T-3168). An <see cref="OverlayHost"/> has no chrome of
+        /// its own — its click guard is a callback, not an element — so every child is somebody's
+        /// content, and the ones nobody registered are precisely the ones no owner will ever come
+        /// back for: an attractor particle layer (<c>SusAttractorService.EnsureLayer</c>), a ring
+        /// cursor, a busy sheet, a drag ghost, or a Storybook story's scenery that was inserted
+        /// beside a component AFTER that component teleported itself in here. Before this,
+        /// <c>ClearAll</c> emptied the stack and returned with those still on screen: that is how
+        /// one tutorial's "Inventory / Open your bag here." card was photographed on four LATER
+        /// kit stories in the 2026-09-09 sweep (showcase-3), and why clearing every reachable host
+        /// (T-3131) plus giving the matrix its own host (T-3160) did not stop it.
+        ///
+        /// Owners re-create these on demand (all of the services above look their layer up by
+        /// name or type and build it when it is missing), so an emptied host costs a rebuild, not
+        /// a broken service.
+        /// </summary>
         public void ClearAll()
         {
             var snapshot = new List<OverlayEntry>(_stack);
@@ -411,6 +429,18 @@ namespace Sharq.Core
             {
                 foreach (var entry in snapshot)
                     RemoveFromOverlay(entry);
+
+                // Strays: whatever is still parented here answered to no stack entry. Snapshot
+                // first — RemoveFromHierarchy mutates the child list, and a detach can re-enter
+                // (a self-teleporting component's Unmounted() runs synchronously); IsClearing is
+                // still true here, so no such re-entry schedules a restore (T-3160).
+                var strays = new List<VisualElement>(hierarchy.childCount);
+                for (int i = 0; i < hierarchy.childCount; i++) strays.Add(hierarchy.ElementAt(i));
+                for (int i = 0; i < strays.Count; i++)
+                {
+                    var stray = strays[i];
+                    if (stray != null && stray.hierarchy.parent == this) stray.RemoveFromHierarchy();
+                }
             }
             finally
             {
