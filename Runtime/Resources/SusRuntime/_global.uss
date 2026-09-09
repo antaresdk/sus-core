@@ -27,7 +27,10 @@
    every sheet that declares `display` carries its own guard block, marked
    `sus:uss-hide`, of the form `<its own selector>.sus-hidden { display: none }`
    — same sheet, one class more specific, last in source order, so it wins on
-   both specificity and order.
+   both specificity and order. The `uss-fix` codemod plants that guard next to
+   each `display` declaration it migrates; a base rule that is itself
+   `display: none` (leaving the class nothing to lift) is judged by R132
+   (hidden-reveal).
 
    So: `sus-hidden` IS the way to hide in SUS — from C#
    (`EnableInClassList("sus-hidden", …)`), never `IStyle.display` (R120/D-069).
