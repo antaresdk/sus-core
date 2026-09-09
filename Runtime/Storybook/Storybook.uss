@@ -526,7 +526,8 @@
     background-color: var(--sus-bg-page);
     background-image: url("canvas-dot.png");
     background-repeat: repeat;
-    background-size: 16px 16px;
+    /* No background-size (R51/D-028): canvas-dot.png is a native 16x16 tile — omitting
+       the property draws it at intrinsic size instead of an explicit stretch pair. */
     min-height: 120px;
 }
 
