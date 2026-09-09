@@ -66,7 +66,17 @@ namespace Sharq.Core
     /// [SusDependsOn(nameof(ContentMode), "icon")] public Prop&lt;string&gt; Icon = new("");
     /// [SusDependsOn(nameof(Clearable))]           public Prop&lt;string&gt; ClearIcon = new("x");
     /// </code>
-    /// Several attributes on one field mean ALL conditions must hold (AND).
+    /// Several attributes on one field mean ALL conditions must hold (AND) — unless they share a
+    /// <see cref="Group"/>, in which case ONE of the group is enough (OR). Both shapes come from
+    /// the corpus, not from theory (T-3080): <c>SusTextfield.ClearIcon</c> is live while
+    /// <c>Clearable</c> OR <c>PersistentClear</c> holds, and <c>SusHudUnitCard.Icon</c> is the
+    /// fallback that only paints while <c>ImageSrc</c> is EMPTY — hence <see cref="Negate"/>.
+    /// <code>
+    /// [SusDependsOn(nameof(Closable), "false")]           public Prop&lt;string&gt; AppendIcon = new("");
+    /// [SusDependsOn(nameof(ImageSrc), Negate = true)]     public Prop&lt;string&gt; Icon = new("");
+    /// [SusDependsOn(nameof(Clearable), Group = "clear")]
+    /// [SusDependsOn(nameof(PersistentClear), Group = "clear")] public Prop&lt;string&gt; ClearIcon = new("x");
+    /// </code>
     /// </summary>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = true, Inherited = true)]
     public sealed class SusDependsOnAttribute : Attribute
@@ -80,15 +90,33 @@ namespace Sharq.Core
         /// </summary>
         public string Value { get; }
 
+        /// <summary>
+        /// Name of an OR-group. Conditions of one field that carry the SAME non-empty group hold
+        /// when ANY of them holds; different groups (and ungrouped conditions) still AND together.
+        /// </summary>
+        public string Group { get; set; }
+
+        /// <summary>
+        /// Inverts the condition: it holds while <see cref="Prop"/> does NOT have
+        /// <see cref="Value"/> (with <c>Value == null</c>: while the prop is empty / false / null).
+        /// A fallback glyph that only appears while a portrait is missing is this shape.
+        /// </summary>
+        public bool Negate { get; set; }
+
         public SusDependsOnAttribute(string prop, string value = null)
         {
             Prop = prop;
             Value = value;
         }
 
-        /// <summary>Human-readable condition: <c>ContentMode = icon</c> / <c>Clearable</c>.</summary>
+        /// <summary>
+        /// Human-readable condition: <c>ContentMode = icon</c> / <c>Clearable</c> /
+        /// <c>ImageSrc empty</c> / <c>Phase ≠ completed</c>.
+        /// </summary>
         public string Describe() =>
-            Value == null ? Prop : Prop + " = " + Value;
+            Negate
+                ? (Value == null ? Prop + " empty" : Prop + " ≠ " + Value)
+                : (Value == null ? Prop : Prop + " = " + Value);
 
         public override string ToString() => Describe();
     }

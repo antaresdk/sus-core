@@ -100,10 +100,13 @@ namespace Sharq.Core
         public bool IsDependencySatisfied(SusPropInfo prop)
         {
             if (prop == null) throw new ArgumentNullException(nameof(prop));
-            var conditions = prop.DependsOn;
-            for (int i = 0; i < conditions.Count; i++)
+            var groups = GroupConditions(prop.DependsOn);
+            for (int g = 0; g < groups.Count; g++)
             {
-                if (!ConditionHolds(conditions[i])) return false;
+                var group = groups[g];
+                bool any = false;
+                for (int i = 0; i < group.Count && !any; i++) any = ConditionHolds(group[i]);
+                if (!any) return false;   // every AND-group needs one member to hold
             }
             return true;
         }
@@ -118,9 +121,52 @@ namespace Sharq.Core
             var conditions = prop.DependsOn;
             if (conditions.Count == 0) return null;
 
-            var parts = new string[conditions.Count];
-            for (int i = 0; i < conditions.Count; i++) parts[i] = conditions[i].Describe();
+            var groups = GroupConditions(conditions);
+            var parts = new string[groups.Count];
+            for (int g = 0; g < groups.Count; g++)
+            {
+                var group = groups[g];
+                var members = new string[group.Count];
+                for (int i = 0; i < group.Count; i++) members[i] = group[i].Describe();
+                parts[g] = string.Join(" or ", members);
+            }
             return string.Join(" & ", parts);
+        }
+
+        /// <summary>
+        /// Conditions bucketed by <see cref="SusDependsOnAttribute.Group"/>, declaration order
+        /// kept: members of one bucket are OR'ed, buckets are AND'ed. An ungrouped condition is
+        /// a bucket of its own, so the pre-T-3080 behaviour (plain AND) is the default.
+        /// </summary>
+        static List<List<SusDependsOnAttribute>> GroupConditions(
+            IReadOnlyList<SusDependsOnAttribute> conditions)
+        {
+            var groups = new List<List<SusDependsOnAttribute>>();
+            Dictionary<string, int> named = null;
+
+            for (int i = 0; i < conditions.Count; i++)
+            {
+                var c = conditions[i];
+                if (c == null) continue;
+
+                if (string.IsNullOrEmpty(c.Group))
+                {
+                    groups.Add(new List<SusDependsOnAttribute> { c });
+                    continue;
+                }
+
+                named ??= new Dictionary<string, int>(StringComparer.Ordinal);
+                if (named.TryGetValue(c.Group, out var index))
+                {
+                    groups[index].Add(c);
+                }
+                else
+                {
+                    named[c.Group] = groups.Count;
+                    groups.Add(new List<SusDependsOnAttribute> { c });
+                }
+            }
+            return groups;
         }
 
         bool ConditionHolds(SusDependsOnAttribute condition)
@@ -135,19 +181,25 @@ namespace Sharq.Core
                 if (descriptors[i].Field.GetValue(this) is not ISusPropAccess access) return false;
 
                 var value = access.BoxedValue;
+                bool raw;
                 if (condition.Value == null)
                 {
                     // "any meaningful value": true for bool, non-empty for string, non-default
                     // for everything else.
-                    if (value is bool b) return b;
-                    if (value is string s) return !string.IsNullOrEmpty(s);
-                    return value != null;
+                    if (value is bool b) raw = b;
+                    else if (value is string s) raw = !string.IsNullOrEmpty(s);
+                    else raw = value != null;
                 }
-                var current = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
-                return string.Equals(current, condition.Value, StringComparison.OrdinalIgnoreCase);
+                else
+                {
+                    var current = Convert.ToString(value, CultureInfo.InvariantCulture) ?? "";
+                    raw = string.Equals(current, condition.Value, StringComparison.OrdinalIgnoreCase);
+                }
+                return condition.Negate ? !raw : raw;
             }
             // The named prop does not exist — a typo in the attribute must not silently disable
             // a working control, so the condition is treated as unmet and named by the caller.
+            // Negate does NOT flip this: a typo is a typo in both directions.
             return false;
         }
 

@@ -714,6 +714,10 @@ namespace Sharq.Core
                 DevConsole.ShouldTrace(GetType(), "Mounted", "");
 #endif
                 Mounted();
+                IsMounted = true;
+                var mounted = MountCompleted;
+                MountCompleted = null;          // one-shot: nobody waits for a second mount
+                mounted?.Invoke();
             }).StartingIn(0);
 
             // Register attach/detach callbacks
