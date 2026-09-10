@@ -16,9 +16,16 @@ namespace Sharq.Core.Editor
         public bool IsAtRule;
         /// <summary>True when the node has a <c>{ ... }</c> block (rule or nesting at-rule).</summary>
         public bool HasBlock;
-        /// <summary>Raw declarations of a leaf rule (null for nesting at-rules / at-statements).</summary>
+        /// <summary>
+        /// This node's OWN declarations, trimmed (empty string when a rule has none of its
+        /// own — e.g. only nested rules; null for nesting at-rules / at-statements, which
+        /// never carry declarations).
+        /// </summary>
         public string Declarations;
-        /// <summary>Nested nodes for nesting at-rules (<c>@media</c>/<c>@supports</c>/…).</summary>
+        /// <summary>
+        /// Nested nodes: children of a nesting at-rule (<c>@media</c>/<c>@supports</c>/…), or
+        /// (T-3291) nested rules/at-rules found inside an ordinary rule's body.
+        /// </summary>
         public readonly List<CssNode> Children = new();
     }
 
@@ -29,7 +36,10 @@ namespace Sharq.Core.Editor
     ///
     /// Correctly handles:
     ///  • nested at-rules (<c>@media</c>, <c>@supports</c>, <c>@container</c>, <c>@layer</c>);
-    ///  • nested braces inside declarations;
+    ///  • (T-3291) nested rules inside an ordinary rule's body — CSS Nesting shape, e.g.
+    ///    <c>.a { color: red; &amp;:hover { color: blue; } }</c> — recursing rather than
+    ///    reading the body as an opaque string, and separating the rule's own declarations
+    ///    from its nested children;
     ///  • block comments <c>/* … */</c> — including a stray <c>/* } */</c>;
     ///  • string literals (<c>content: "}"</c>, attribute selectors <c>[x="{"]</c>);
     ///  • <c>url(data:…)</c> parens that may contain braces/quotes;
@@ -47,7 +57,7 @@ namespace Sharq.Core.Editor
             var nodes = new List<CssNode>();
             if (string.IsNullOrEmpty(css)) return nodes;
             int i = 0;
-            ParseNodes(css, ref i, nodes);
+            ParseNodes(css, ref i, nodes, null);
             return nodes;
         }
 
@@ -64,7 +74,21 @@ namespace Sharq.Core.Editor
         }
 
         // Parses sibling nodes until end-of-input or the enclosing block's '}' (consumed here).
-        private static void ParseNodes(string css, ref int i, List<CssNode> outNodes)
+        //
+        // T-3291 (plan §4.3): the same scan now serves two contexts, told apart by whether
+        // `ownDeclarations` is non-null —
+        //   • top-level stylesheet / a nesting at-rule's body (@media, …): `ownDeclarations`
+        //     is null, and a `;`-terminated segment becomes an at-statement sibling node
+        //     (unchanged from before this card — e.g. `@import url(…);`).
+        //   • the body of an ordinary rule: `ownDeclarations` collects that rule's OWN
+        //     declaration text, appended verbatim exactly as the old (pre-nesting)
+        //     `ReadDeclarations` did — this is what keeps a body with no nested rule
+        //     byte-identical to before. A `{` is now ALWAYS a nested node (rule or nesting
+        //     at-rule) rather than an opaque depth-tracked brace: hitting it flushes
+        //     everything accumulated since the last flush as the nested node's own prelude
+        //     and recurses, so an existing flat rule (no nested `{`) never takes this branch
+        //     and its declarations text is unchanged.
+        private static void ParseNodes(string css, ref int i, List<CssNode> outNodes, StringBuilder ownDeclarations)
         {
             var prelude = new StringBuilder();
             while (i < css.Length)
@@ -79,6 +103,7 @@ namespace Sharq.Core.Editor
                 if (c == '}')
                 {
                     i++; // consume the enclosing block's closing brace
+                    if (ownDeclarations != null) ownDeclarations.Append(prelude);
                     return;
                 }
                 if (c == '"' || c == '\'')
@@ -94,6 +119,18 @@ namespace Sharq.Core.Editor
                 if (c == ';')
                 {
                     i++;
+                    if (ownDeclarations != null)
+                    {
+                        // Rule body: flush the declaration just closed (verbatim, ';'
+                        // included) so a following '{' only sees the NEXT nested node's own
+                        // prelude — not this declaration's text too (T-3291 fix: without this
+                        // flush, `color: red; &:hover {` mis-parsed the whole run as one
+                        // child prelude and dropped "color: red;" outside any block).
+                        prelude.Append(c);
+                        ownDeclarations.Append(prelude);
+                        prelude.Clear();
+                        continue;
+                    }
                     var stmt = prelude.ToString().Trim();
                     prelude.Clear();
                     if (stmt.Length > 0)
@@ -107,9 +144,17 @@ namespace Sharq.Core.Editor
                     prelude.Clear();
                     var node = new CssNode { Prelude = text, IsAtRule = text.StartsWith("@"), HasBlock = true };
                     if (IsNestingAtRule(text))
-                        ParseNodes(css, ref i, node.Children); // recurse; consumes matching '}'
+                    {
+                        ParseNodes(css, ref i, node.Children, null); // recurse; consumes matching '}'
+                    }
                     else
-                        node.Declarations = ReadDeclarations(css, ref i); // reads to matching '}', consumes it
+                    {
+                        // Rule body: recurse, separating this rule's OWN declarations from
+                        // further-nested rule/at-rule children (T-3291).
+                        var declSb = new StringBuilder();
+                        ParseNodes(css, ref i, node.Children, declSb);
+                        node.Declarations = declSb.ToString().Trim();
+                    }
                     outNodes.Add(node);
                     continue;
                 }
@@ -117,30 +162,7 @@ namespace Sharq.Core.Editor
                 prelude.Append(c);
                 i++;
             }
-        }
-
-        // Reads a leaf block body until the matching '}' (consumed). Respects nested
-        // braces, strings, url() parens and comments (comments are dropped).
-        private static string ReadDeclarations(string css, ref int i)
-        {
-            var sb = new StringBuilder();
-            int depth = 0;
-            while (i < css.Length)
-            {
-                char c = css[i];
-                if (c == '/' && i + 1 < css.Length && css[i + 1] == '*') { i = SkipComment(css, i); continue; }
-                if (c == '"' || c == '\'') { ReadString(css, ref i, sb); continue; }
-                if (c == '(') { ReadParen(css, ref i, sb); continue; }
-                if (c == '{') { depth++; sb.Append(c); i++; continue; }
-                if (c == '}')
-                {
-                    if (depth == 0) { i++; return sb.ToString().Trim(); }
-                    depth--; sb.Append(c); i++; continue;
-                }
-                sb.Append(c);
-                i++;
-            }
-            return sb.ToString().Trim();
+            if (ownDeclarations != null) ownDeclarations.Append(prelude);
         }
 
         private static void ReadString(string css, ref int i, StringBuilder sink)

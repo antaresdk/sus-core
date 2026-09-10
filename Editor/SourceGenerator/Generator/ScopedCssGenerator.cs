@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -21,14 +22,27 @@ namespace Sharq.Core.Editor
 
             // P2.1: brace-balanced scan (handles @media nesting, nested braces,
             // comments, strings and url(...)) instead of the old fragile regex.
+            // T-3291: the scanner now also recurses into an ordinary rule's body, so this
+            // tree can carry real nested rules — flatten them here before scoping.
             var nodes = CssScanner.Parse(model.StyleBody);
-            EmitNodes(nodes, hash, scoped, indent: "");
+            EmitNodes(nodes, hash, scoped, indent: "", parentSelector: null);
 
             return scoped.ToString();
         }
 
-        private static void EmitNodes(System.Collections.Generic.IReadOnlyList<CssNode> nodes,
-            string hash, StringBuilder sb, string indent)
+        /// <summary>
+        /// Walks the parsed tree, flattening nested rules into flat selectors (T-3291,
+        /// plan §4.3). <paramref name="parentSelector"/> is the already-combined, still
+        /// UNSCOPED selector of the enclosing rule (null at the top of the stylesheet or
+        /// inside a nesting at-rule with no enclosing rule) — combined first, scoped after
+        /// (D-10): scoping the parent alone before splicing in a nested `&amp;:hover` would
+        /// produce `.a.s-hash:hover`'s reverse, `.a:hover.s-hash`, which UITK does not match.
+        /// Emission order is this rule's own declarations first, then its descendants in the
+        /// order they were written (plan §4.3) — matching the pre-nesting output exactly
+        /// when a rule has no nested children.
+        /// </summary>
+        private static void EmitNodes(IReadOnlyList<CssNode> nodes,
+            string hash, StringBuilder sb, string indent, string parentSelector)
         {
             foreach (var node in nodes)
             {
@@ -40,24 +54,73 @@ namespace Sharq.Core.Editor
                     continue;
                 }
 
-                if (node.Children.Count > 0 || (node.IsAtRule && node.Declarations == null))
+                if (node.Declarations == null)
                 {
-                    // Nesting at-rule: keep prelude, scope the inner selectors.
+                    // Nesting at-rule (@media/@supports/…): keep prelude verbatim, scope the
+                    // inner selectors against the SAME parent context.
                     sb.AppendLine($"{indent}{node.Prelude} {{");
-                    EmitNodes(node.Children, hash, sb, indent + "    ");
+                    EmitNodes(node.Children, hash, sb, indent + "    ", parentSelector);
                     sb.AppendLine($"{indent}}}");
                     sb.AppendLine();
                     continue;
                 }
 
-                var selector = node.Prelude;
-                if (string.IsNullOrEmpty(selector)) continue;
+                // Ordinary rule: combine with the parent selector BEFORE scoping (D-10), then
+                // recurse into nested rules using the combined (still unscoped) selector as
+                // THEIR parent. `combined == node.Prelude` verbatim when parentSelector is
+                // null (top-level rule) — the unchanged pre-nesting path.
+                var combined = CombineSelector(parentSelector, node.Prelude);
+                if (string.IsNullOrEmpty(combined)) continue;
 
-                sb.AppendLine($"{indent}{ScopeSelector(selector, hash)} {{");
+                sb.AppendLine($"{indent}{ScopeSelector(combined, hash)} {{");
                 sb.AppendLine($"{indent}    {node.Declarations}");
                 sb.AppendLine($"{indent}}}");
                 sb.AppendLine();
+
+                if (node.Children.Count > 0)
+                    EmitNodes(node.Children, hash, sb, indent, combined);
             }
+        }
+
+        /// <summary>
+        /// Combines a nested rule's own selector with its parent's (already-combined, still
+        /// unscoped) selector — CSS Nesting semantics (D-8): <c>&amp;</c> stands for the
+        /// WHOLE parent selector; a child part without it is an implicit descendant
+        /// combinator. A comma-separated parent/child list cross-expands textually (D-9).
+        /// No budget or depth error is enforced here: that belongs to the authorial `&lt;style&gt;`
+        /// surface (step 12 / T-3301), which this card does not open — no author-reachable
+        /// `.sharq` can grow this list today, so there is nothing yet to reject.
+        /// </summary>
+        private static string CombineSelector(string parentSelector, string childPrelude)
+        {
+            if (parentSelector == null) return childPrelude;
+
+            var parentParts = SplitSelectorList(parentSelector);
+            var childParts = SplitSelectorList(childPrelude);
+            var combined = new StringBuilder();
+            var first = true;
+            foreach (var p in parentParts)
+            {
+                foreach (var c in childParts)
+                {
+                    if (!first) combined.Append(", ");
+                    first = false;
+                    combined.Append(c.Contains("&") ? c.Replace("&", p) : $"{p} {c}");
+                }
+            }
+            return combined.ToString();
+        }
+
+        private static string[] SplitSelectorList(string selector)
+        {
+            var raw = selector.Split(',');
+            var parts = new List<string>();
+            foreach (var r in raw)
+            {
+                var t = r.Trim();
+                if (t.Length > 0) parts.Add(t);
+            }
+            return parts.ToArray();
         }
 
         /// <summary>

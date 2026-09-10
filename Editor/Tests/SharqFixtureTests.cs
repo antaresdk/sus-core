@@ -16,7 +16,7 @@ namespace Sharq.Core.Editor.Tests
     /// cosmetic formatting changes", see its header) and <see cref="SharqCorpusIdempotencyTests"/>
     /// (T-3289) only proves the compiler agrees with itself between two runs — neither pins down
     /// what the compiler is supposed to emit. This harness does: every fixture folder under
-    /// <c>Fixtures/&lt;name&gt;/</c> carries an <c>input.sharq</c> and one or more committed
+    /// <c>Fixtures~/&lt;name&gt;/</c> carries an <c>input.sharq</c> and one or more committed
     /// <c>expected.*</c> files; a byte-for-byte mismatch fails loudly with a diff, so an
     /// emitter change that only shifts formatting (which the golden tests would miss) is
     /// still caught here.
@@ -52,7 +52,13 @@ namespace Sharq.Core.Editor.Tests
         // works the same whether sus-core is installed as a UPM cache copy or a file: link
         // (mirrors why SharqCorpusIdempotencyTests walks descriptor.AbsSourceDirs rather than
         // guessing from the active project's Assets folder).
-        private static string FixturesRoot() => Path.Combine(ThisFileDir(), "Fixtures");
+        // T-3291: "~" suffix keeps Unity from importing/compiling these golden .cs fixtures
+        // as real scripts — three fixture folders each emit a class named "input" (from
+        // input.sharq), which collided (CS0579/CS0111/CS0102) once Unity's AssetDatabase
+        // actually reimported them, since a plain "Fixtures" folder puts all three in one
+        // compiled assembly. The harness still reads them as plain text (File.ReadAllText
+        // below), which never depended on Unity importing the folder in the first place.
+        private static string FixturesRoot() => Path.Combine(ThisFileDir(), "Fixtures~");
 
         private static readonly (string File, Func<SharqCompilePipeline.Artifacts, string> Pick)[] Kinds =
         {
@@ -176,7 +182,7 @@ namespace Sharq.Core.Editor.Tests
         {
             if (!UnityEditor.EditorUtility.DisplayDialog(
                     "Regenerate Sharq fixture baselines",
-                    "This OVERWRITES every expected.* file under Editor/Tests/Fixtures with " +
+                    "This OVERWRITES every expected.* file under Editor/Tests/Fixtures~ with " +
                     "whatever the compiler produces RIGHT NOW. Only confirm after reviewing the " +
                     "emitter diff by hand — this harness exists to catch exactly the drift this " +
                     "action would erase. The resulting `git diff` in sus-core IS the review.",
