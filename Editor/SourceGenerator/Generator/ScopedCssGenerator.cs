@@ -12,44 +12,67 @@ namespace Sharq.Core.Editor
     /// </summary>
     internal static class ScopedCssGenerator
     {
-        public static string Generate(SharqFileModel model)
+        public static string Generate(SharqFileModel model) => Generate(model, out _);
+
+        /// <summary>
+        /// Same as <see cref="Generate(SharqFileModel)"/>, plus the per-line source map
+        /// (T-3295, plan §4.4) — <paramref name="map"/>'s <c>Src</c> is local to
+        /// <c>model.StyleBody</c> (the caller adds the file offset, see
+        /// <see cref="SharqSourceMapWriter"/>).
+        /// </summary>
+        public static string Generate(SharqFileModel model, out List<SharqMapLine> map)
         {
             if (string.IsNullOrEmpty(model.StyleBody))
+            {
+                map = new List<SharqMapLine>();
                 return null;
+            }
 
             // P2.1: brace-balanced scan (handles @media nesting, nested braces,
             // comments, strings and url(...)) instead of the old fragile regex.
             // T-3291: the scanner now also recurses into an ordinary rule's body, so this
             // tree can carry real nested rules — flatten them here before scoping.
             var nodes = CssScanner.Parse(model.StyleBody);
-            return GenerateFromNodes(nodes, model.ClassName);
+            return GenerateFromNodes(nodes, model.ClassName, out map);
         }
 
         /// <summary>
-        /// Same as <see cref="Generate"/> but from an ALREADY-PARSED (and possibly rewritten)
-        /// node tree — the hook <c>StyleParser</c> uses after <c>VariantsCompiler</c> has spliced
-        /// <c>@variants</c> value blocks in as plain rule nodes (T-3292), so this method itself
-        /// stays entirely unaware of recipes: it only ever sees ordinary <see cref="CssNode"/>s.
+        /// Same as <see cref="Generate(SharqFileModel)"/> but from an ALREADY-PARSED (and
+        /// possibly rewritten) node tree — the hook <c>StyleParser</c> uses after
+        /// <c>VariantsCompiler</c> has spliced <c>@variants</c> value blocks in as plain rule
+        /// nodes (T-3292), so this method itself stays entirely unaware of recipes: it only
+        /// ever sees ordinary <see cref="CssNode"/>s.
         /// </summary>
-        public static string GenerateFromNodes(List<CssNode> nodes, string className)
+        public static string GenerateFromNodes(List<CssNode> nodes, string className) =>
+            GenerateFromNodes(nodes, className, out _);
+
+        /// <summary>Same as above, plus the per-line source map (T-3295, plan §4.4).</summary>
+        public static string GenerateFromNodes(List<CssNode> nodes, string className, out List<SharqMapLine> map)
         {
             var hash = GenerateScopedHash(className);
             var scoped = new StringBuilder();
-            EmitNodes(nodes, hash, scoped, indent: "", parentSelector: null);
+            map = new List<SharqMapLine>();
+            var ussLine = 1;
+            EmitNodes(nodes, hash, scoped, indent: "", parentSelector: null, map, ref ussLine);
             return scoped.ToString();
         }
 
         /// <summary>
-        /// Same tree walk as <see cref="GenerateFromNodes"/> but for UNSCOPED (<c>&lt;style&gt;</c>
-        /// without <c>scoped</c>) output — no <c>.s-хеш</c> is appended to any selector. Used only
-        /// when the style body contains <c>@variants</c> (T-3292): a plain global style with none
-        /// keeps the old byte-for-byte raw-text path in <c>StyleParser</c>, this method is never
-        /// on that path.
+        /// Same tree walk as <see cref="GenerateFromNodes(List{CssNode}, string)"/> but for
+        /// UNSCOPED (<c>&lt;style&gt;</c> without <c>scoped</c>) output — no <c>.s-хеш</c> is
+        /// appended to any selector. Used only when the style body contains <c>@variants</c>
+        /// (T-3292): a plain global style with none keeps the old byte-for-byte raw-text path
+        /// in <c>StyleParser</c>, this method is never on that path.
         /// </summary>
-        public static string GenerateGlobalFromNodes(List<CssNode> nodes)
+        public static string GenerateGlobalFromNodes(List<CssNode> nodes) => GenerateGlobalFromNodes(nodes, out _);
+
+        /// <summary>Same as above, plus the per-line source map (T-3295, plan §4.4).</summary>
+        public static string GenerateGlobalFromNodes(List<CssNode> nodes, out List<SharqMapLine> map)
         {
             var sb = new StringBuilder();
-            EmitNodes(nodes, hash: null, sb, indent: "", parentSelector: null);
+            map = new List<SharqMapLine>();
+            var ussLine = 1;
+            EmitNodes(nodes, hash: null, sb, indent: "", parentSelector: null, map, ref ussLine);
             return sb.ToString();
         }
 
@@ -65,9 +88,16 @@ namespace Sharq.Core.Editor
         /// when a rule has no nested children.
         /// </summary>
         /// <summary><paramref name="hash"/> null ⇒ unscoped (T-3292 global-with-@variants path);
-        /// non-null ⇒ appends <c>.s-хеш</c> to every rule, same as before this parameter existed.</summary>
+        /// non-null ⇒ appends <c>.s-хеш</c> to every rule, same as before this parameter existed.
+        /// (T-3295) <paramref name="map"/>/<paramref name="ussLine"/> track the source map
+        /// alongside the SAME emission — one entry per PHYSICAL line of a rule's own
+        /// declarations (declarations may embed <c>\n</c> verbatim from the source, so one
+        /// <c>AppendLine</c> call can still grow the output by several lines); selector/brace/
+        /// blank lines get no entry — R22 (step 7) only ever needs to resolve a DECLARATION
+        /// line back to <c>.sharq</c>, never a selector line.</summary>
         private static void EmitNodes(IReadOnlyList<CssNode> nodes,
-            string hash, StringBuilder sb, string indent, string parentSelector)
+            string hash, StringBuilder sb, string indent, string parentSelector,
+            List<SharqMapLine> map, ref int ussLine)
         {
             foreach (var node in nodes)
             {
@@ -75,7 +105,9 @@ namespace Sharq.Core.Editor
                 {
                     // At-statement (e.g. @import ...;) — emit verbatim.
                     sb.AppendLine($"{indent}{node.Prelude};");
+                    ussLine++;
                     sb.AppendLine();
+                    ussLine++;
                     continue;
                 }
 
@@ -84,9 +116,12 @@ namespace Sharq.Core.Editor
                     // Nesting at-rule (@media/@supports/…): keep prelude verbatim, scope the
                     // inner selectors against the SAME parent context.
                     sb.AppendLine($"{indent}{node.Prelude} {{");
-                    EmitNodes(node.Children, hash, sb, indent + "    ", parentSelector);
+                    ussLine++;
+                    EmitNodes(node.Children, hash, sb, indent + "    ", parentSelector, map, ref ussLine);
                     sb.AppendLine($"{indent}}}");
+                    ussLine++;
                     sb.AppendLine();
+                    ussLine++;
                     continue;
                 }
 
@@ -99,12 +134,31 @@ namespace Sharq.Core.Editor
 
                 var selectorText = hash != null ? ScopeSelector(combined, hash) : combined;
                 sb.AppendLine($"{indent}{selectorText} {{");
+                ussLine++;
+
+                var declLineSpan = string.IsNullOrEmpty(node.Declarations)
+                    ? 1
+                    : TextLines.CountNewlines(node.Declarations, 0, node.Declarations.Length) + 1;
+                if (map != null && node.DeclLine > 0)
+                {
+                    for (var k = 0; k < declLineSpan; k++)
+                        map.Add(new SharqMapLine
+                        {
+                            Uss = ussLine + k,
+                            Src = node.DeclLine + k,
+                            Origin = node.Origin ?? "style",
+                        });
+                }
                 sb.AppendLine($"{indent}    {node.Declarations}");
+                ussLine += declLineSpan;
+
                 sb.AppendLine($"{indent}}}");
+                ussLine++;
                 sb.AppendLine();
+                ussLine++;
 
                 if (node.Children.Count > 0)
-                    EmitNodes(node.Children, hash, sb, indent, combined);
+                    EmitNodes(node.Children, hash, sb, indent, combined, map, ref ussLine);
             }
         }
 

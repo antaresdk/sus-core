@@ -232,13 +232,22 @@ namespace Sharq.Core.Editor
                 var vm = ValueHeaderRe.Match(child.Prelude.Trim());
                 if (!vm.Success) continue; // already recorded as an error above
 
-                var cls = axis.ClassFor(block, vm.Groups["value"].Value);
+                var valueName = vm.Groups["value"].Value;
+                var cls = axis.ClassFor(block, valueName);
                 var rule = new CssNode
                 {
                     Prelude = "." + cls,
                     IsAtRule = false,
                     HasBlock = true,
                     Declarations = child.Declarations,
+                    // T-3295: the synthesized rule's OWN text is new (no author ever wrote
+                    // ".sus-button--size-xs" — it's this compiler's class name), but its
+                    // declarations are the child value block's verbatim text, so DeclLine
+                    // (already correct, computed for `child` by CssScanner) carries over
+                    // unchanged — this is the "variants:size:xs → real .sharq line" mapping
+                    // the source map (§4.4) exists for.
+                    DeclLine = child.DeclLine,
+                    Origin = $"variants:{axis.Axis}:{valueName}",
                 };
                 // Nested `&`/descendant rules already parsed by T-3291's scanner — reused
                 // verbatim, so EmitNodes combines/scopes them exactly like an author-written

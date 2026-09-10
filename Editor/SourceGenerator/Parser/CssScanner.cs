@@ -27,6 +27,40 @@ namespace Sharq.Core.Editor
         /// (T-3291) nested rules/at-rules found inside an ordinary rule's body.
         /// </summary>
         public readonly List<CssNode> Children = new();
+        /// <summary>
+        /// (T-3295) 1-based line WITHIN the css text passed to <see cref="CssScanner.Parse"/>
+        /// (i.e. relative to <c>model.StyleBody</c>, NOT the whole <c>.sharq</c> file — the
+        /// caller adds the file offset) where this node's own <see cref="Declarations"/>
+        /// content begins. 0 when <see cref="Declarations"/> is null or empty (nesting
+        /// at-rule, at-statement, or a rule with no declarations of its own) — nothing to
+        /// point the source map at.
+        /// </summary>
+        public int DeclLine;
+        /// <summary>
+        /// (T-3295) Source-map origin tag: null ⇒ "style" (an ordinary authored rule, the
+        /// default the map writer falls back to); set by
+        /// <see cref="VariantsCompiler.BuildRuleNodes"/> to
+        /// <c>"variants:&lt;axis&gt;:&lt;value&gt;"</c> for a rule synthesized from an
+        /// <c>@variants</c> value block — the same node the AXIS came from, not a real
+        /// selector written by the author.
+        /// </summary>
+        public string Origin;
+    }
+
+    /// <summary>
+    /// One row of the <c>&lt;Class&gt;.g.uss(.map).json</c> source map (T-3295, plan §4.4):
+    /// USS line ↔ .sharq line, with <see cref="Origin"/> naming WHY the row exists (a plain
+    /// <c>&lt;style&gt;</c> declaration, or an <c>@variants</c> value block). <see cref="Src"/>
+    /// is local to <c>model.StyleBody</c> until <see cref="SharqSourceMapWriter"/> adds the
+    /// file-level offset — kept local here so <see cref="CssScanner"/>/<see
+    /// cref="ScopedCssGenerator"/> never need to know where <c>&lt;style&gt;</c> starts in the
+    /// whole file.
+    /// </summary>
+    internal struct SharqMapLine
+    {
+        public int Uss;
+        public int Src;
+        public string Origin;
     }
 
     /// <summary>
@@ -63,7 +97,8 @@ namespace Sharq.Core.Editor
             var nodes = new List<CssNode>();
             if (string.IsNullOrEmpty(css)) return nodes;
             int i = 0;
-            ParseNodes(css, ref i, nodes, null);
+            int line = 1; // T-3295: 1-based, local to `css` — DeclLine below is relative to it.
+            ParseNodes(css, ref i, ref line, nodes, null);
             return nodes;
         }
 
@@ -94,7 +129,11 @@ namespace Sharq.Core.Editor
         //     everything accumulated since the last flush as the nested node's own prelude
         //     and recurses, so an existing flat rule (no nested `{`) never takes this branch
         //     and its declarations text is unchanged.
-        private static void ParseNodes(string css, ref int i, List<CssNode> outNodes, StringBuilder ownDeclarations)
+        // `line` (T-3295) is threaded alongside `i` purely to stamp CssNode.DeclLine — it
+        // never influences parsing decisions, so every branch below is byte-for-byte the
+        // pre-T-3295 scanner with one extra bookkeeping line (`if (c=='\n') line++;` at each
+        // point a character is actually consumed past).
+        private static void ParseNodes(string css, ref int i, ref int line, List<CssNode> outNodes, StringBuilder ownDeclarations)
         {
             var prelude = new StringBuilder();
             while (i < css.Length)
@@ -103,28 +142,28 @@ namespace Sharq.Core.Editor
 
                 if (c == '/' && i + 1 < css.Length && css[i + 1] == '*')
                 {
-                    i = SkipComment(css, i);
+                    i = SkipComment(css, i, ref line);
                     continue;
                 }
                 if (c == '}')
                 {
-                    i++; // consume the enclosing block's closing brace
+                    i++; // consume the enclosing block's closing brace ('}' is never '\n')
                     if (ownDeclarations != null) ownDeclarations.Append(prelude);
                     return;
                 }
                 if (c == '"' || c == '\'')
                 {
-                    ReadString(css, ref i, prelude);
+                    ReadString(css, ref i, ref line, prelude);
                     continue;
                 }
                 if (c == '(')
                 {
-                    ReadParen(css, ref i, prelude);
+                    ReadParen(css, ref i, ref line, prelude);
                     continue;
                 }
                 if (c == ';')
                 {
-                    i++;
+                    i++; // ';' is never '\n'
                     if (ownDeclarations != null)
                     {
                         // Rule body: flush the declaration just closed (verbatim, ';'
@@ -145,33 +184,42 @@ namespace Sharq.Core.Editor
                 }
                 if (c == '{')
                 {
-                    i++;
+                    i++; // '{' is never '\n'
                     var text = prelude.ToString().Trim();
                     prelude.Clear();
                     var node = new CssNode { Prelude = text, IsAtRule = text.StartsWith("@"), HasBlock = true };
                     if (IsNestingAtRule(text))
                     {
-                        ParseNodes(css, ref i, node.Children, null); // recurse; consumes matching '}'
+                        ParseNodes(css, ref i, ref line, node.Children, null); // recurse; consumes matching '}'
                     }
                     else
                     {
                         // Rule body: recurse, separating this rule's OWN declarations from
-                        // further-nested rule/at-rule children (T-3291).
+                        // further-nested rule/at-rule children (T-3291). `line` right here is
+                        // the line of the '{' just consumed — i.e. the line the FIRST
+                        // (untrimmed) content character of the body would fall on (T-3295).
+                        var declStartLine = line;
                         var declSb = new StringBuilder();
-                        ParseNodes(css, ref i, node.Children, declSb);
-                        node.Declarations = declSb.ToString().Trim();
+                        ParseNodes(css, ref i, ref line, node.Children, declSb);
+                        var raw = declSb.ToString();
+                        var leadingLen = raw.Length - raw.TrimStart().Length;
+                        node.Declarations = raw.Trim();
+                        node.DeclLine = node.Declarations.Length > 0
+                            ? declStartLine + TextLines.CountNewlines(raw, 0, leadingLen)
+                            : 0;
                     }
                     outNodes.Add(node);
                     continue;
                 }
 
+                if (c == '\n') line++;
                 prelude.Append(c);
                 i++;
             }
             if (ownDeclarations != null) ownDeclarations.Append(prelude);
         }
 
-        private static void ReadString(string css, ref int i, StringBuilder sink)
+        private static void ReadString(string css, ref int i, ref int line, StringBuilder sink)
         {
             char quote = css[i];
             sink.Append(quote);
@@ -181,30 +229,35 @@ namespace Sharq.Core.Editor
                 char c = css[i];
                 sink.Append(c);
                 i++;
-                if (c == '\\' && i < css.Length) { sink.Append(css[i]); i++; continue; }
+                if (c == '\\' && i < css.Length) { sink.Append(css[i]); if (css[i] == '\n') line++; i++; continue; }
+                if (c == '\n') line++;
                 if (c == quote) break;
             }
         }
 
-        private static void ReadParen(string css, ref int i, StringBuilder sink)
+        private static void ReadParen(string css, ref int i, ref int line, StringBuilder sink)
         {
             int depth = 0;
             while (i < css.Length)
             {
                 char c = css[i];
-                if (c == '"' || c == '\'') { ReadString(css, ref i, sink); continue; }
+                if (c == '"' || c == '\'') { ReadString(css, ref i, ref line, sink); continue; }
                 sink.Append(c);
                 i++;
+                if (c == '\n') line++;
                 if (c == '(') depth++;
                 else if (c == ')') { depth--; if (depth == 0) break; }
             }
         }
 
-        private static int SkipComment(string css, int i)
+        private static int SkipComment(string css, int i, ref int line)
         {
             i += 2; // skip "/*"
             while (i + 1 < css.Length && !(css[i] == '*' && css[i + 1] == '/'))
+            {
+                if (css[i] == '\n') line++;
                 i++;
+            }
             return i + 2 <= css.Length ? i + 2 : css.Length;
         }
 

@@ -172,6 +172,14 @@ namespace Sharq.Core.Editor
                     UnityEngine.Debug.Log($"[Sharq] USS hot-reloaded: {model.ClassName}.g.uss");
             }
 
+            // ─── Source map (T-3295, plan §4.4) ───────────────────────
+            // Refreshed on EVERY processed run (not gated on changed.StyleChanged alone): the
+            // map's "sha1" is a WHOLE-FILE hash, and this method only runs when that hash
+            // already changed (the skip-cache check above) — a template/script-only edit can
+            // still shift <style>'s own line number, so the map is stale exactly as often as
+            // the artifact set that gates it here.
+            SharqCompilePipeline.WriteSourceMap(in artifacts, model.ClassName, GeneratedDir);
+
             // Store section hashes for next diff
             SharqSectionCache.StoreHashes(model.ClassName, changed.NewHashes);
 
@@ -216,7 +224,11 @@ namespace Sharq.Core.Editor
         internal static void CleanupGeneratedFiles(string className)
         {
             // ─── 1. Remove from generated/ directory ─────────────────
-            string[] generatedSuffixes = { ".g.cs", ".g.uss", "_scoped.g.uss", "_static.g.uss", ".sections.json", ".sharq.hash" };
+            string[] generatedSuffixes =
+            {
+                ".g.cs", ".g.uss", "_scoped.g.uss", "_static.g.uss", ".sections.json", ".sharq.hash",
+                ".g.uss.map.json", "_scoped.g.uss.map.json", // T-3295
+            };
             foreach (var suffix in generatedSuffixes)
             {
                 var genPath = Path.Combine(GeneratedDir, $"{className}{suffix}");

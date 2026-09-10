@@ -28,6 +28,14 @@ namespace Sharq.Core.Editor
             public string GlobalUss;
             /// <summary>Number of deduplicated inline-style rules folded into <see cref="StaticUss"/> (for logging).</summary>
             public int StaticRuleCount;
+            /// <summary>
+            /// (T-3295, plan §4.4) <c>{ScopedUss|GlobalUss filename}.map.json</c> content —
+            /// null when neither <see cref="ScopedUss"/> nor <see cref="GlobalUss"/> mapped any
+            /// declaration (no <c>&lt;style&gt;</c> section, or one with zero leaf rules). Never
+            /// produced for <see cref="StaticUss"/> (inline <c>style="…"</c> attrs) — out of
+            /// scope for this card, which covers the <c>&lt;style&gt;</c> section only.
+            /// </summary>
+            public string SourceMap;
         }
 
         /// <summary>
@@ -59,6 +67,11 @@ namespace Sharq.Core.Editor
 
             var styleResult = StyleParser.Parse(model);
 
+            string sourceMap = null;
+            if (styleResult.MapLines.Count > 0)
+                sourceMap = SharqSourceMapWriter.Build(
+                    model.SourcePath, model.SourceSha1, model.StyleBodyLine, styleResult.MapLines);
+
             return new Artifacts
             {
                 Code = code,
@@ -66,7 +79,22 @@ namespace Sharq.Core.Editor
                 StaticRuleCount = styleCount,
                 ScopedUss = styleResult.HasScopedCss ? styleResult.ScopedCss : null,
                 GlobalUss = styleResult.HasGlobalCss ? styleResult.GlobalCss : null,
+                SourceMap = sourceMap,
             };
+        }
+
+        /// <summary>
+        /// (T-3295) File name of <see cref="Artifacts.SourceMap"/> — mirrors whichever USS
+        /// artifact it maps (<c>_scoped.g.uss</c> or <c>.g.uss</c>), the same convention a
+        /// browser devtools sourcemap uses (<c>foo.js.map</c> next to <c>foo.js</c>). Null when
+        /// there is nothing to write (no map, or — should both somehow be null — no USS at all).
+        /// </summary>
+        internal static string MapFileName(string className, in Artifacts a)
+        {
+            if (a.SourceMap == null) return null;
+            if (a.ScopedUss != null) return $"{className}_scoped.g.uss.map.json";
+            if (a.GlobalUss != null) return $"{className}.g.uss.map.json";
+            return null;
         }
 
         /// <summary>
@@ -80,6 +108,26 @@ namespace Sharq.Core.Editor
             WriteOrDelete(Path.Combine(generatedDir, $"{className}_static.g.uss"), a.StaticUss);
             WriteOrDelete(Path.Combine(generatedDir, $"{className}_scoped.g.uss"), a.ScopedUss);
             WriteOrDelete(Path.Combine(generatedDir, $"{className}.g.uss"), a.GlobalUss);
+            WriteSourceMap(in a, className, generatedDir);
+        }
+
+        /// <summary>
+        /// (T-3295) Writes/deletes <see cref="Artifacts.SourceMap"/> next to whichever USS it
+        /// maps, same atomic path as every other artifact — both write paths
+        /// (<see cref="WriteAll"/> and the incremental callers) go through this so the map's
+        /// lifecycle can never drift from the USS it describes: same call, same file, same
+        /// delete-when-null rule. Deletes BOTH possible map names when writing nothing, so a
+        /// component that flips from scoped ↔ global (or drops <c>&lt;style&gt;</c> entirely)
+        /// never leaves a map pointing at a USS suffix that no longer exists.
+        /// </summary>
+        internal static void WriteSourceMap(in Artifacts a, string className, string generatedDir)
+        {
+            var scopedMapPath = Path.Combine(generatedDir, $"{className}_scoped.g.uss.map.json");
+            var globalMapPath = Path.Combine(generatedDir, $"{className}.g.uss.map.json");
+            var target = MapFileName(className, in a);
+
+            WriteOrDelete(scopedMapPath, target == Path.GetFileName(scopedMapPath) ? a.SourceMap : null);
+            WriteOrDelete(globalMapPath, target == Path.GetFileName(globalMapPath) ? a.SourceMap : null);
         }
 
         /// <summary>Writes <paramref name="content"/> if non-null (atomically); otherwise deletes the file if present.</summary>

@@ -200,6 +200,8 @@ namespace Sharq.Core.Editor
                 SharqCompilePipeline.WriteOrDelete(
                     Path.Combine(generatedDir, $"{model.ClassName}.g.uss"),
                     artifacts.GlobalUss);
+                // T-3295: map lifecycle rides the same StyleChanged gate as the USS it describes.
+                SharqCompilePipeline.WriteSourceMap(in artifacts, model.ClassName, generatedDir);
             }
 
             SharqCompilePipeline.SyncUssToResources(model.ClassName, generatedDir, resourcesDir);

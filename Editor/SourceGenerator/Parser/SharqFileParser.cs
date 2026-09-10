@@ -25,6 +25,20 @@ namespace Sharq.Core.Editor
         /// Empty / null → emit into the global namespace (legacy).
         /// </summary>
         public string Namespace;
+        /// <summary>
+        /// (T-3295) 1-based line, in the WHOLE <c>.sharq</c> file, of the first character of
+        /// <see cref="StyleBody"/> (already trimmed, already <c>rung()</c>-resolved) — anchors
+        /// <see cref="CssNode.DeclLine"/> (local to <see cref="StyleBody"/>) back to a real
+        /// file line for the source map. 0 when there is no <c>&lt;style&gt;</c> section.
+        /// </summary>
+        public int StyleBodyLine;
+        /// <summary>
+        /// (T-3295) SHA-1 of the RAW <c>.sharq</c> FILE content (the exact bytes <see
+        /// cref="Parse"/> was called with) — the source map's staleness check: ANY save
+        /// invalidates it, not just a style-section edit, because a template/script-only
+        /// change still shifts every line number below it.
+        /// </summary>
+        public string SourceSha1;
     }
 
     /// <summary>
@@ -48,7 +62,8 @@ namespace Sharq.Core.Editor
             var model = new SharqFileModel
             {
                 ClassName = Path.GetFileNameWithoutExtension(filePath),
-                SourcePath = filePath
+                SourcePath = filePath,
+                SourceSha1 = ComputeSha1(sharqContent), // T-3295: hash of the whole file, not just <style>
             };
 
             // ─── Extract <template> (XML-aware close finding) ────────
@@ -80,6 +95,7 @@ namespace Sharq.Core.Editor
                 var startLine = 1 + CountNewlines(sharqContent, 0, styleContentStart + leadingTrimmedLen);
                 model.StyleBody = RungResolver.ResolveAll(styleBody.Trim(), filePath, model.ClassName, startLine);
                 model.IsStyleScoped = styleAttrs.Contains(Constants.ScopedStyleAttr);
+                model.StyleBodyLine = startLine; // T-3295: same anchor rung() errors already use
             }
 
             return model;
@@ -92,6 +108,18 @@ namespace Sharq.Core.Editor
             for (var i = from; i < end; i++)
                 if (s[i] == '\n') n++;
             return n;
+        }
+
+        /// <summary>(T-3295) Lower-case hex SHA-1 of <paramref name="content"/>, UTF-8 encoded —
+        /// matches the field name the map (§4.4) uses ("sha1"), distinct from the SHA-256
+        /// <c>SharqFileImporter</c> already keeps for its own unrelated skip-cache.</summary>
+        private static string ComputeSha1(string content)
+        {
+            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            var bytes = sha1.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+            var sb = new System.Text.StringBuilder(bytes.Length * 2);
+            foreach (var b in bytes) sb.Append(b.ToString("x2"));
+            return sb.ToString();
         }
 
         // ─── Section scanner ──────────────────────────────────────────
