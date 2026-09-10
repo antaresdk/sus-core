@@ -96,8 +96,8 @@ Infrastructure lives in `sus-core/Editor/Packaging/`:
 - **`SusPackageRegistry`** - finds descriptors for all resolved packages; only mutable packages
   (`file:` links / embedded) are considered - registry/git packages already ship ready-made
   artifacts.
-- **`SusPackageGenerator`** — menu **`Sharq/Generate All Packages`** (all packages at once) and
-  window **`Sharq/Generate Package…`** (one at a time). Under the hood: `SharqBatchCompiler.CompileDirectory`
+- **`SusPackageGenerator`** — menu **`Window/SUS/Sharq/Generate All Packages`** (all packages at once) and
+  window **`Window/SUS/Sharq/Generate Package…`** (one at a time). Under the hood: `SharqBatchCompiler.CompileDirectory`
   (`sus-core/Editor/AssetPipeline/`), using the **same** `BuildMethodGenerator` as the importer.
 - **`SusPackageAutoCompile`** — a FileSystemWatcher for each source directory of a package with
   `watch: true` (packages outside `Assets/` aren't visible to AssetPostprocessor): saving `.sharq` →
