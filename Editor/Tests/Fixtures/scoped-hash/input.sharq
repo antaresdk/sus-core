@@ -1,0 +1,13 @@
+<template>
+  <ui:VisualElement class="box">
+    <ui:Label text="Hi" />
+  </ui:VisualElement>
+</template>
+<script>
+public int X = 1;
+</script>
+<style scoped>
+.box {
+    color: red;
+}
+</style>

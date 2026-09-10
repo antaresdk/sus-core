@@ -1,0 +1,6 @@
+<template>
+  <ui:VisualElement :class="{ active: IsActive }" />
+</template>
+<script>
+public bool IsActive = false;
+</script>
