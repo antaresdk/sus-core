@@ -143,6 +143,20 @@ namespace Sharq.Core.Editor
                 }
             }
 
+            // @variants (T-3292, plan §4.1/§4.2): gated on the same substring check StyleParser
+            // uses, so a component with no @variants pays nothing and its Build() is unchanged.
+            if (model.StyleBody != null && model.StyleBody.Contains("@variants"))
+            {
+                var variantNodes = CssScanner.Parse(model.StyleBody);
+                var variantAxes = VariantsCompiler.ExtractAndRewrite(variantNodes, model, out var variantErrors);
+                if (variantErrors.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{model.ClassName}.sharq: " + string.Join(" | ", variantErrors.Select(e => e.Message)));
+                }
+                EmitVariantRecipes(sb, bodyIndent, variantAxes, model);
+            }
+
             if (root.Attributes.TryGetValue("style", out var rootStyle))
                 EmitRegisteredStyle(sb, bodyIndent, "this", model.ClassName, rootStyle);
 
@@ -969,6 +983,76 @@ public partial class {className} : {b}
         private static string EscapeCSharpString(string s)
         {
             return s?.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        }
+
+        /// <summary>
+        /// Emits, per axis (T-3292, plan §4.1/§4.2/D-5/D-6):
+        ///  • non-ambient: one <c>BindClass</c> per value (condition matches the value's name,
+        ///    its quoted aliases, and — for a value literally named <c>default</c> — the empty
+        ///    string too, D-4), then a compiler-written <c>UseAllowed</c> (D-5) and
+        ///    <c>RegisterVariantRecipe</c> (D-6);
+        ///  • ambient: only <c>RegisterVariantRecipe</c> with <c>Ambient = true</c> — no class, no
+        ///    clamp: the axis moves nothing of its own (§4.1), the author still owns the values.
+        /// </summary>
+        private static void EmitVariantRecipes(
+            StringBuilder sb, string indent, List<VariantAxis> axes, SharqFileModel model)
+        {
+            var block = VariantsCompiler.ResolveBlockClass(model);
+
+            foreach (var axis in axes)
+            {
+                if (axis.Ambient)
+                {
+                    sb.AppendLine($"{indent}RegisterVariantRecipe(new SusVariantRecipeInfo " +
+                        $"{{ Axis = \"{EscapeCSharpString(axis.Axis)}\", " +
+                        $"PropName = \"{EscapeCSharpString(axis.PropName)}\", Ambient = true }});");
+                    continue;
+                }
+
+                foreach (var v in axis.Values)
+                {
+                    var cls = axis.ClassFor(block, v.Name);
+                    var matches = new List<string> { v.Name };
+                    matches.AddRange(v.Aliases);
+                    if (v.Name == "default") matches.Add("");
+                    var cond = string.Join(" || ",
+                        matches.Select(x => $"{axis.PropName}.Value == \"{EscapeCSharpString(x)}\""));
+                    sb.AppendLine($"{indent}BindClass(this, \"{EscapeCSharpString(cls)}\", () => {cond});");
+                }
+
+                var defaultValue = axis.Values.FirstOrDefault(v => v.Name == "default")?.Name
+                    ?? axis.Values[0].Name;
+                var allowedLiteral = string.Join(", ",
+                    axis.Values.Select(v => $"\"{EscapeCSharpString(v.Name)}\""));
+
+                var aliasEntries = new List<string>();
+                foreach (var v in axis.Values)
+                    foreach (var a in v.Aliases)
+                        aliasEntries.Add($"[\"{EscapeCSharpString(a)}\"] = \"{EscapeCSharpString(v.Name)}\"");
+                if (axis.Values.Any(v => v.Name == "default"))
+                    aliasEntries.Add("[\"\"] = \"default\"");
+                var aliasesLiteral = aliasEntries.Count > 0
+                    ? "new Dictionary<string, string> { " + string.Join(", ", aliasEntries) + " }"
+                    : "null";
+
+                sb.AppendLine($"{indent}UseAllowed({axis.PropName}, new string[] {{ {allowedLiteral} }}, " +
+                    $"\"{EscapeCSharpString(defaultValue)}\", {aliasesLiteral}, " +
+                    $"propName: \"{EscapeCSharpString(model.ClassName)}.{EscapeCSharpString(axis.PropName)}\");");
+
+                var metricsLiteral = axis.Metrics.Count > 0
+                    ? "new string[] { " + string.Join(", ",
+                        axis.Metrics.OrderBy(m => m, StringComparer.Ordinal)
+                            .Select(m => $"\"{EscapeCSharpString(m)}\"")) + " }"
+                    : "Array.Empty<string>()";
+
+                sb.AppendLine($"{indent}RegisterVariantRecipe(new SusVariantRecipeInfo {{ " +
+                    $"Axis = \"{EscapeCSharpString(axis.Axis)}\", " +
+                    $"PropName = \"{EscapeCSharpString(axis.PropName)}\", " +
+                    $"Values = new string[] {{ {allowedLiteral} }}, " +
+                    $"Aliases = {aliasesLiteral}, " +
+                    $"Default = \"{EscapeCSharpString(defaultValue)}\", " +
+                    $"Metrics = {metricsLiteral} }});");
+            }
         }
 
         private static bool TryGetBindAttr(Dictionary<string, string> attrs, string bindKey, out string expr)

@@ -17,17 +17,40 @@ namespace Sharq.Core.Editor
             if (string.IsNullOrEmpty(model.StyleBody))
                 return null;
 
-            var hash = GenerateScopedHash(model.ClassName);
-            var scoped = new StringBuilder();
-
             // P2.1: brace-balanced scan (handles @media nesting, nested braces,
             // comments, strings and url(...)) instead of the old fragile regex.
             // T-3291: the scanner now also recurses into an ordinary rule's body, so this
             // tree can carry real nested rules — flatten them here before scoping.
             var nodes = CssScanner.Parse(model.StyleBody);
-            EmitNodes(nodes, hash, scoped, indent: "", parentSelector: null);
+            return GenerateFromNodes(nodes, model.ClassName);
+        }
 
+        /// <summary>
+        /// Same as <see cref="Generate"/> but from an ALREADY-PARSED (and possibly rewritten)
+        /// node tree — the hook <c>StyleParser</c> uses after <c>VariantsCompiler</c> has spliced
+        /// <c>@variants</c> value blocks in as plain rule nodes (T-3292), so this method itself
+        /// stays entirely unaware of recipes: it only ever sees ordinary <see cref="CssNode"/>s.
+        /// </summary>
+        public static string GenerateFromNodes(List<CssNode> nodes, string className)
+        {
+            var hash = GenerateScopedHash(className);
+            var scoped = new StringBuilder();
+            EmitNodes(nodes, hash, scoped, indent: "", parentSelector: null);
             return scoped.ToString();
+        }
+
+        /// <summary>
+        /// Same tree walk as <see cref="GenerateFromNodes"/> but for UNSCOPED (<c>&lt;style&gt;</c>
+        /// without <c>scoped</c>) output — no <c>.s-хеш</c> is appended to any selector. Used only
+        /// when the style body contains <c>@variants</c> (T-3292): a plain global style with none
+        /// keeps the old byte-for-byte raw-text path in <c>StyleParser</c>, this method is never
+        /// on that path.
+        /// </summary>
+        public static string GenerateGlobalFromNodes(List<CssNode> nodes)
+        {
+            var sb = new StringBuilder();
+            EmitNodes(nodes, hash: null, sb, indent: "", parentSelector: null);
+            return sb.ToString();
         }
 
         /// <summary>
@@ -41,6 +64,8 @@ namespace Sharq.Core.Editor
         /// order they were written (plan §4.3) — matching the pre-nesting output exactly
         /// when a rule has no nested children.
         /// </summary>
+        /// <summary><paramref name="hash"/> null ⇒ unscoped (T-3292 global-with-@variants path);
+        /// non-null ⇒ appends <c>.s-хеш</c> to every rule, same as before this parameter existed.</summary>
         private static void EmitNodes(IReadOnlyList<CssNode> nodes,
             string hash, StringBuilder sb, string indent, string parentSelector)
         {
@@ -72,7 +97,8 @@ namespace Sharq.Core.Editor
                 var combined = CombineSelector(parentSelector, node.Prelude);
                 if (string.IsNullOrEmpty(combined)) continue;
 
-                sb.AppendLine($"{indent}{ScopeSelector(combined, hash)} {{");
+                var selectorText = hash != null ? ScopeSelector(combined, hash) : combined;
+                sb.AppendLine($"{indent}{selectorText} {{");
                 sb.AppendLine($"{indent}    {node.Declarations}");
                 sb.AppendLine($"{indent}}}");
                 sb.AppendLine();

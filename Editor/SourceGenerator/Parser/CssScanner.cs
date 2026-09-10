@@ -49,7 +49,13 @@ namespace Sharq.Core.Editor
     {
         private static readonly string[] NestingAtRules =
         {
-            "@media", "@supports", "@container", "@document", "@-moz-document", "@layer", "@scope"
+            "@media", "@supports", "@container", "@document", "@-moz-document", "@layer", "@scope",
+            // T-3292 (plan §4.1): `@variants <axis> { <value> { … } … }` has the exact same
+            // brace shape as @media — a nesting at-rule whose children are themselves parsed as
+            // ordinary rules (own declarations + T-3291 nested `&` children). Interpreting that
+            // shape as a recipe is VariantsCompiler's job, not the scanner's — this line only
+            // buys it a correct parse tree to work from.
+            "@variants",
         };
 
         public static List<CssNode> Parse(string css)
