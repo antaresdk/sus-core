@@ -20,9 +20,44 @@ namespace Sharq.Core
         /// for the same axis name replaces the record (same rule <c>RegisterAllowed</c> uses for
         /// a re-registered prop).
         /// </summary>
-        protected void RegisterVariantRecipe(SusVariantRecipeInfo recipe)
+        /// <remarks>
+        /// (T-3297) Takes PRIMITIVES, not a pre-built <see cref="SusVariantRecipeInfo"/> — that
+        /// type's setters are deliberately <c>internal</c> (sus-core's own encapsulation), and
+        /// generated <c>Build()</c> code for a <c>@variants</c> axis lands in WHATEVER package
+        /// declared it (kit, game, a third-party paid package sus-core has never heard of) — a
+        /// different assembly every time. The earlier shape (<c>RegisterVariantRecipe(new
+        /// SusVariantRecipeInfo { Axis = …, … })</c>) compiled in the fixture-only tests T-3292
+        /// shipped with (no real corpus file used a non-ambient axis yet) but broke on first real
+        /// use here (CS0200, first migrated component: an object initializer needs `internal set`
+        /// visible from the CALLER's assembly). The fix generalizes the SAME idiom <see cref="UseAllowed"/>/
+        /// <c>AllowedRecord</c> (T-3031) already use for exactly this shape of problem: sus-core
+        /// exposes a public METHOD with plain parameters, and only sus-core's own code (this
+        /// method) ever constructs the internal-setter type — no <c>InternalsVisibleTo</c> grant
+        /// naming a downstream package is needed, which R25 (public-scope, D-24) would have
+        /// refused from sus-core's Runtime anyway.
+        /// </remarks>
+        protected void RegisterVariantRecipe(
+            string axis,
+            string propName,
+            bool ambient = false,
+            IReadOnlyList<string> values = null,
+            IReadOnlyDictionary<string, string> aliases = null,
+            string defaultValue = null,
+            IReadOnlyList<string> metrics = null)
         {
-            if (recipe == null) throw new ArgumentNullException(nameof(recipe));
+            if (string.IsNullOrEmpty(axis)) throw new ArgumentException("axis must be non-empty", nameof(axis));
+
+            var recipe = new SusVariantRecipeInfo
+            {
+                Axis = axis,
+                PropName = propName,
+                Ambient = ambient,
+                Values = values ?? Array.Empty<string>(),
+                Aliases = aliases ?? new Dictionary<string, string>(0, StringComparer.Ordinal),
+                Default = defaultValue,
+                Metrics = metrics ?? Array.Empty<string>(),
+            };
+
             _recipeRecords ??= new List<SusVariantRecipeInfo>();
             for (int i = 0; i < _recipeRecords.Count; i++)
             {

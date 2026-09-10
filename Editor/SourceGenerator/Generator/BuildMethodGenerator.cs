@@ -1003,9 +1003,12 @@ public partial class {className} : {b}
             {
                 if (axis.Ambient)
                 {
-                    sb.AppendLine($"{indent}RegisterVariantRecipe(new SusVariantRecipeInfo " +
-                        $"{{ Axis = \"{EscapeCSharpString(axis.Axis)}\", " +
-                        $"PropName = \"{EscapeCSharpString(axis.PropName)}\", Ambient = true }});");
+                    // T-3297: primitives-in, not `new SusVariantRecipeInfo { … }` — see
+                    // SusComponent.Recipe.cs's RegisterVariantRecipe remarks (CS0200 otherwise:
+                    // that type's setters are `internal`, and this emitted call lands in
+                    // whatever package declared the axis, not sus-core).
+                    sb.AppendLine($"{indent}RegisterVariantRecipe(\"{EscapeCSharpString(axis.Axis)}\", " +
+                        $"\"{EscapeCSharpString(axis.PropName)}\", ambient: true);");
                     continue;
                 }
 
@@ -1045,13 +1048,12 @@ public partial class {className} : {b}
                             .Select(m => $"\"{EscapeCSharpString(m)}\"")) + " }"
                     : "Array.Empty<string>()";
 
-                sb.AppendLine($"{indent}RegisterVariantRecipe(new SusVariantRecipeInfo {{ " +
-                    $"Axis = \"{EscapeCSharpString(axis.Axis)}\", " +
-                    $"PropName = \"{EscapeCSharpString(axis.PropName)}\", " +
-                    $"Values = new string[] {{ {allowedLiteral} }}, " +
-                    $"Aliases = {aliasesLiteral}, " +
-                    $"Default = \"{EscapeCSharpString(defaultValue)}\", " +
-                    $"Metrics = {metricsLiteral} }});");
+                sb.AppendLine($"{indent}RegisterVariantRecipe(\"{EscapeCSharpString(axis.Axis)}\", " +
+                    $"\"{EscapeCSharpString(axis.PropName)}\", " +
+                    $"values: new string[] {{ {allowedLiteral} }}, " +
+                    $"aliases: {aliasesLiteral}, " +
+                    $"defaultValue: \"{EscapeCSharpString(defaultValue)}\", " +
+                    $"metrics: {metricsLiteral});");
             }
         }
 
