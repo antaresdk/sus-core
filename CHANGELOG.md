@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+## [1.0.30] - 2026-09-10
+
+### Changed
+- Visibility toggle (`v-show` / `BindVisibility`) hides via the `sus-hidden` USS class instead of writing inline `display` — the single declaration lives in core, and kit/game/skin packages cascade from it (T-2653, T-2749, T-3129, T-3141).
+- Storybook: new in-core sample engine (`com.sharq-it.sus.core.storybook`) — story registry, zones A-E (environment chips, Variant×state matrix, live instance, prop-driven control factory, deep links), icon-prop picker, component introspection (`DescribeProps`/`DescribeAllowed`/`DescribeEvents`, `[SusRange]`/`[SusDependsOn]` attributes) (T-3025…T-3224).
+- Font service moved fully to USS — inline `-unity-font-definition` no longer set from code (T-2767/D-069/R120).
+- Responsive token contract documented for the dimension-tokens plan (T-3007/T-3009).
+
+### Fixed
+- Overlay host resolution unified across all three mount channels (ancestor-first) (T-3032).
+- World-space panel root declares its domain via the `.sus-world-space` class instead of inline state (T-3071/D-19).
+
 ## [1.0.29] - 2026-08-30
 
 ### Fixed
