@@ -52,7 +52,7 @@ namespace Sharq.Core.Editor
             };
 
             // ─── Extract <template> (XML-aware close finding) ────────
-            if (TryExtractSection(sharqContent, "template", xmlAware: true, out _, out var templateBody))
+            if (TryExtractSection(sharqContent, "template", xmlAware: true, out _, out var templateBody, out _))
             {
                 // Strip HTML comments <!-- ... -->
                 var raw = Regex.Replace(templateBody, @"<!--.*?-->", "", RegexOptions.Singleline);
@@ -60,7 +60,7 @@ namespace Sharq.Core.Editor
             }
 
             // ─── Extract <script> (raw text) ─────────────────────────
-            if (TryExtractSection(sharqContent, "script", xmlAware: false, out _, out var scriptBody))
+            if (TryExtractSection(sharqContent, "script", xmlAware: false, out _, out var scriptBody, out _))
             {
                 var parsed = ScriptParser.Parse(scriptBody);
                 model.Usings = parsed.Usings;
@@ -69,32 +69,51 @@ namespace Sharq.Core.Editor
             }
 
             // ─── Extract <style> (raw text) ──────────────────────────
-            if (TryExtractSection(sharqContent, "style", xmlAware: false, out var styleAttrs, out var styleBody))
+            if (TryExtractSection(sharqContent, "style", xmlAware: false, out var styleAttrs, out var styleBody, out var styleContentStart))
             {
-                model.StyleBody = styleBody.Trim();
+                // T-3293: line of the FIRST character of the (about-to-be-trimmed) body, 1-based,
+                // measured against the WHOLE .sharq file — so a rung()-resolution error can name a
+                // real line, not just "somewhere in <style>". `Trim()` below can move that first
+                // character forward (leading blank lines) — accounted for by counting newlines in
+                // the trimmed-off prefix too, before newlines are counted in the trimmed body itself.
+                var leadingTrimmedLen = styleBody.Length - styleBody.TrimStart().Length;
+                var startLine = 1 + CountNewlines(sharqContent, 0, styleContentStart + leadingTrimmedLen);
+                model.StyleBody = RungResolver.ResolveAll(styleBody.Trim(), filePath, model.ClassName, startLine);
                 model.IsStyleScoped = styleAttrs.Contains(Constants.ScopedStyleAttr);
             }
 
             return model;
         }
 
+        private static int CountNewlines(string s, int from, int to)
+        {
+            var n = 0;
+            var end = Math.Min(to, s.Length);
+            for (var i = from; i < end; i++)
+                if (s[i] == '\n') n++;
+            return n;
+        }
+
         // ─── Section scanner ──────────────────────────────────────────
 
         /// <summary>
         /// Locates a top-level <c>&lt;name …&gt; … &lt;/name&gt;</c> section and returns its
-        /// attribute string and inner body. Returns false when the section is absent or
-        /// its close tag is missing.
+        /// attribute string, inner body, and the body's start offset within <paramref name="src"/>
+        /// (T-3293: needed to turn a match offset inside the body into a real file line for
+        /// <c>rung()</c> compile errors). Returns false when the section is absent or its close
+        /// tag is missing.
         /// </summary>
         private static bool TryExtractSection(string src, string name, bool xmlAware,
-            out string attrs, out string body)
+            out string attrs, out string body, out int contentStart)
         {
             attrs = string.Empty;
             body = null;
+            contentStart = -1;
 
             int open = FindOpenTag(src, name, out int openTagEnd, out attrs);
             if (open < 0) return false;
 
-            int contentStart = openTagEnd + 1;
+            contentStart = openTagEnd + 1;
             int close = xmlAware
                 ? FindXmlClose(src, contentStart, name)
                 : FindRawTextClose(src, contentStart, name);
