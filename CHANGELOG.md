@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [1.0.31] - 2026-09-11
+
+### Added
+- Sharq `@variants` at-rule: parsing, rule emission, `BindClass`/`UseAllowed`/`DescribeRecipe` wiring, plus aliases, `default` and ambient variants — a component declares its variant axis once in `.sharq` instead of repeating class-binding boilerplate (T-3292).
+- `rung(<family>, <rung>)` — compile-time resolution of a dimension-ladder step inside `.sharq`, backed by `RungResolver` and line tracking in `SharqFileParser` (T-3293, plan `ARCH-20260910-SHARQ-STYLE-LAYER` step 5).
+- Nested rules in the Sharq scanner and emitter (T-3291, step 3).
+- `<Name>.g.uss.map.json` — generated-to-source map emitted next to every generated USS, so a rule in a `.g.uss` points back at the `.sharq` line that produced it (T-3295, step 6).
+
+### Changed
+- `RegisterVariantRecipe` now takes primitives instead of an object with internal setters, so a recipe can be registered from outside the assembly (T-3297).
+
+### Fixed
+- Sharq compiler corpus: idempotency test (a second compile of the same corpus is byte-identical) and precise compiler fixtures moved to `Fixtures~` (T-3289, T-3290, T-3291).
+
 ## [1.0.30] - 2026-09-10
 
 ### Changed
