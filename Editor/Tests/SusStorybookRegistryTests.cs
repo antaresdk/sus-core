@@ -65,7 +65,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Find_is_case_insensitive_and_returns_null_for_an_unknown_id()
         {
-            Assert.That(SusStoryRegistry.Find("CORE/PRIMITIVES/COUNTER"), Is.Not.Null);
+            Assert.That(SusStoryRegistry.Find("ENGINETESTS/PRIMITIVES/COUNTER"), Is.Not.Null);
             Assert.That(SusStoryRegistry.Find("kit/atoms/nope"), Is.Null);
         }
 

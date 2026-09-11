@@ -41,6 +41,15 @@ namespace Sharq.Core.Editor.Tests
         /// </summary>
         private static List<VisualElement> ShellChrome(SusStorybookHost host) =>
             host.Query<VisualElement>().ToList()
+                // A mounted instance is PRODUCT even while the shell has put a class of its own on
+                // it: SusStoryMatrix adds sus-sb-matrix__item to the SusComponent itself rather
+                // than to a wrapper (SusStoryMatrix.cs:382), so without this line every matrix cell
+                // reads as "shell chrome wearing sus-alert". This never fired before card T-3409
+                // because the default story of an EditMode host was a CORE fixture, and the core
+                // fixtures wear no product classes; with the fixture package out of the product
+                // selection the default story is a real kit component. The shell class ON a product
+                // instance is a separate question, filed as its own card.
+                .Where(e => !(e is SusComponent))
                 .Where(e => e.GetClasses().Any(c => c.StartsWith(ShellPrefix)))
                 .ToList();
 
