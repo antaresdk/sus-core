@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using UnityEngine;
 using UnityEngine.UIElements;
+using Sharq.Core.Storybook.Probe;   // cards T-3482 / T-3483: the mode and the cell geometry
 
 namespace Sharq.Core.Storybook.UI
 {
@@ -30,11 +32,47 @@ namespace Sharq.Core.Storybook.UI
     /// that cannot are named under the grid; see <see cref="SusStateTwins"/> for why hover and
     /// active are usually those.</item>
     /// </list>
+    ///
+    /// A grid of miniatures is a tool for SMALL components, and only for them (owner, 2026-09-11:
+    /// "there is no point stuffing large components into a table of variants or states - they
+    /// simply cannot be shown whole there"; card T-3482, decision d:360869). So the FIRST question
+    /// the matrix asks is not how many cells it would draw but how big ONE instance is, measured
+    /// live rather than read off a stylesheet:
+    /// <list type="bullet">
+    /// <item>an instance that fits <see cref="CellMaxWidth"/> x <see cref="CellMaxHeight"/> gets a
+    /// grid, and every cell of it GROWS to the instance's natural size (card T-3481, decision
+    /// d:3750a2) - a cell promises the instance whole, and a clipped one is a forgery;</item>
+    /// <item>anything larger gets no grid at all: one natural-size instance and a row of state
+    /// switches (<see cref="SusStoryMatrixMode.Switcher"/>). Twenty-four 600x400 modals are a
+    /// wall, not a comparison, and the matrix says so in words rather than leaving the buyer to
+    /// guess why this story looks different.</item>
+    /// </list>
+    ///
+    /// The measurement costs ONE instance and is taken BEFORE the grid is built, which is the
+    /// whole point: a matrix that built twenty-four modals and then folded them away would have
+    /// paid the very price it exists to avoid.
     /// </summary>
-    public sealed class SusStoryMatrix : VisualElement
+    public sealed class SusStoryMatrix : VisualElement, ISusStoryCellSource
     {
         /// <summary>Cells the matrix may build without being asked (plan §0.3).</summary>
         public const int CellBudget = 24;
+
+        /// <summary>
+        /// Widest cell a grid may contain, in pixels (card T-3482, decision d:360869).
+        ///
+        /// The number is named by VISIBILITY, not by taste: zone C's box is the stage width
+        /// (777px) less the row-label column (<c>--sb-matrix-label-w</c>, 68px), about 709px, and
+        /// at least a 2x2 block of natural cells has to be visible at once or the grid stops being
+        /// a comparison and becomes a scrolling list of one. 709 / 2 is about 354, rounded down
+        /// to 340.
+        /// </summary>
+        public const float CellMaxWidth = 340f;
+
+        /// <summary>
+        /// Tallest cell a grid may contain, in pixels. The same arithmetic on the other axis: the
+        /// scroll box is 280px high (<c>.sb-matrix__scroll</c>), 280 / 2 = 140.
+        /// </summary>
+        public const float CellMaxHeight = 140f;
 
         /// <summary>Label of the single row used when the component has no axis.</summary>
         public const string DefaultRow = "default";
@@ -75,14 +113,24 @@ namespace Sharq.Core.Storybook.UI
         public static string AxisPropName { get; set; } = SusStoryAxis.DefaultPropName;
 
         readonly Button _toggle = new();
-        readonly ScrollView _scroll = new(ScrollViewMode.Horizontal);
+        // Card T-3481: BOTH axes. With a horizontal-only scroller the rows below the 280px box
+        // were not clipped, they were UNREACHABLE - and the only reason that looked survivable is
+        // that the cells were clipped to 64x28 and never reached the bottom of the box.
+        readonly ScrollView _scroll = new(ScrollViewMode.VerticalAndHorizontal);
         readonly VisualElement _grid = new();
         readonly Label _note = new();
         readonly OverlayHost _overlay = new() { name = OverlayName };
+        // Where ONE instance is measured before anything is built (card T-3482). Laid out like
+        // any other element - `visibility: hidden` keeps it out of the picture without taking it
+        // out of layout - so what it reports is a real natural size and not a declaration.
+        readonly VisualElement _measure = new();
 
         readonly List<string> _rows = new();
         readonly List<string> _columns = new();
         readonly List<string> _skipped = new();
+        readonly List<CellRef> _refs = new();
+        readonly List<SusStoryCellGeometry> _cells = new();
+        readonly List<Button> _stateButtons = new();
 
         SusStoryEntry _entry;
         string _axis;
@@ -91,6 +139,25 @@ namespace Sharq.Core.Storybook.UI
         SusStoryAxisSource _axisSource = SusStoryAxisSource.None;
         bool _open;
         bool _built;
+        Vector2 _natural;
+        bool _measured;
+        bool _measurePending;
+        bool _sized;
+        bool _oversize;
+        string _switcherState;
+        int _created;
+
+        /// <summary>One cell, kept by reference so the measuring pass never re-queries the tree.</summary>
+        sealed class CellRef
+        {
+            public string Row;
+            public string State;
+            public int Column;
+            public int Line;
+            public VisualElement Cell;
+            public VisualElement Item;
+            public Vector2 Natural;
+        }
 
         public SusStoryMatrix()
         {
@@ -104,9 +171,16 @@ namespace Sharq.Core.Storybook.UI
             _scroll.Add(_grid);
 
             _note.AddToClassList("sb-matrix__note");
+            _measure.AddToClassList("sb-matrix__measure");
+            _measure.pickingMode = PickingMode.Ignore;
+            // Two doors into the same idempotent finish, because neither alone is reliable: the
+            // geometry event never arrives for an instance that measures 0x0, and a scheduled
+            // item does not exist outside a panel (card T-3482).
+            _measure.RegisterCallback<GeometryChangedEvent>(_ => FinishMeasure());
 
             Add(_toggle);
             Add(_scroll);
+            Add(_measure);
             Add(_note);
             // Card T-3160. A cell is a REAL instance built by the story's own Create()+Configure(),
             // so a story that is open at t=0 (every modal story: Model = true) makes every cell
@@ -169,18 +243,108 @@ namespace Sharq.Core.Storybook.UI
         /// <summary>True when <see cref="CellCount"/> exceeds <see cref="CellBudget"/>.</summary>
         public bool OverBudget => CellCount > CellBudget;
 
+        /// <summary>
+        /// True when one instance does not fit <see cref="CellMaxWidth"/> x
+        /// <see cref="CellMaxHeight"/> (card T-3482). Measured, never declared: what matters is
+        /// what the skin actually lays out, and a good half of the kit disagrees with its own
+        /// stylesheet about it.
+        /// </summary>
+        public bool OverCellSize => _oversize;
+
         /// <summary>True when the story declared itself heavy.</summary>
         public bool Heavy => _entry != null && _entry.Weight == SusStoryWeight.Heavy;
 
-        /// <summary>Why the matrix starts folded, or null when it starts open.</summary>
+        /// <summary>
+        /// Why the matrix starts folded, or null when it starts open.
+        ///
+        /// The cell budget applies to a GRID and to nothing else (card T-3482, the second of the
+        /// two numbers of d:7250aa): a switcher is one instance whatever the row x column product
+        /// would have been, so folding it would hide a cheap thing for an expensive thing's
+        /// reason.
+        /// </summary>
         public string CollapseReason =>
-            Heavy ? "heavy story" : OverBudget ? "cell budget" : null;
+            Heavy ? "heavy story" : !_oversize && OverBudget ? "cell budget" : null;
+
+        /// <summary>
+        /// How zone C is showing the states (card T-3482). Public because the buyer sees the
+        /// difference between a grid and a switcher and is owed a reason for it, and because the
+        /// cell judge has to tell "too large for a grid" from "matrix broken".
+        /// </summary>
+        public SusStoryMatrixMode MatrixMode =>
+            _entry == null || _silent != null ? SusStoryMatrixMode.None
+            : !_open ? SusStoryMatrixMode.Collapsed
+            : _oversize ? SusStoryMatrixMode.Switcher
+            : SusStoryMatrixMode.Grid;
+
+        /// <summary>Why that mode - the same words the caption carries.</summary>
+        public string MatrixModeReason
+        {
+            get
+            {
+                if (_entry == null) return null;
+                if (_silent != null) return _silent;
+                if (!_open) return CollapseReason ?? "folded";
+                if (_oversize)
+                    return "one instance is " + Dim(_natural) + ", over the " +
+                           Dim(new Vector2(CellMaxWidth, CellMaxHeight)) +
+                           " a grid cell may take - states are shown one at a time";
+                return _measured
+                    ? "one instance is " + Dim(_natural) + ", within the " +
+                      Dim(new Vector2(CellMaxWidth, CellMaxHeight)) + " a grid cell may take"
+                    : "grid";
+            }
+        }
+
+        /// <summary>Natural size of one instance of this story; zero until it has been measured.</summary>
+        public Vector2 NaturalCellSize => _natural;
+
+        /// <summary>True once one instance has been measured live (card T-3482).</summary>
+        public bool Measured => _measured;
+
+        /// <summary>Live instances zone C holds right now - 1 in a switcher, N in a grid.</summary>
+        public int MatrixInstanceCount =>
+            _grid.Query<VisualElement>(className: "sb-matrix__item").ToList().Count;
+
+        /// <summary>
+        /// Instances this matrix has CREATED since the last <see cref="Show"/>, the measuring
+        /// probe included. The acceptance figure of T-3482: a switcher that arrived at one
+        /// instance by building twenty-four and throwing them away has paid the price anyway, and
+        /// only a cumulative counter can say so.
+        /// </summary>
+        public int MatrixInstancesCreated => _created;
+
+        /// <summary>
+        /// Measured geometry of every cell (card T-3483). Empty until the layout has converged,
+        /// and empty for good in <see cref="SusStoryMatrixMode.Switcher"/> - there are no cells.
+        /// </summary>
+        public IReadOnlyList<SusStoryCellGeometry> Cells => _cells;
+
+        /// <summary>Cells whose instance is not shown whole - the number T-3481 drives to zero.</summary>
+        public int CroppedCellCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _cells.Count; i++) if (_cells[i].Cropped) n++;
+                return n;
+            }
+        }
+
+        /// <summary>State the switcher is showing, or null outside switcher mode.</summary>
+        public string SwitcherState => _oversize ? _switcherState : null;
 
         /// <summary>The <c>Variant × state · R × C</c> half of the toggle caption.</summary>
         public string MetaText =>
-            (_axis ?? "no axis") + " × state · " +
-            _rows.Count.ToString(CultureInfo.InvariantCulture) + " × " +
-            _columns.Count.ToString(CultureInfo.InvariantCulture);
+            _oversize
+                ? "one instance " + Dim(_natural) + " · " +
+                  _columns.Count.ToString(CultureInfo.InvariantCulture) + " states"
+                : (_axis ?? "no axis") + " × state · " +
+                  _rows.Count.ToString(CultureInfo.InvariantCulture) + " × " +
+                  _columns.Count.ToString(CultureInfo.InvariantCulture);
+
+        static string Dim(Vector2 v) =>
+            Mathf.Round(v.x).ToString(CultureInfo.InvariantCulture) + "x" +
+            Mathf.Round(v.y).ToString(CultureInfo.InvariantCulture);
 
         /// <summary>Text of the toggle, chevron included — what a test can read back.</summary>
         public string ToggleText => _toggle.text;
@@ -232,6 +396,7 @@ namespace Sharq.Core.Storybook.UI
             try
             {
                 entry.Instantiate(null, out probe);
+                if (probe != null) _created++;
             }
             catch (Exception e)
             {
@@ -250,7 +415,67 @@ namespace Sharq.Core.Storybook.UI
                 return;
             }
 
+            // Card T-3482. The probe has already been built to answer the rows and the columns;
+            // it now answers the third question - how big one instance is - instead of being
+            // dropped. Nothing is built until it has, because the answer decides WHAT to build.
+            //
+            // Outside a panel there is no layout and therefore no answer, so the grid is built at
+            // once with a natural size of zero: an EditMode rig asserting rows, columns and cell
+            // counts must not have to spin a panel to see a cell.
+            if (panel != null && probe != null)
+            {
+                BeginMeasure(probe);
+                return;
+            }
+
+            Decide(Vector2.zero, false);
             SetOpen(CollapseReason == null);
+        }
+
+        // ── the measurement the mode is decided on (card T-3482) ─────────────
+
+        /// <summary>
+        /// Parks ONE instance in the measuring box and waits for the layout to size it. Nothing
+        /// else is built meanwhile: the whole reason the measurement comes first is that building
+        /// a grid of twenty-four modals and folding it away afterwards costs exactly as much as
+        /// keeping it.
+        /// </summary>
+        void BeginMeasure(SusComponent probe)
+        {
+            _measurePending = true;
+            _measure.Add(probe);
+            _measure.schedule.Execute(FinishMeasure);
+        }
+
+        /// <summary>
+        /// Reads the natural size off the parked instance and lets the matrix build. Idempotent:
+        /// the geometry event and the scheduled item race on purpose, and whichever arrives first
+        /// wins.
+        /// </summary>
+        void FinishMeasure()
+        {
+            if (!_measurePending) return;
+            _measurePending = false;
+
+            var probe = _measure.childCount > 0 ? _measure[0] : null;
+            var size = probe == null ? Vector2.zero : new Vector2(probe.layout.width, probe.layout.height);
+            if (float.IsNaN(size.x) || float.IsNaN(size.y)) size = Vector2.zero;
+            _measure.Clear();
+
+            Decide(size, size != Vector2.zero);
+            SetOpen(CollapseReason == null);
+        }
+
+        /// <summary>
+        /// The fork of d:360869, in one place: a natural size over the threshold gets a switcher,
+        /// anything else gets a grid. Role is deliberately NOT consulted - a role says which
+        /// states exist, never how much room one instance needs.
+        /// </summary>
+        void Decide(Vector2 natural, bool measured)
+        {
+            _natural = natural;
+            _measured = measured;
+            _oversize = measured && (natural.x > CellMaxWidth || natural.y > CellMaxHeight);
         }
 
         /// <summary>Empties the matrix and hides it — what an empty stage needs.</summary>
@@ -271,13 +496,23 @@ namespace Sharq.Core.Storybook.UI
             if (!_open) ClearCells();
 
             _scroll.EnableInClassList("sb-hidden", !_open);
-            _toggle.text = (_open ? "▾" : "▸") + " matrix · " + MetaText +
+            // Card T-3482: the word changes with the mode, because the buyer is looking at two
+            // stories that show their states differently and is owed the reason in words.
+            _toggle.text = (_open ? "▾" : "▸") + (_oversize ? " states · " : " matrix · ") + MetaText +
                            (_open || CollapseReason == null ? string.Empty : " · " + CollapseReason);
+            RenderNote();
         }
 
         void Reset()
         {
             ClearCells();
+            _measure.Clear();
+            _measurePending = false;
+            _measured = false;
+            _oversize = false;
+            _natural = Vector2.zero;
+            _created = 0;
+            _switcherState = null;
             _rows.Clear();
             _columns.Clear();
             _skipped.Clear();
@@ -361,26 +596,202 @@ namespace Sharq.Core.Storybook.UI
                 return;
             }
 
-            if (_skipped.Count == 0)
-            {
-                _note.text = string.Empty;
-                _note.AddToClassList("sb-hidden");
-                return;
-            }
+            RenderNote();
+        }
 
-            _note.text = string.Join(", ", _skipped) +
-                         " — no state twins in this component's USS, so the column is not drawn: " +
-                         "UI Toolkit cannot force a pseudo-class, and a column showing the rest " +
-                         "state under another name would be wrong.";
-            _note.RemoveFromClassList("sb-hidden");
+        /// <summary>
+        /// The footnote under the widget. Two things can need saying and both are the buyer's
+        /// business: which state columns could not be drawn at all, and - card T-3482 - why this
+        /// story shows one instance with switches where the previous one showed a grid. A mode
+        /// the reader has to infer from the shape of the widget is not a named mode.
+        /// </summary>
+        void RenderNote()
+        {
+            var text = string.Empty;
+            if (_skipped.Count > 0)
+                text = string.Join(", ", _skipped) +
+                       " — no state twins in this component's USS, so the column is not drawn: " +
+                       "UI Toolkit cannot force a pseudo-class, and a column showing the rest " +
+                       "state under another name would be wrong.";
+            if (_oversize && _open)
+                text = (text.Length > 0 ? text + " " : string.Empty) +
+                       "No grid for this one: " + MatrixModeReason + ".";
+
+            _note.text = text;
+            _note.EnableInClassList("sb-hidden", text.Length == 0);
         }
 
         void BuildCells()
         {
+            if (_oversize) { BuildSwitcher(); return; }
+
             _grid.Clear();
+            _refs.Clear();
+            _cells.Clear();
+            _sized = false;
             _grid.Add(HeaderRow());
-            for (int r = 0; r < _rows.Count; r++) _grid.Add(BodyRow(_rows[r]));
+            for (int r = 0; r < _rows.Count; r++) _grid.Add(BodyRow(_rows[r], r));
             _built = true;
+            // Two more passes, and they cannot be one (card T-3481). The first reads what every
+            // instance takes when nothing constrains it; only then is a column wide enough to be
+            // given a width. The second records where everything ended up - which is the evidence
+            // of T-3483, and it has to be taken after the columns, or it would describe the
+            // intermediate layout instead of the one on screen.
+            _grid.schedule.Execute(SizeColumns);
+        }
+
+        /// <summary>
+        /// Gives every column the width of its widest cell and every row the height of its
+        /// tallest (card T-3481). A column is sized as a WHOLE - a per-cell width would make the
+        /// grid a ragged pile and destroy the only thing a matrix is for, comparing the same
+        /// place across states.
+        /// </summary>
+        void SizeColumns()
+        {
+            if (!_built || _sized || _refs.Count == 0) return;
+            _sized = true;
+
+            var colW = new float[_columns.Count];
+            var lineH = new float[_rows.Count];
+            for (int i = 0; i < _refs.Count; i++)
+            {
+                var r = _refs[i];
+                r.Natural = new Vector2(r.Item.layout.width, r.Item.layout.height);
+                if (float.IsNaN(r.Natural.x) || float.IsNaN(r.Natural.y)) r.Natural = Vector2.zero;
+                if (r.Column >= 0 && r.Natural.x > colW[r.Column]) colW[r.Column] = r.Natural.x;
+                if (r.Line >= 0 && r.Natural.y > lineH[r.Line]) lineH[r.Line] = r.Natural.y;
+            }
+
+            for (int i = 0; i < _refs.Count; i++)
+            {
+                var r = _refs[i];
+                // sus:uss-impossible the width is a measured size of live instances, computed
+                // from this layout pass - USS has no number for "as wide as the widest of these
+                // eighteen components turned out to be"
+                r.Cell.style.minWidth = colW[r.Column];
+                // sus:uss-impossible same measured height, from the same pass
+                r.Cell.style.minHeight = lineH[r.Line];
+            }
+
+            var heads = _grid.Query<Label>(className: "sb-matrix__colhead").ToList();
+            for (int i = 0; i < heads.Count && i < colW.Length; i++)
+                // sus:uss-impossible the column head follows the measured width of its column
+                heads[i].style.minWidth = colW[i];
+
+            _grid.schedule.Execute(RecordCells);
+        }
+
+        /// <summary>
+        /// Writes down what every cell ended up being (card T-3483). Read from LAYOUT and not
+        /// from the rendered frame, which is the point: <c>overflow: hidden</c> can hide a crop
+        /// from a screenshot, and it cannot hide it from here.
+        /// </summary>
+        void RecordCells()
+        {
+            _cells.Clear();
+            for (int i = 0; i < _refs.Count; i++)
+            {
+                var r = _refs[i];
+                var cellWorld = r.Cell.LocalToWorld(r.Cell.contentRect);
+                var itemWorld = r.Item.worldBound;
+                var scale = ScaleBetween(r.Cell, r.Item);
+                _cells.Add(new SusStoryCellGeometry(
+                    r.Row, r.State, cellWorld, itemWorld, r.Natural, scale,
+                    SusStoryCellGeometry.Judge(cellWorld, itemWorld, r.Natural, scale)));
+            }
+        }
+
+        /// <summary>Scale of the transform chain between two elements; 1 when nothing scales.</summary>
+        static float ScaleBetween(VisualElement outer, VisualElement inner)
+        {
+            var a = outer.worldTransform.lossyScale.x;
+            var b = inner.worldTransform.lossyScale.x;
+            return a > 0.0001f ? b / a : 1f;
+        }
+
+        /// <summary>
+        /// The other half of the fork (card T-3482): ONE natural-size instance and a row of state
+        /// switches. No grid is built, not even briefly - the counter
+        /// <see cref="MatrixInstancesCreated"/> is what says so.
+        /// </summary>
+        void BuildSwitcher()
+        {
+            _grid.Clear();
+            _refs.Clear();
+            _cells.Clear();
+
+            var bar = new VisualElement();
+            bar.AddToClassList("sb-matrix__states");
+            _stateButtons.Clear();
+            for (int i = 0; i < _columns.Count; i++)
+            {
+                var state = _columns[i];
+                var button = new Button { text = state };
+                button.AddToClassList("sb-matrix__state");
+                button.clicked += () => ShowState(state);
+                _stateButtons.Add(button);
+                bar.Add(button);
+            }
+            _grid.Add(bar);
+
+            var solo = new VisualElement();
+            solo.AddToClassList("sb-matrix__solo");
+            solo.pickingMode = PickingMode.Ignore;
+            _grid.Add(solo);
+
+            _built = true;
+            ShowState(_columns.Count > 0 ? _columns[0] : SusStoryStates.Rest);
+        }
+
+        /// <summary>
+        /// Rebuilds the single instance in the state asked for. A rebuild and not an edit,
+        /// because forcing a state is one-way (<see cref="SusStoryStates.Force"/> adds classes and
+        /// writes props; there is no Unforce), and one instance at a time is still one instance.
+        /// </summary>
+        public void ShowState(string state)
+        {
+            if (!_oversize || !_built) return;
+            var solo = _grid.Q<VisualElement>(className: "sb-matrix__solo");
+            if (solo == null) return;
+
+            _switcherState = state;
+            solo.Clear();
+
+            SusComponent item = null;
+            try
+            {
+                _entry.Instantiate(null, out item);
+                if (item != null) _created++;
+            }
+            catch (Exception e)
+            {
+                SusLog.Warn("[storybook] matrix switcher '" + state + "' failed: " + e.Message);
+            }
+
+            if (item == null)
+            {
+                var dash = new Label("—");
+                dash.AddToClassList("sb-matrix__cell-fail");
+                solo.Add(dash);
+            }
+            else
+            {
+                SusStoryStates.Force(item, state);
+                var box = new VisualElement();
+                box.AddToClassList("sb-matrix__item");
+                box.pickingMode = PickingMode.Ignore;
+                item.pickingMode = PickingMode.Ignore;
+                box.Add(item);
+                solo.Add(box);
+            }
+            solo.Add(new OverlayHost { name = CellOverlayName });
+
+            for (int i = 0; i < _stateButtons.Count; i++)
+                _stateButtons[i].EnableInClassList(
+                    "sb-matrix__state--on",
+                    string.Equals(_stateButtons[i].text, state, StringComparison.Ordinal));
+
+            RenderNote();
         }
 
         void ClearCells()
@@ -393,6 +804,10 @@ namespace Sharq.Core.Storybook.UI
             // order would put the cell's instance back on screen one frame later.
             _grid.Clear();
             _overlay.ClearAll();
+            _refs.Clear();
+            _cells.Clear();
+            _stateButtons.Clear();
+            _sized = false;
             _built = false;
         }
 
@@ -411,16 +826,16 @@ namespace Sharq.Core.Storybook.UI
             return row;
         }
 
-        VisualElement BodyRow(string value)
+        VisualElement BodyRow(string value, int line)
         {
             var row = new VisualElement();
             row.AddToClassList("sb-matrix__row");
             row.Add(RowLabel(value));
-            for (int c = 0; c < _columns.Count; c++) row.Add(Cell(value, _columns[c]));
+            for (int c = 0; c < _columns.Count; c++) row.Add(Cell(value, _columns[c], line, c));
             return row;
         }
 
-        VisualElement Cell(string rowValue, string state)
+        VisualElement Cell(string rowValue, string state, int line, int column)
         {
             var cell = new VisualElement();
             cell.AddToClassList("sb-matrix__cell");
@@ -432,6 +847,7 @@ namespace Sharq.Core.Storybook.UI
             try
             {
                 _entry.Instantiate(null, out item);
+                if (item != null) _created++;
             }
             catch (Exception e)
             {
@@ -466,6 +882,13 @@ namespace Sharq.Core.Storybook.UI
             // SusBootstrap.FindOverlayHost meets it first (card T-3189). A cell that opens itself
             // now fills its cell instead of the whole matrix.
             cell.Add(new OverlayHost { name = CellOverlayName });
+            // Card T-3483: the measuring passes walk THIS list and not the tree. The indexer of a
+            // container is not the hierarchy - on a list with columns it answers zero children -
+            // and a measurement that silently found nothing to measure is the worst kind of green.
+            _refs.Add(new CellRef
+            {
+                Row = rowValue, State = state, Column = column, Line = line, Cell = cell, Item = box,
+            });
             return cell;
         }
 

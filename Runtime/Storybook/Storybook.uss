@@ -129,6 +129,9 @@
     --sb-zone-a-w: 220px;
     --sb-zone-a-drawer-w: 260px;
     --sb-zone-d-w: 300px;
+    /* MINIMUMS of a matrix cell, not its size (card T-3481, decision d:360869). A cell grows to
+       whatever the instance inside it turns out to need; these two only keep a row of tiny
+       components from collapsing into a line of dots. */
     --sb-matrix-cell-w: 72px;
     --sb-matrix-cell-h: 34px;
     --sb-matrix-label-w: 68px;
@@ -799,15 +802,19 @@
     flex-direction: column;
 }
 
+/* Card T-3481: a MINIMUM and no clipping. `height` plus `overflow: hidden` made a row a guillotine
+ * - a component taller than 34px was cut instead of being shown, and the cut was invisible because
+ * the same declaration hid it. The row is now as tall as its tallest cell, and the matrix scrolls. */
 .sb-matrix__row {
     flex-direction: row;
-    align-items: center;
-    height: var(--sb-matrix-cell-h);
-    overflow: hidden;
+    align-items: flex-start;
+    min-height: var(--sb-matrix-cell-h);
+    flex-shrink: 0;
 }
 
 .sb-matrix__row--head {
-    height: 20px;
+    min-height: 20px;
+    align-items: center;
 }
 
 .sb-matrix__rowlabel {
@@ -822,7 +829,7 @@
 }
 
 .sb-matrix__colhead {
-    width: var(--sb-matrix-cell-w);
+    min-width: var(--sb-matrix-cell-w);
     flex-shrink: 0;
     -unity-text-align: middle-center;
     -unity-font-definition: var(--sb-font-mono);
@@ -830,35 +837,87 @@
     color: var(--sb-muted);
 }
 
+/* Card T-3481: the cell GROWS. The declared width/height became minimums and the clipping is
+ * gone; SusStoryMatrix.SizeColumns then gives every cell of a column the measured width of the
+ * widest instance in it, so the grid stays aligned without any cell being smaller than what it
+ * holds. */
 .sb-matrix__cell {
-    width: var(--sb-matrix-cell-w);
-    height: var(--sb-matrix-cell-h);
+    min-width: var(--sb-matrix-cell-w);
+    min-height: var(--sb-matrix-cell-h);
     flex-shrink: 0;
     flex-grow: 0;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
 }
 
-/* A miniature, not a second live instance: the cell clips, the type scales down, and nothing in
- * the component is resized from C#.
+/* The wrapper the cell measures. It declares NOTHING about size any more.
  *
- * Card T-3355: the cell clipped on ONE axis. width/height/overflow were declared on the cell, but
- * the item inside had max-width and no max-height, so a control taller than the 34px row — which
- * is most interactive kit components — hung out of its cell and broke the row it sat in
- * (kit/atoms/dropdown, 44px in a 34px cell, was the witness). D19 gives the cell the same contract
- * as the canvas: fixed step, clipped on BOTH axes, and a subject bigger than the cell stretches
- * neither the row nor the block.
+ * What was here until card T-3481, and why it is gone: `max-width: 64px; max-height: 28px;
+ * overflow: hidden`, introduced by T-3355 to stop tall components from breaking their row. It
+ * stopped the breakage by amputation. The ux-reviewer sweep of 2026-09-11 counted the bill: 460
+ * of 537 cells across 103 stories showed a cut-off component, and on kit/atoms/button the caption
+ * "Start Quest" was 81px of text in a 28px box - 53 invisible pixels out of 81, in all 18 cells,
+ * while the widget reported itself healthy. A declared `overflow` is evidence of a broken
+ * promise, never a defence for one (decisions d:3750a2 and d:ef1a8a).
+ *
+ * The row-breaking T-3355 was about is now answered where it belongs: the row is a minimum, the
+ * cells of a column share one measured width, and the matrix scrolls on both axes.
  *
  * Card T-3421: this dresses the cell's WRAPPER, not the instance. The shell names its own boxes
- * and leaves the product's classes to the product (campaign T-3388); the instance is the single
- * child of this box and is sized by it. */
+ * and leaves the product's classes to the product (campaign T-3388). */
 .sb-matrix__item {
-    max-width: 64px;
-    max-height: 28px;
-    overflow: hidden;
-    font-size: var(--sb-fs-10);
-    flex-shrink: 1;
+    flex-shrink: 0;
+}
+
+/* The switcher (card T-3482): the states of a component too large for a grid. One instance at
+ * natural size, one button per state, and the reason in the note underneath. */
+.sb-matrix__states {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.sb-matrix__state {
+    height: 20px;
+    margin-left: 0;
+    margin-right: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-width: 1px;
+    border-color: var(--sb-line);
+    border-top-left-radius: 3px;
+    border-top-right-radius: 3px;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
+}
+
+.sb-matrix__state:hover {
+    color: var(--sb-ink);
+}
+
+.sb-matrix__state--on {
+    color: var(--sb-ink);
+    border-color: var(--sb-ink-disabled);
+    background-color: var(--sb-code);
+}
+
+.sb-matrix__solo {
+    align-items: flex-start;
+}
+
+/* Where ONE instance is measured before the mode is decided (card T-3482). It has to be laid out
+ * - `display: none` would report nothing - and it must not be seen, which is exactly what
+ * `visibility: hidden` is for. Absolute, so it takes no room in the widget. */
+.sb-matrix__measure {
+    position: absolute;
+    left: 0;
+    top: 0;
+    visibility: hidden;
+    align-items: flex-start;
 }
 
 .sb-matrix__cell-fail {

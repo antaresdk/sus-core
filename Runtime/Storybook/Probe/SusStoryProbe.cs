@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook.Controls;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -136,6 +137,13 @@ namespace Sharq.Core.Storybook.Probe
 
         /// <summary>The event log behind the chips — the seam a test drives without a click.</summary>
         public SusStoryEventLog Events => _events;
+
+        /// <summary>
+        /// Zone C, as far as zone E needs to know it (card T-3483). Set by the shell; null in a
+        /// rig that has no matrix, and then the session report simply carries no cells — which is
+        /// different from carrying zero cells for a story that has a grid.
+        /// </summary>
+        public ISusStoryCellSource CellSource { get; set; }
 
         /// <summary>Story the probe is attached to, or null.</summary>
         public SusStoryEntry Story => _entry;
@@ -337,7 +345,17 @@ namespace Sharq.Core.Storybook.Probe
                 uncovered: _panel == null ? Array.Empty<string>() : new List<string>(_panel.Uncovered),
                 excluded: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.Exclusions.Keys),
                 manualControls: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.ManualControls.Keys),
-                kind: _entry?.Kind ?? SusStoryPackageKind.Product);   // card T-3411
+                kind: _entry?.Kind ?? SusStoryPackageKind.Product,   // card T-3411
+                // Cards T-3482 / T-3483. Zone C measures; zone E is what carries the measurement
+                // out of the editor. Without these six fields the session report said nothing
+                // about cells at all, which is exactly how the crop of T-3355 passed acceptance
+                // as an improvement: nobody could have noticed, because nothing was written down.
+                matrixMode: CellSource?.MatrixMode ?? SusStoryMatrixMode.None,
+                matrixModeReason: CellSource?.MatrixModeReason,
+                naturalCell: CellSource?.NaturalCellSize ?? Vector2.zero,
+                matrixInstances: CellSource?.MatrixInstanceCount ?? 0,
+                matrixInstancesCreated: CellSource?.MatrixInstancesCreated ?? 0,
+                cells: CellSource == null ? null : new List<SusStoryCellGeometry>(CellSource.Cells));
 
         /// <summary>
         /// Every prop the mounted instance declares. Read straight off <see cref="_instance"/>

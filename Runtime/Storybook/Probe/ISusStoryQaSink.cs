@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core.Storybook.Probe
@@ -24,8 +25,20 @@ namespace Sharq.Core.Storybook.Probe
             IReadOnlyList<string> uncovered = null,
             IReadOnlyList<string> excluded = null,
             IReadOnlyList<string> manualControls = null,
-            SusStoryPackageKind kind = SusStoryPackageKind.Product)
+            SusStoryPackageKind kind = SusStoryPackageKind.Product,
+            SusStoryMatrixMode matrixMode = SusStoryMatrixMode.None,
+            string matrixModeReason = null,
+            Vector2 naturalCell = default,
+            int matrixInstances = 0,
+            int matrixInstancesCreated = 0,
+            IReadOnlyList<SusStoryCellGeometry> cells = null)
         {
+            MatrixMode = matrixMode;
+            MatrixModeReason = matrixModeReason;
+            NaturalCell = naturalCell;
+            MatrixInstances = matrixInstances;
+            MatrixInstancesCreated = matrixInstancesCreated;
+            Cells = cells ?? Array.Empty<SusStoryCellGeometry>();
             StoryId = storyId;
             Kind = kind;
             DeclaredEvents = declaredEvents ?? Array.Empty<string>();
@@ -103,6 +116,35 @@ namespace Sharq.Core.Storybook.Probe
         /// Also counts as covered for R134 L1 — a manual control is still a control.
         /// </summary>
         public IReadOnlyList<string> ManualControls { get; }
+
+        /// <summary>
+        /// How zone C showed the states of this story (card T-3482): a grid, a switcher on one
+        /// natural-size instance, a folded matrix, or none at all.
+        /// </summary>
+        public SusStoryMatrixMode MatrixMode { get; }
+
+        /// <summary>Why that mode, in the same words the buyer reads under the widget.</summary>
+        public string MatrixModeReason { get; }
+
+        /// <summary>Natural size of one instance of this story, measured live; zero if unmeasured.</summary>
+        public Vector2 NaturalCell { get; }
+
+        /// <summary>Live instances zone C was holding when the story finished.</summary>
+        public int MatrixInstances { get; }
+
+        /// <summary>
+        /// Instances zone C CREATED for this story, the measuring probe included. The acceptance
+        /// figure of T-3482: a switcher is only cheap if it never built the grid first.
+        /// </summary>
+        public int MatrixInstancesCreated { get; }
+
+        /// <summary>
+        /// Geometry of every matrix cell (card T-3483) — the evidence the cell judge of d:3750a2
+        /// reads. Empty in switcher mode, and empty while a layout has not converged, which is
+        /// itself a finding rather than a pass: a report with no cells and mode <c>grid</c> is a
+        /// measurement that did not happen.
+        /// </summary>
+        public IReadOnlyList<SusStoryCellGeometry> Cells { get; }
     }
 
     /// <summary>

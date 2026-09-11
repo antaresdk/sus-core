@@ -242,6 +242,9 @@ namespace Sharq.Core.Storybook
             // a reader scanning the story list must see that this story is broken without
             // looking down at the strip.
             _probe.AnomalyCountChanged += count => _nav.AnomalyCount = count;
+            // Card T-3483: zone E reports what zone C measured. One wire, set once - the matrix
+            // outlives every story, so there is nothing to re-attach on a mount.
+            _probe.CellSource = _matrix;
 
             _url = new SusStoryUrl();
             _url.ExternalChanged += route =>
@@ -697,9 +700,13 @@ namespace Sharq.Core.Storybook
             _probeTick?.Pause();       // card T-3358
             _probeTick = null;
             _overlayOpen = false;
+            // Zone E FIRST, zone C second (card T-3483). Clear() is where the probe hands the
+            // finished session to the sinks, and the cell geometry it hands over lives in the
+            // matrix - clearing the matrix first would have emptied the report of the very
+            // evidence it exists to carry.
+            _probe.Clear();   // card T-3040: reset on story change
             _matrix.Clear();
             _sizes.Track(null);
-            _probe.Clear();   // card T-3040: reset on story change
             _sizes.SetOverlayOpen(false);
             // T-3131: a story that opens an overlay before _canvasOverlay exists (ModalStory
             // sets Model=true from Configure(), which runs during entry.Instantiate() — BEFORE
