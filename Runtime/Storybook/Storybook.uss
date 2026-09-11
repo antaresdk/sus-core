@@ -1607,15 +1607,34 @@
  * level up or down between versions.
  */
 
-/* -- ScrollView: an 8px band, no arrows (D12) ------------------------------- */
+/* -- ScrollView: an 8px band, no arrows (D12) -------------------------------
+ *
+ * WHY EVERY BAND IS NAMED TWICE. ScrollView.verticalScroller is NOT a child of the ScrollView.
+ * Measured on this editor (Unity 6000.3.17f1, 2026-09-11, card T-3399): the vertical scroller
+ * sits inside unity-content-and-vertical-scroll-container, one level further down, while the
+ * horizontal scroller IS a direct child. The first cut of this section used only ">", so it
+ * skinned all six horizontal bands and left all six vertical ones at Unity default: a 24px band
+ * with two arrow buttons, which is precisely the band a reader sees over zone A.
+ *
+ * Stepping through that container does NOT widen the reach (D20): the class is a ScrollView part
+ * and never a story boundary, so a selector anchored on a shell ScrollView still cannot leave
+ * that ScrollView. The direct-child form is kept beside it so a Unity version that flattens the
+ * hierarchy back is skinned by the same rules instead of silently reverting to 24px.
+ */
 
 .sus-sb-nav__list > .unity-scroller,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sus-sb-stage > .unity-scroller,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sus-sb-env__chips > .unity-scroller,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sus-sb-matrix__scroll > .unity-scroller,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sus-sb-ctlpanel__groups > .unity-scroller,
-.sus-sb-iconpicker__scroll > .unity-scroller {
-    /* Unity's default is a 24px band with a button at each end. The mock-up has an 8px band and
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sus-sb-iconpicker__scroll > .unity-scroller,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller {
+    /* Unity default is a 24px band with a button at each end. The mock-up has an 8px band and
        no buttons at all. */
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
@@ -1623,11 +1642,17 @@
 }
 
 .sus-sb-nav__list > .unity-scroller--vertical,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sus-sb-stage > .unity-scroller--vertical,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sus-sb-env__chips > .unity-scroller--vertical,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sus-sb-matrix__scroll > .unity-scroller--vertical,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sus-sb-ctlpanel__groups > .unity-scroller--vertical,
-.sus-sb-iconpicker__scroll > .unity-scroller--vertical {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sus-sb-iconpicker__scroll > .unity-scroller--vertical,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical {
     width: var(--sb-scrollbar);
     min-width: var(--sb-scrollbar);
 }
@@ -1638,55 +1663,87 @@
 .sus-sb-matrix__scroll > .unity-scroller--horizontal,
 .sus-sb-ctlpanel__groups > .unity-scroller--horizontal,
 .sus-sb-iconpicker__scroll > .unity-scroller--horizontal {
+    /* No container form here: the horizontal scroller is a direct child of the ScrollView on
+       every Unity version measured. */
     height: var(--sb-scrollbar);
     min-height: var(--sb-scrollbar);
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-scroller__low-button,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-stage > .unity-scroller .unity-scroller__low-button,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-env__chips > .unity-scroller .unity-scroller__low-button,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-matrix__scroll > .unity-scroller .unity-scroller__low-button,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__low-button,
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__low-button,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sus-sb-nav__list > .unity-scroller .unity-scroller__high-button,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sus-sb-stage > .unity-scroller .unity-scroller__high-button,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sus-sb-env__chips > .unity-scroller .unity-scroller__high-button,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sus-sb-matrix__scroll > .unity-scroller .unity-scroller__high-button,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__high-button,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__high-button {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__high-button,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button {
     /* The two pale squares at the ends of every band. The mock-up has none, and a drag band this
        thin has no room for a hit target anyway. */
     display: none;
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-scroller__slider,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sus-sb-stage > .unity-scroller .unity-scroller__slider,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sus-sb-env__chips > .unity-scroller .unity-scroller__slider,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sus-sb-matrix__scroll > .unity-scroller .unity-scroller__slider,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__slider,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__slider {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__slider,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider {
     margin: 0;
     min-width: var(--sb-scrollbar);
     min-height: var(--sb-scrollbar);
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sus-sb-stage > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sus-sb-env__chips > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__tracker {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     margin: 0;
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sus-sb-stage > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger {
     background-color: var(--sb-line);
     border-width: 0;
     border-radius: var(--sb-r-sm);
@@ -1694,22 +1751,35 @@
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sus-sb-stage > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger:hover {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover {
     background-color: var(--sb-muted);
 }
 
 .sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sus-sb-stage > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger-border {
+.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border {
     display: none;
 }
+
 
 /* -- Shell text colour is DECLARED, never borrowed (D27, card T-3400) --------
  *
