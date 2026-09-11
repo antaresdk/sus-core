@@ -13,12 +13,138 @@
 
 /* ── shell ─────────────────────────────────────────────────────────────── */
 
+/* ── the shell's OWN token set ────────────────────────────────────────────
+ *
+ * Plan ARCH-20260911-STORYBOOK-SHELL.md §4.2 and decisions D2 / D4 / D5 / D7 / D8 / D9,
+ * cards T-3371 and T-3373.
+ *
+ * WHY the shell does not read the product's tokens: the shell is the INSTRUMENT, the story on
+ * the canvas is the SUBJECT. While the shell read var(--sus-*) (165 references before T-3371)
+ * a skin swap, a semantic-token edit or one click on the "theme" chip repainted the
+ * instrument together with the subject — and then a dark screenshot of a component was taken
+ * in a different viewer than the light one, so the difference could no longer be attributed
+ * to the component. Every value below is the shell's own; nothing here resolves through a
+ * product, kit or skin chain.
+ *
+ * Dark is the shell's resting state (the mock-up's default artboard). The light set lives on
+ * .sus-sb--theme-light, put on THIS element by the shell's own "shell theme" chip in zone B —
+ * a different chip from "theme", which keeps switching the SUBJECT (D4).
+ *
+ * Custom properties inherit, so the canvas subtree sees --sb-* too; nothing inside the canvas
+ * reads them, and nothing outside the shell may (D20).
+ */
 .sus-sb {
     flex-grow: 1;
     flex-direction: column;
     min-height: 0;
-    background-color: var(--sus-bg-page);
-    color: var(--sus-text-primary);
+
+    /* 13 colour names, dark set (§4.2 table) */
+    --sb-bg: #18181a;
+    --sb-panel: #1f1f21;
+    --sb-ink: #ebeae6;
+    --sb-muted: #9a9a93;
+    --sb-line: #2f2f2c;
+    --sb-line-soft: #282826;
+    --sb-code: #262625;
+    --sb-accent: #86cfa4;
+    --sb-accent-ink: #0e1a13;
+    --sb-accent-soft: rgba(134, 207, 164, 0.14);
+    --sb-ok: #7fcf9a;
+    --sb-warn: #d9a84e;
+    --sb-bad: #e6705f;
+
+    /* Two names beyond the 13 of the table, both stated rather than smuggled in: the table has
+       no overlay dim and no disabled ink, and mapping either onto --sb-muted would have made
+       "secondary text" and "dead text" the same pixel — which is exactly what zone D's dead-prop
+       badges have to tell apart. */
+    --sb-scrim: rgba(0, 0, 0, 0.52);
+    --sb-ink-disabled: #6a6a64;
+
+    /* Typography (D5, D6, D7). The url is the DECLARED FALLBACK: the mock-up asks for Instrument
+       Sans and Geist Mono, neither ships in the package, and buying/importing two families is the
+       owner's call — so until that answer arrives the shell is honestly NOT "per the mock-up" on
+       type, and says so here instead of silently substituting. Montserrat is the one family the
+       package carries; the path is relative to THIS sheet. */
+    --sb-font-ui: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
+    --sb-font-mono: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
+    --sb-fw-400: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
+    --sb-fw-500: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Medium.ttf");
+    --sb-fw-600: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Bold.ttf");
+
+    /* 8 size rungs (D7). The mock-up's two half-pixel sizes are collapsed into the ladder: in
+       Unity's SDF text the difference is under a pixel of cap height, and a whole extra quarter
+       of the ladder for a 2px span is not worth the ambiguity of "which 11 did you mean". */
+    --sb-fs-10: 10px;
+    --sb-fs-11: 11px;
+    --sb-fs-12: 12px;
+    --sb-fs-13: 13px;
+    --sb-fs-14: 14px;
+    --sb-fs-15: 15px;
+    --sb-fs-16: 16px;
+    --sb-fs-20: 20px;
+
+    /* Radii (D8). PIXELS, never percent — in USS a percentage radius is not measured against
+       what CSS measures it against. */
+    --sb-r-xs: 2px;
+    --sb-r-sm: 4px;
+    --sb-r-md: 6px;
+    --sb-r-lg: 8px;
+    /* The inner radius under a 1px border. It is DERIVED (--sb-r-lg minus the border width) and
+       is written out only because USS has no calc(); the derivation, not the number, is the rule. */
+    --sb-r-lg-inner: 7px;
+
+    /* Pill and circle radii are HALF THE HEIGHT OF THE SAME RUNG (D9), never a constant. That is
+       why --sus-radius-full had to go: it is a fixed 20px, and on anything shorter than 40px
+       Unity draws a lens instead of a pill — the 34x18 switch was the visible proof. Each pair
+       below is "size, then half of it", so the invariant holds by construction. */
+    --sb-h-ctl: 30px;
+    --sb-pill-ctl: 15px;
+    --sb-switch-w: 34px;
+    --sb-switch-h: 18px;
+    --sb-pill-switch: 9px;
+    --sb-knob: 14px;
+    --sb-pill-knob: 7px;
+    --sb-dot: 8px;
+    --sb-pill-dot: 4px;
+
+    /* Reserved zone sizes and grid steps (§4.2, D15, D19). None of them depends on content. */
+    --sb-topbar-h: 46px;
+    --sb-zone-a-w: 220px;
+    --sb-zone-a-drawer-w: 260px;
+    --sb-zone-d-w: 300px;
+    --sb-matrix-cell-w: 72px;
+    --sb-matrix-cell-h: 34px;
+    --sb-matrix-label-w: 68px;
+    /* The canvas is ONE number, declared here, before the first layout pass (D18): an open
+       popover must not be able to change it. */
+    --sb-canvas-h: 350px;
+    --sb-canvas-min-w: 320px;
+    /* Scrollbar band, mock-up: 8px and no arrow buttons (D12). */
+    --sb-scrollbar: 8px;
+
+    background-color: var(--sb-bg);
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-font-ui);
+}
+
+/* Light set: only the 13 names plus the two stated extras are redefined — geometry, type and
+   radii are theme-independent by construction. */
+.sus-sb--theme-light {
+    --sb-bg: #f3f2ee;
+    --sb-panel: #fbfaf7;
+    --sb-ink: #1c1c1a;
+    --sb-muted: #6b6b64;
+    --sb-line: #dcdad3;
+    --sb-line-soft: #e9e7e0;
+    --sb-code: #eceae4;
+    --sb-accent: #1f7a52;
+    --sb-accent-ink: #ffffff;
+    --sb-accent-soft: rgba(31, 122, 82, 0.12);
+    --sb-ok: #1f8f5f;
+    --sb-warn: #a8741c;
+    --sb-bad: #c2422f;
+    --sb-scrim: rgba(0, 0, 0, 0.32);
+    --sb-ink-disabled: #9d9d95;
 }
 
 .sus-sb__topbar {
@@ -29,8 +155,8 @@
     padding-left: 12px;
     padding-right: 12px;
     border-bottom-width: 1px;
-    border-bottom-color: var(--sus-border);
-    background-color: var(--sus-bg-surface);
+    border-bottom-color: var(--sb-line);
+    background-color: var(--sb-panel);
 }
 
 .sus-sb__burger {
@@ -41,10 +167,10 @@
     align-items: center;
     justify-content: center;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface);
-    color: var(--sus-text-primary);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-panel);
+    color: var(--sb-ink);
 }
 
 .sus-sb--narrow .sus-sb__burger {
@@ -52,9 +178,9 @@
 }
 
 .sus-sb__crumbs {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -66,9 +192,9 @@
 }
 
 .sus-sb__link {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     margin-right: 10px;
     max-width: 320px;
     overflow: hidden;
@@ -85,15 +211,15 @@
     padding-left: 10px;
     padding-right: 10px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface);
-    color: var(--sus-text-primary);
-    font-size: 12px;
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-panel);
+    color: var(--sb-ink);
+    font-size: var(--sb-fs-12);
 }
 
 .sus-sb__share:hover {
-    border-color: var(--sus-border-hover);
+    border-color: var(--sb-muted);
 }
 
 .sus-sb__body {
@@ -108,7 +234,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    background-color: var(--sus-scrim);
+    background-color: var(--sb-scrim);
     display: none;
 }
 
@@ -124,8 +250,8 @@
     flex-direction: column;
     min-height: 0;
     border-right-width: 1px;
-    border-right-color: var(--sus-border);
-    background-color: var(--sus-bg-surface);
+    border-right-color: var(--sb-line);
+    background-color: var(--sb-panel);
 }
 
 .sus-sb--narrow .sus-sb-nav {
@@ -157,23 +283,23 @@
     padding-left: 9px;
     padding-right: 9px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface-variant);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-nav__search--focus {
-    border-color: var(--sus-border-focus);
+    border-color: var(--sb-accent);
 }
 
 .sus-sb-nav__search-input {
     flex-grow: 1;
-    font-size: 12px;
+    font-size: var(--sb-fs-12);
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     margin: 0;
     padding: 0;
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-nav__search-input > #unity-text-input {
@@ -181,21 +307,21 @@
     border-width: 0;
     padding-left: 0;
     padding-right: 0;
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-nav__search-hint {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 10.5px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     margin-left: 6px;
 }
 
 .sus-sb-nav__search-placeholder {
     position: absolute;
     left: 9px;
-    font-size: 12px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-muted);
 }
 
 .sus-sb-nav__search-placeholder.sus-sb-hidden {
@@ -206,7 +332,7 @@
     flex-direction: row;
     margin-top: 10px;
     border-bottom-width: 1px;
-    border-bottom-color: var(--sus-border);
+    border-bottom-color: var(--sb-line);
 }
 
 .sus-sb-nav__tab {
@@ -220,8 +346,8 @@
     padding-left: 2px;
     padding-right: 2px;
     -unity-text-align: middle-center;
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     border-bottom-width: 2px;
@@ -231,13 +357,13 @@
 }
 
 .sus-sb-nav__tab:hover {
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-nav__tab--active {
-    color: var(--sus-text-primary);
-    -unity-font-style: bold;
-    border-bottom-color: var(--sus-primary);
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-fw-600);
+    border-bottom-color: var(--sb-accent);
 }
 
 .sus-sb-nav__list {
@@ -249,11 +375,11 @@
 }
 
 .sus-sb-nav__group {
-    -unity-font-definition: var(--font-family-mono);
-    -unity-font-style: bold;
-    font-size: 10.5px;
+    -unity-font-definition: var(--sb-font-mono);
+    -unity-font-definition: var(--sb-fw-600);
+    font-size: var(--sb-fs-11);
     letter-spacing: 1px;
-    color: var(--sus-text-secondary);
+    color: var(--sb-muted);
     margin-top: 12px;
     margin-bottom: 4px;
     margin-left: 8px;
@@ -268,23 +394,23 @@
     padding-bottom: 5px;
     padding-left: 8px;
     padding-right: 8px;
-    border-radius: var(--sus-radius-sm);
+    border-radius: var(--sb-r-sm);
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
     margin: 0;
-    color: var(--sus-text-primary);
-    font-size: 12.5px;
+    color: var(--sb-ink);
+    font-size: var(--sb-fs-13);
     -unity-text-align: middle-left;
 }
 
 .sus-sb-nav__row:hover {
-    background-color: var(--sus-hover-overlay);
+    background-color: var(--sb-line-soft);
 }
 
 .sus-sb-nav__row--active {
-    background-color: var(--sus-selected-overlay);
-    color: var(--sus-primary);
-    -unity-font-style: bold;
+    background-color: var(--sb-accent-soft);
+    color: var(--sb-accent);
+    -unity-font-definition: var(--sb-fw-600);
 }
 
 .sus-sb-nav__row-name {
@@ -295,9 +421,9 @@
 }
 
 .sus-sb-nav__row-count {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 10.5px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     margin-left: 8px;
     flex-shrink: 0;
 }
@@ -308,31 +434,31 @@
     margin-right: 2px;
     padding: 10px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-md);
-    background-color: var(--sus-bg-surface-variant);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-md);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-nav__empty-title {
-    color: var(--sus-text-primary);
-    -unity-font-style: bold;
-    font-size: 12px;
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-fw-600);
+    font-size: var(--sb-fs-12);
     margin-bottom: 4px;
     white-space: normal;
 }
 
 .sus-sb-nav__empty-text {
-    color: var(--sus-text-secondary);
-    font-size: 12px;
+    color: var(--sb-muted);
+    font-size: var(--sb-fs-12);
     white-space: normal;
 }
 
 .sus-sb-nav__empty-code {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-primary);
-    background-color: var(--sus-bg-surface-raised);
-    border-radius: var(--sus-radius-sm);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink);
+    background-color: var(--sb-code);
+    border-radius: var(--sb-r-sm);
     padding: 6px 8px;
     margin-top: 8px;
     white-space: normal;
@@ -344,7 +470,7 @@
     align-items: center;
     justify-content: space-between;
     border-top-width: 1px;
-    border-top-color: var(--sus-border);
+    border-top-color: var(--sb-line);
     padding: 9px 12px;
 }
 
@@ -354,23 +480,23 @@
 }
 
 .sus-sb-nav__dot {
-    width: 7px;
-    height: 7px;
-    border-radius: var(--sus-radius-full);
+    width: var(--sb-dot);
+    height: var(--sb-dot);
+    border-radius: var(--sb-pill-dot);
     margin-right: 6px;
     flex-shrink: 0;
-    background-color: var(--sus-success);
+    background-color: var(--sb-ok);
 }
 
 .sus-sb-nav__dot--bad {
-    background-color: var(--sus-error);
+    background-color: var(--sb-bad);
 }
 
 .sus-sb-nav__health-text,
 .sus-sb-nav__version {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 /* ── zones B..E ────────────────────────────────────────────────────────── */
@@ -401,7 +527,7 @@
     padding-left: 16px;
     padding-right: 16px;
     border-bottom-width: 1px;
-    border-bottom-color: var(--sus-border);
+    border-bottom-color: var(--sb-line);
 }
 
 .sus-sb-env__bar {
@@ -412,9 +538,9 @@
     flex-direction: row;
     align-items: center;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-panel);
     overflow: hidden;
 }
 
@@ -437,11 +563,20 @@
     padding-left: 10px;
     padding-right: 10px;
     border-right-width: 1px;
-    border-right-color: var(--sus-border);
+    border-right-color: var(--sb-line);
 }
 
 .sus-sb-env__chip--last {
     border-right-width: 0;
+}
+
+/* The instrument's own theme chip (card T-3371, D4). It sits behind a heavier divider and on the
+ * shell's panel tone, so "this switch is about the viewer" is visible without reading the glyph:
+ * two chips both able to say "dark" is exactly the ambiguity this rule removes. */
+.sus-sb-env__chip--shell {
+    border-left-width: 1px;
+    border-left-color: var(--sb-line);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-env__chip-icon {
@@ -453,8 +588,8 @@
 }
 
 .sus-sb-env__chip-value {
-    font-size: 12px;
-    color: var(--sus-text-primary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-ink);
     white-space: nowrap;
 }
 
@@ -501,15 +636,15 @@
 }
 
 .sus-sb-stage__title {
-    font-size: 20px;
-    -unity-font-style: bold;
-    color: var(--sus-text-primary);
+    font-size: var(--sb-fs-20);
+    -unity-font-definition: var(--sb-fw-600);
+    color: var(--sb-ink);
     margin-top: 8px;
 }
 
 .sus-sb-stage__purpose {
-    font-size: 13px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-13);
+    color: var(--sb-muted);
     margin-top: 4px;
     white-space: normal;
 }
@@ -521,32 +656,49 @@
     margin-top: 10px;
     padding: 22px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-md);
-    background-color: var(--sus-bg-page);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-md);
+    background-color: var(--sb-bg);
     background-image: url("canvas-dot.png");
     background-repeat: repeat;
     /* No background-size (R51/D-028): canvas-dot.png is a native 16x16 tile — omitting
        the property draws it at intrinsic size instead of an explicit stretch pair. */
-    min-height: 120px;
+
+    /* Card T-3378, decision D18. The canvas used to be min-height:120px and grew to 350px the
+       moment a popover opened, so every story with a popover jumped 230px — the loudest instance
+       of "everything moves". It also had no overflow at all, so a story wider than the stage was
+       not clipped but UNREACHABLE (the stage scrolls vertically only).
+       The fix is one number, declared here before the first layout pass: the canvas never
+       resizes, for any story or any popover, which is also what makes two screenshots of the same
+       address comparable between runs. A subject bigger than the canvas is clipped visibly and
+       scrolled to — it does not push the canvas open. */
+    height: var(--sb-canvas-h);
+    min-height: var(--sb-canvas-h);
+    max-height: var(--sb-canvas-h);
+    min-width: var(--sb-canvas-min-w);
+    max-width: 100%;
+    overflow: hidden;
 }
 
-/* An open popup lives in the stage's OWN OverlayHost, which is a child of this canvas. The canvas
- * grows so the popup is inside the frame a screenshot takes, instead of being clipped away. */
+/* The popover state carries NO geometry any more — that is the whole point of D18. The class is
+ * still toggled by the stage (zone C also says in words that an overlay is open), and the stage's
+ * own OverlayHost is absolutely positioned, so a popup lays out INSIDE the canvas box without
+ * enlarging it. Kept as an explicit empty-of-geometry rule rather than deleted, so the next reader
+ * sees that the decision was made here and not forgotten. */
 .sus-sb-stage__canvas--overlay {
-    min-height: 350px;
+    border-color: var(--sb-line-soft);
 }
 
 .sus-sb-stage__crumbs {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 .sus-sb-stage__live-hint {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     margin-top: 22px;
 }
 
@@ -566,14 +718,14 @@
     margin-right: 0;
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    -unity-font-definition: var(--font-family-mono);
+    -unity-font-definition: var(--sb-font-mono);
     -unity-text-align: middle-left;
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 .sus-sb-matrix__toggle:hover {
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-matrix__scroll {
@@ -588,7 +740,8 @@
 .sus-sb-matrix__row {
     flex-direction: row;
     align-items: center;
-    height: 34px;
+    height: var(--sb-matrix-cell-h);
+    overflow: hidden;
 }
 
 .sus-sb-matrix__row--head {
@@ -596,51 +749,61 @@
 }
 
 .sus-sb-matrix__rowlabel {
-    width: 68px;
+    width: var(--sb-matrix-label-w);
     flex-shrink: 0;
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .sus-sb-matrix__colhead {
-    width: 72px;
+    width: var(--sb-matrix-cell-w);
     flex-shrink: 0;
     -unity-text-align: middle-center;
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 10.5px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 .sus-sb-matrix__cell {
-    width: 72px;
-    height: 34px;
+    width: var(--sb-matrix-cell-w);
+    height: var(--sb-matrix-cell-h);
     flex-shrink: 0;
+    flex-grow: 0;
     align-items: center;
     justify-content: center;
     overflow: hidden;
 }
 
 /* A miniature, not a second live instance: the cell clips, the type scales down, and nothing in
- * the component is resized from C#. */
+ * the component is resized from C#.
+ *
+ * Card T-3355: the cell clipped on ONE axis. width/height/overflow were declared on the cell, but
+ * the item inside had max-width and no max-height, so a control taller than the 34px row — which
+ * is most interactive kit components — hung out of its cell and broke the row it sat in
+ * (kit/atoms/dropdown, 44px in a 34px cell, was the witness). D19 gives the cell the same contract
+ * as the canvas: fixed step, clipped on BOTH axes, and a subject bigger than the cell stretches
+ * neither the row nor the block. */
 .sus-sb-matrix__item {
     max-width: 64px;
-    font-size: 9px;
+    max-height: 28px;
+    overflow: hidden;
+    font-size: var(--sb-fs-10);
     flex-shrink: 1;
 }
 
 .sus-sb-matrix__cell-fail {
-    font-size: 11px;
-    color: var(--sus-text-disabled);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink-disabled);
 }
 
 .sus-sb-matrix__note {
     margin-top: 8px;
-    font-size: 11px;
-    color: var(--sus-text-disabled);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink-disabled);
     white-space: normal;
     max-width: 620px;
 }
@@ -656,9 +819,9 @@
 
 .sus-sb-sizes__metrics,
 .sus-sb-sizes__overlay {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
     margin-right: 18px;
 }
 
@@ -670,32 +833,53 @@
 }
 
 .sus-sb-stage__empty-title {
-    font-size: 15px;
-    -unity-font-style: bold;
-    color: var(--sus-text-primary);
+    font-size: var(--sb-fs-15);
+    -unity-font-definition: var(--sb-fw-600);
+    color: var(--sb-ink);
     margin-bottom: 6px;
 }
 
 .sus-sb-stage__empty-text {
-    font-size: 12.5px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-13);
+    color: var(--sb-muted);
     white-space: normal;
     max-width: 420px;
     -unity-text-align: middle-center;
 }
 
-/* Zone D — control panel. Empty until step 4 fills it. */
+/* Zone D — control panel. */
 .sus-sb-panel {
     flex-shrink: 0;
-    width: 300px;
+    width: var(--sb-zone-d-w);
     min-height: 0;
     border-left-width: 1px;
-    border-left-color: var(--sus-border);
-    background-color: var(--sus-bg-surface);
+    border-left-color: var(--sb-line);
+    background-color: var(--sb-panel);
 }
 
+/* Card T-3377, decision D25. Below 800px this rule used to be a bare `display: none` on the whole
+ * zone: the props panel disappeared with no button, no drawer and no label, so the storybook at
+ * 640 was a viewer with no controls and the question "how do I change a prop here" had no answer.
+ * Zone A had already been given a burger, a drawer, a scrim and Ctrl+K at the same threshold —
+ * zone D now reuses exactly that mechanism instead of being stacked under zone C, because
+ * stacking pushes the stage off screen and kills the constant canvas size D18 depends on.
+ * A zone is either present or has a NAMED entry; "gone" is not a third option. */
 .sus-sb--narrow .sus-sb-panel {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: var(--sb-zone-a-drawer-w);
+    border-left-width: 1px;
     display: none;
+}
+
+.sus-sb--narrow.sus-sb--panel-open .sus-sb-panel {
+    display: flex;
+}
+
+.sus-sb--narrow.sus-sb--panel-open .sus-sb__scrim {
+    display: flex;
 }
 
 /* ── Zone E — the probe strip (card T-3040, mock-up "Storybook Shell" zone E) ─────────────
@@ -707,8 +891,8 @@
 .sus-sb-probe {
     flex-shrink: 0;
     border-top-width: 1px;
-    border-top-color: var(--sus-border);
-    background-color: var(--sus-bg-surface);
+    border-top-color: var(--sb-line);
+    background-color: var(--sb-panel);
     padding: 9px 16px;
 }
 
@@ -728,9 +912,9 @@
 .sus-sb-probe__frame,
 .sus-sb-probe__unfired,
 .sus-sb-probe__chip {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 .sus-sb-probe__title {
@@ -744,11 +928,11 @@
 }
 
 .sus-sb-probe__chip {
-    background-color: var(--sus-bg-surface-variant);
-    border-radius: var(--sus-radius-sm);
+    background-color: var(--sb-code);
+    border-radius: var(--sb-r-sm);
     padding: 3px 7px;
     margin-right: 6px;
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-probe__none {
@@ -758,7 +942,7 @@
 /* "Promise without a deed" is a warning, not a failure: the story may simply not have been
  * clicked yet — which is exactly what the reader has to notice. */
 .sus-sb-probe__unfired {
-    color: var(--sus-warning);
+    color: var(--sb-warn);
     margin-right: 8px;
 }
 
@@ -770,21 +954,21 @@
 }
 
 .sus-sb-probe__dot {
-    width: 7px;
-    height: 7px;
-    border-radius: var(--sus-radius-full);
+    width: var(--sb-dot);
+    height: var(--sb-dot);
+    border-radius: var(--sb-pill-dot);
     margin-right: 6px;
     flex-shrink: 0;
-    background-color: var(--sus-success);
+    background-color: var(--sb-ok);
 }
 
 .sus-sb-probe__dot--bad {
-    background-color: var(--sus-error);
+    background-color: var(--sb-bad);
 }
 
 .sus-sb-probe__health--bad,
 .sus-sb-probe__frame--bad {
-    color: var(--sus-error);
+    color: var(--sb-bad);
 }
 
 .sus-sb-probe__frame {
@@ -808,21 +992,21 @@
     flex-shrink: 0;
     margin-right: 8px;
     -unity-background-scale-mode: scale-to-fit;
-    -unity-background-image-tint-color: var(--sus-error);
+    -unity-background-image-tint-color: var(--sb-bad);
 }
 
 .sus-sb-probe__anomaly-text {
-    -unity-font-definition: var(--font-family-mono);
-    font-size: 11px;
-    color: var(--sus-text-primary);
+    -unity-font-definition: var(--sb-font-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink);
     white-space: normal;
     flex-shrink: 1;
 }
 
 .sus-sb-slot-hint {
-    font-size: 11px;
-    color: var(--sus-text-disabled);
-    -unity-font-definition: var(--font-family-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink-disabled);
+    -unity-font-definition: var(--sb-font-mono);
 }
 
 /* Visibility switch of the shell — state through classes, never through the C# style API
@@ -852,10 +1036,10 @@
     padding-bottom: 10px;
     padding-left: 12px;
     padding-right: 12px;
-    font-size: 12px;
-    color: var(--sus-text-primary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-ink);
     border-bottom-width: 1px;
-    border-bottom-color: var(--sus-border);
+    border-bottom-color: var(--sb-line);
 }
 
 .sus-sb-ctlpanel__groups {
@@ -872,9 +1056,9 @@
 .sus-sb-ctlpanel__group-title {
     margin-top: 12px;
     margin-bottom: 2px;
-    font-size: 9px;
+    font-size: var(--sb-fs-10);
     letter-spacing: 1px;
-    color: var(--sus-text-disabled);
+    color: var(--sb-ink-disabled);
 }
 
 .sus-sb-ctlpanel__empty {
@@ -886,14 +1070,14 @@
 }
 
 .sus-sb-ctlpanel__empty-title {
-    font-size: 12px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-muted);
     margin-bottom: 6px;
 }
 
 .sus-sb-ctlpanel__empty-text {
-    font-size: 11px;
-    color: var(--sus-text-disabled);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink-disabled);
     white-space: normal;
     -unity-text-align: middle-center;
 }
@@ -905,8 +1089,8 @@
     padding-left: 12px;
     padding-right: 12px;
     border-top-width: 1px;
-    border-top-color: var(--sus-border);
-    background-color: var(--sus-bg-surface-variant);
+    border-top-color: var(--sb-line);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-ctlpanel__counters {
@@ -916,43 +1100,43 @@
 }
 
 .sus-sb-ctlpanel__count {
-    font-size: 11px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
 }
 
 .sus-sb-ctlpanel__badge {
-    font-size: 10px;
+    font-size: var(--sb-fs-10);
     padding-top: 1px;
     padding-bottom: 1px;
     padding-left: 6px;
     padding-right: 6px;
-    border-radius: var(--sus-radius-sm);
-    color: var(--sus-text-primary);
+    border-radius: var(--sb-r-sm);
+    color: var(--sb-ink);
 }
 
 .sus-sb-ctlpanel__badge--ok {
-    color: var(--sus-success);
-    background-color: var(--sus-selected-overlay);
+    color: var(--sb-ok);
+    background-color: var(--sb-accent-soft);
 }
 
 .sus-sb-ctlpanel__badge--defect {
-    color: var(--sus-error);
-    background-color: var(--sus-hover-overlay);
+    color: var(--sb-bad);
+    background-color: var(--sb-line-soft);
 }
 
 .sus-sb-ctlpanel__hole {
     margin-top: 4px;
-    font-size: 10px;
+    font-size: var(--sb-fs-10);
     white-space: normal;
-    color: var(--sus-text-secondary);
+    color: var(--sb-muted);
 }
 
 .sus-sb-ctlpanel__hole--dead {
-    color: var(--sus-error);
+    color: var(--sb-bad);
 }
 
 .sus-sb-ctlpanel__hole--excluded {
-    color: var(--sus-text-disabled);
+    color: var(--sb-ink-disabled);
 }
 
 /* -- one row ------------------------------------------------------------- */
@@ -961,7 +1145,7 @@
     padding-top: 7px;
     padding-bottom: 7px;
     border-bottom-width: 1px;
-    border-bottom-color: var(--sus-border);
+    border-bottom-color: var(--sb-line);
 }
 
 .sus-sb-ctl--inert {
@@ -974,27 +1158,27 @@
 }
 
 .sus-sb-ctl__name {
-    font-size: 11px;
-    color: var(--sus-text-primary);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink);
     margin-right: 6px;
 }
 
 .sus-sb-ctl__badge {
-    font-size: 9px;
+    font-size: var(--sb-fs-10);
     padding-left: 4px;
     padding-right: 4px;
     margin-right: 4px;
-    border-radius: var(--sus-radius-sm);
-    color: var(--sus-text-secondary);
-    background-color: var(--sus-bg-surface-raised);
+    border-radius: var(--sb-r-sm);
+    color: var(--sb-muted);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-ctl__badge--dead {
-    color: var(--sus-error);
+    color: var(--sb-bad);
 }
 
 .sus-sb-ctl__badge--manual {
-    color: var(--sus-text-disabled);
+    color: var(--sb-ink-disabled);
 }
 
 .sus-sb-ctl__body {
@@ -1006,36 +1190,36 @@
 .sus-sb-ctl__note,
 .sus-sb-ctl__dependency {
     margin-top: 3px;
-    font-size: 9px;
+    font-size: var(--sb-fs-10);
     white-space: normal;
-    color: var(--sus-text-disabled);
+    color: var(--sb-ink-disabled);
 }
 
 /* -- bool ---------------------------------------------------------------- */
 
 .sus-sb-ctl__switch {
-    width: 34px;
-    height: 18px;
+    width: var(--sb-switch-w);
+    height: var(--sb-switch-h);
     padding: 0;
     margin: 0;
-    border-radius: var(--sus-radius-full);
+    border-radius: var(--sb-pill-switch);
     border-width: 1px;
-    border-color: var(--sus-border);
-    background-color: var(--sus-bg-surface-raised);
+    border-color: var(--sb-line);
+    background-color: var(--sb-code);
     justify-content: center;
 }
 
 .sus-sb-ctl__switch--on {
-    background-color: var(--sus-primary);
-    border-color: var(--sus-primary);
+    background-color: var(--sb-accent);
+    border-color: var(--sb-accent);
 }
 
 .sus-sb-ctl__knob {
-    width: 14px;
-    height: 14px;
+    width: var(--sb-knob);
+    height: var(--sb-knob);
     margin-left: 2px;
-    border-radius: var(--sus-radius-full);
-    background-color: var(--sus-bg-page);
+    border-radius: var(--sb-pill-knob);
+    background-color: var(--sb-bg);
 }
 
 .sus-sb-ctl__switch--on .sus-sb-ctl__knob {
@@ -1048,8 +1232,8 @@
     flex-grow: 1;
     flex-direction: row;
     padding: 2px;
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface-raised);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-ctl__seg {
@@ -1059,26 +1243,26 @@
     padding-bottom: 3px;
     padding-left: 2px;
     padding-right: 2px;
-    font-size: 10px;
+    font-size: var(--sb-fs-10);
     border-width: 0;
-    border-radius: var(--sus-radius-sm);
+    border-radius: var(--sb-r-sm);
     background-color: rgba(0, 0, 0, 0);
-    color: var(--sus-text-secondary);
+    color: var(--sb-muted);
     text-overflow: ellipsis;
     overflow: hidden;
 }
 
 .sus-sb-ctl__seg--active {
-    background-color: var(--sus-bg-surface);
-    color: var(--sus-text-primary);
+    background-color: var(--sb-panel);
+    color: var(--sb-ink);
     border-width: 1px;
-    border-color: var(--sus-border);
+    border-color: var(--sb-line);
 }
 
 .sus-sb-ctl__dropdown {
     flex-grow: 1;
     margin: 0;
-    font-size: 11px;
+    font-size: var(--sb-fs-11);
 }
 
 /* -- text, icon, numbers ------------------------------------------------- */
@@ -1088,7 +1272,7 @@
 .sus-sb-ctl__hex,
 .sus-sb-ctl__list-row {
     margin: 0;
-    font-size: 11px;
+    font-size: var(--sb-fs-11);
 }
 
 .sus-sb-ctl__text {
@@ -1126,11 +1310,25 @@
     margin-left: 0;
     margin-right: 4px;
     padding: 0;
-    border-radius: var(--sus-radius-sm);
+    border-radius: var(--sb-r-sm);
     border-width: 1px;
-    border-color: var(--sus-border);
+    border-color: var(--sb-line);
 }
 
+/* THE ONE DECLARED EXCEPTION to D2, and the reason it is an exception rather than an oversight.
+ *
+ * These six rules are the only place in this sheet that still reads the PRODUCT's palette, and
+ * they must: the swatch is not chrome, it is a PREVIEW of the subject's own colour. The control
+ * that owns them names no colour in C# at all — it reads back `resolvedStyle.backgroundColor` of
+ * whichever swatch was clicked (SusControl.cs, the Color control), so a skin can change what the
+ * palette offers with no code change. Repaint these from --sb-* and the swatch would show the
+ * instrument's green while handing the story the product's green: a control that lies about the
+ * value it is about to set.
+ *
+ * So the honest number for card T-3371 is 165 var(--sus-*) → 6, not → 0, and the six are here,
+ * named, in one block. Whether a preview of the subject belongs in the shell's sheet at all, or
+ * in a sheet of its own under the stage, is an architecture question and it is asked as a card,
+ * not decided by a grep. */
 .sus-sb-ctl__swatch--primary {
     background-color: var(--sus-primary);
 }
@@ -1162,8 +1360,8 @@
 
 .sus-sb-ctl__value {
     margin-left: 6px;
-    font-size: 10px;
-    color: var(--sus-text-disabled);
+    font-size: var(--sb-fs-10);
+    color: var(--sb-ink-disabled);
 }
 
 /* -- list and model ------------------------------------------------------ */
@@ -1174,19 +1372,19 @@
     padding-bottom: 3px;
     padding-left: 8px;
     padding-right: 8px;
-    font-size: 10px;
-    border-radius: var(--sus-radius-sm);
+    font-size: var(--sb-fs-10);
+    border-radius: var(--sb-r-sm);
     border-width: 1px;
-    border-color: var(--sus-border);
-    background-color: var(--sus-bg-surface-raised);
-    color: var(--sus-text-secondary);
+    border-color: var(--sb-line);
+    background-color: var(--sb-code);
+    color: var(--sb-muted);
 }
 
 .sus-sb-ctl__list {
     margin-top: 4px;
     padding-left: 8px;
     border-left-width: 1px;
-    border-left-color: var(--sus-border);
+    border-left-color: var(--sb-line);
 }
 
 .sus-sb-ctl__list-row {
@@ -1197,17 +1395,17 @@
     margin: 0;
     padding-top: 2px;
     padding-bottom: 2px;
-    font-size: 10px;
+    font-size: var(--sb-fs-10);
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    color: var(--sus-text-secondary);
+    color: var(--sb-muted);
 }
 
 .sus-sb-ctl__mono {
     flex-grow: 1;
-    font-size: 10px;
-    color: var(--sus-text-secondary);
-    -unity-font-definition: var(--font-family-mono);
+    font-size: var(--sb-fs-10);
+    color: var(--sb-muted);
+    -unity-font-definition: var(--sb-font-mono);
 }
 
 /* -- icon picker (T-3035) ------------------------------------------------ */
@@ -1221,21 +1419,21 @@
     padding-left: 8px;
     padding-right: 8px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface-variant);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-ctl__iconname {
     flex-grow: 1;
-    font-size: 11px;
-    color: var(--sus-text-primary);
-    -unity-font-definition: var(--font-family-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-font-mono);
     -unity-text-align: middle-left;
 }
 
 .sus-sb-ctl__iconname--empty {
-    color: var(--sus-text-secondary);
+    color: var(--sb-muted);
 }
 
 .sus-sb-ctl__iconcaret {
@@ -1248,9 +1446,9 @@
     width: 236px;
     padding: 8px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-md);
-    background-color: var(--sus-bg-surface-raised);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-md);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-iconpicker__search {
@@ -1260,9 +1458,9 @@
     padding-left: 8px;
     padding-right: 8px;
     border-width: 1px;
-    border-color: var(--sus-border);
-    border-radius: var(--sus-radius-sm);
-    background-color: var(--sus-bg-surface-variant);
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-code);
 }
 
 .sus-sb-iconpicker__search-glyph {
@@ -1276,10 +1474,10 @@
     flex-grow: 1;
     margin: 0;
     padding: 0;
-    font-size: 12px;
+    font-size: var(--sb-fs-12);
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-iconpicker__search-input > #unity-text-input {
@@ -1287,14 +1485,14 @@
     padding-left: 0;
     padding-right: 0;
     background-color: rgba(0, 0, 0, 0);
-    color: var(--sus-text-primary);
+    color: var(--sb-ink);
 }
 
 .sus-sb-iconpicker__placeholder {
     position: absolute;
     left: 27px;
-    font-size: 12px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-muted);
 }
 
 .sus-sb-iconpicker__placeholder.sus-sb-hidden {
@@ -1306,11 +1504,11 @@
     margin-top: 6px;
     padding-top: 3px;
     padding-bottom: 3px;
-    font-size: 10.5px;
+    font-size: var(--sb-fs-11);
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    color: var(--sus-text-secondary);
-    -unity-font-definition: var(--font-family-mono);
+    color: var(--sb-muted);
+    -unity-font-definition: var(--sb-font-mono);
     -unity-text-align: middle-left;
 }
 
@@ -1337,17 +1535,17 @@
     justify-content: center;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
-    border-radius: var(--sus-radius-sm);
+    border-radius: var(--sb-r-sm);
     background-color: rgba(0, 0, 0, 0);
 }
 
 .sus-sb-iconpicker__cell:hover {
-    background-color: var(--sus-hover-overlay);
+    background-color: var(--sb-line-soft);
 }
 
 .sus-sb-iconpicker__cell--selected {
-    border-color: var(--sus-primary);
-    background-color: var(--sus-selected-overlay);
+    border-color: var(--sb-accent);
+    background-color: var(--sb-accent-soft);
 }
 
 .sus-sb-iconpicker__cell-glyph {
@@ -1360,8 +1558,8 @@
     margin-bottom: 4px;
     padding-left: 4px;
     padding-right: 4px;
-    font-size: 12px;
-    color: var(--sus-text-secondary);
+    font-size: var(--sb-fs-12);
+    color: var(--sb-muted);
     white-space: normal;
 }
 
@@ -1378,11 +1576,475 @@
 
 .sus-sb-iconpicker__count,
 .sus-sb-iconpicker__hint {
-    font-size: 10.5px;
-    color: var(--sus-text-secondary);
-    -unity-font-definition: var(--font-family-mono);
+    font-size: var(--sb-fs-11);
+    color: var(--sb-muted);
+    -unity-font-definition: var(--sb-font-mono);
 }
 
 .sus-sb-iconpicker__hint.sus-sb-hidden {
     display: none;
+}
+
+/* == Unity's own elements: the parts that had no declared appearance ==========
+ *
+ * Card T-3354, plan ARCH-20260911-STORYBOOK-SHELL.md 4.4, decisions D11 / D12 / D13 / D14.
+ *
+ * The shell keeps Unity's built-in ScrollView, TextField, DropdownField, Slider and Button --
+ * kit is out of reach here (sus-core cannot depend on a paid package, R25, and D2 forbids
+ * wearing the subject's clothes anyway), and rewriting scrolling, focus, keyboard and IME in
+ * core would be weeks, not a wave. What was missing was not the structure but the SKIN: before
+ * this card the sheet contained exactly ZERO `.unity-*` selectors, so 6 of 7 text inputs showed
+ * Unity's light-grey default on a dark shell, and every scroll band was 24px wide with two pale
+ * arrow buttons on it. That is the whole of "the scrollbars are huge" and "the inputs are
+ * colourless".
+ *
+ * WHY THE SELECTORS LOOK LIKE THIS. Every rule is anchored on a shell class and reaches inward
+ * with `>` before it uses a descendant step (D20): the canvas holds the SUBJECT of inspection,
+ * and a rule like `.sus-sb .unity-scroller` would also repaint a ScrollView that belongs to the
+ * component being judged. Anchoring on the six named shell ScrollViews and the seven named shell
+ * fields keeps the rule inside the instrument. Inside a scroller or a field there is never a
+ * story, so a descendant step below that anchor is safe and survives Unity moving a part one
+ * level up or down between versions.
+ */
+
+/* -- ScrollView: an 8px band, no arrows (D12) ------------------------------- */
+
+.sus-sb-nav__list > .unity-scroller,
+.sus-sb-stage > .unity-scroller,
+.sus-sb-env__chips > .unity-scroller,
+.sus-sb-matrix__scroll > .unity-scroller,
+.sus-sb-ctlpanel__groups > .unity-scroller,
+.sus-sb-iconpicker__scroll > .unity-scroller {
+    /* Unity's default is a 24px band with a button at each end. The mock-up has an 8px band and
+       no buttons at all. */
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin: 0;
+}
+
+.sus-sb-nav__list > .unity-scroller--vertical,
+.sus-sb-stage > .unity-scroller--vertical,
+.sus-sb-env__chips > .unity-scroller--vertical,
+.sus-sb-matrix__scroll > .unity-scroller--vertical,
+.sus-sb-ctlpanel__groups > .unity-scroller--vertical,
+.sus-sb-iconpicker__scroll > .unity-scroller--vertical {
+    width: var(--sb-scrollbar);
+    min-width: var(--sb-scrollbar);
+}
+
+.sus-sb-nav__list > .unity-scroller--horizontal,
+.sus-sb-stage > .unity-scroller--horizontal,
+.sus-sb-env__chips > .unity-scroller--horizontal,
+.sus-sb-matrix__scroll > .unity-scroller--horizontal,
+.sus-sb-ctlpanel__groups > .unity-scroller--horizontal,
+.sus-sb-iconpicker__scroll > .unity-scroller--horizontal {
+    height: var(--sb-scrollbar);
+    min-height: var(--sb-scrollbar);
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-scroller__low-button,
+.sus-sb-stage > .unity-scroller .unity-scroller__low-button,
+.sus-sb-env__chips > .unity-scroller .unity-scroller__low-button,
+.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__low-button,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__low-button,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__low-button,
+.sus-sb-nav__list > .unity-scroller .unity-scroller__high-button,
+.sus-sb-stage > .unity-scroller .unity-scroller__high-button,
+.sus-sb-env__chips > .unity-scroller .unity-scroller__high-button,
+.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__high-button,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__high-button,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__high-button {
+    /* The two pale squares at the ends of every band. The mock-up has none, and a drag band this
+       thin has no room for a hit target anyway. */
+    display: none;
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-scroller__slider,
+.sus-sb-stage > .unity-scroller .unity-scroller__slider,
+.sus-sb-env__chips > .unity-scroller .unity-scroller__slider,
+.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__slider,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__slider,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__slider {
+    margin: 0;
+    min-width: var(--sb-scrollbar);
+    min-height: var(--sb-scrollbar);
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-stage > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-env__chips > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__tracker,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin: 0;
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-stage > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger {
+    background-color: var(--sb-line);
+    border-width: 0;
+    border-radius: var(--sb-r-sm);
+    margin: 0;
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-stage > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger:hover,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger:hover {
+    background-color: var(--sb-muted);
+}
+
+.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-stage > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger-border,
+.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger-border {
+    display: none;
+}
+
+/* -- TextField: five states, three properties each (D13) ----------------------
+ *
+ * rest / hover / focus / disabled / invalid, and each one says background, border and text.
+ * Declaring only the resting state is how "the inputs are colourless" comes back one wave later
+ * as "you cannot tell what has focus". `--invalid` has no producer in the engine yet -- the
+ * contract is declared here so a producer has something to switch on, and so the next reader can
+ * see which of the five states is still waiting for code instead of guessing.
+ */
+
+.sus-sb-nav__search-input > #unity-text-input,
+.sus-sb-iconpicker__search-input > #unity-text-input,
+.sus-sb-ctl__text > #unity-text-input,
+.sus-sb-ctl__number > #unity-text-input,
+.sus-sb-ctl__hex > #unity-text-input,
+.sus-sb-ctl__mono > #unity-text-input,
+.sus-sb-ctl__list-row > #unity-text-input {
+    background-color: var(--sb-code);
+    border-width: 1px;
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-font-ui);
+    font-size: var(--sb-fs-12);
+}
+
+.sus-sb-nav__search-input:hover > #unity-text-input,
+.sus-sb-iconpicker__search-input:hover > #unity-text-input,
+.sus-sb-ctl__text:hover > #unity-text-input,
+.sus-sb-ctl__number:hover > #unity-text-input,
+.sus-sb-ctl__hex:hover > #unity-text-input,
+.sus-sb-ctl__mono:hover > #unity-text-input,
+.sus-sb-ctl__list-row:hover > #unity-text-input {
+    border-color: var(--sb-muted);
+}
+
+.sus-sb-nav__search-input:focus > #unity-text-input,
+.sus-sb-iconpicker__search-input:focus > #unity-text-input,
+.sus-sb-ctl__text:focus > #unity-text-input,
+.sus-sb-ctl__number:focus > #unity-text-input,
+.sus-sb-ctl__hex:focus > #unity-text-input,
+.sus-sb-ctl__mono:focus > #unity-text-input,
+.sus-sb-ctl__list-row:focus > #unity-text-input,
+.sus-sb-nav__search-input > #unity-text-input:focus,
+.sus-sb-iconpicker__search-input > #unity-text-input:focus,
+.sus-sb-ctl__text > #unity-text-input:focus,
+.sus-sb-ctl__number > #unity-text-input:focus,
+.sus-sb-ctl__hex > #unity-text-input:focus,
+.sus-sb-ctl__mono > #unity-text-input:focus,
+.sus-sb-ctl__list-row > #unity-text-input:focus {
+    border-color: var(--sb-accent);
+    background-color: var(--sb-panel);
+    color: var(--sb-ink);
+}
+
+.sus-sb-nav__search-input:disabled > #unity-text-input,
+.sus-sb-iconpicker__search-input:disabled > #unity-text-input,
+.sus-sb-ctl__text:disabled > #unity-text-input,
+.sus-sb-ctl__number:disabled > #unity-text-input,
+.sus-sb-ctl__hex:disabled > #unity-text-input,
+.sus-sb-ctl__mono:disabled > #unity-text-input,
+.sus-sb-ctl__list-row:disabled > #unity-text-input {
+    background-color: var(--sb-line-soft);
+    border-color: var(--sb-line);
+    color: var(--sb-ink-disabled);
+}
+
+.sus-sb-nav__search-input--invalid > #unity-text-input,
+.sus-sb-iconpicker__search-input--invalid > #unity-text-input,
+.sus-sb-ctl__text--invalid > #unity-text-input,
+.sus-sb-ctl__number--invalid > #unity-text-input,
+.sus-sb-ctl__hex--invalid > #unity-text-input,
+.sus-sb-ctl__mono--invalid > #unity-text-input,
+.sus-sb-ctl__list-row--invalid > #unity-text-input {
+    background-color: var(--sb-code);
+    border-color: var(--sb-bad);
+    color: var(--sb-bad);
+}
+
+/* The two search boxes draw their own frame, so their field stays frameless inside it. This was
+ * the ONE `.unity-*` override the sheet already had before T-3354; it is kept, and now stated as
+ * a deliberate exception rather than standing there as the only field anybody remembered to
+ * dress. */
+.sus-sb-nav__search-input > #unity-text-input,
+.sus-sb-nav__search-input:hover > #unity-text-input,
+.sus-sb-nav__search-input:focus > #unity-text-input,
+.sus-sb-iconpicker__search-input > #unity-text-input,
+.sus-sb-iconpicker__search-input:hover > #unity-text-input,
+.sus-sb-iconpicker__search-input:focus > #unity-text-input {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    padding-left: 0;
+    padding-right: 0;
+    color: var(--sb-ink);
+}
+
+/* -- DropdownField: field, text, arrow (4.4) -------------------------------- */
+
+.sus-sb-ctl__dropdown .unity-base-popup-field__input {
+    background-color: var(--sb-code);
+    border-width: 1px;
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+}
+
+.sus-sb-ctl__dropdown:hover .unity-base-popup-field__input {
+    border-color: var(--sb-muted);
+}
+
+.sus-sb-ctl__dropdown:focus .unity-base-popup-field__input {
+    border-color: var(--sb-accent);
+}
+
+.sus-sb-ctl__dropdown:disabled .unity-base-popup-field__input {
+    background-color: var(--sb-line-soft);
+    border-color: var(--sb-line);
+}
+
+.sus-sb-ctl__dropdown .unity-base-popup-field__text {
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-font-ui);
+    font-size: var(--sb-fs-12);
+}
+
+.sus-sb-ctl__dropdown:disabled .unity-base-popup-field__text {
+    color: var(--sb-ink-disabled);
+}
+
+.sus-sb-ctl__dropdown .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: var(--sb-muted);
+}
+
+/* The dropped-open list is NOT reachable from this sheet: UI Toolkit renders it in the panel's
+ * own root overlay, outside the shell subtree, so no selector anchored on a shell class can
+ * touch it. Named here so the gap reads as a measured boundary and not as a missing row of the
+ * 4.4 table; dressing it needs the list's own sheet, which is a separate card. */
+
+/* -- Slider: tracker, dragger, the number field beside it (4.4) ------------- */
+
+.sus-sb-ctl__slider .unity-base-slider__tracker {
+    background-color: var(--sb-line);
+    border-width: 0;
+    border-radius: var(--sb-r-xs);
+    height: 4px;
+}
+
+.sus-sb-ctl__slider .unity-base-slider__dragger {
+    background-color: var(--sb-accent);
+    border-width: 0;
+    border-radius: var(--sb-pill-knob);
+    width: var(--sb-knob);
+    height: var(--sb-knob);
+}
+
+.sus-sb-ctl__slider:hover .unity-base-slider__dragger {
+    background-color: var(--sb-ink);
+}
+
+.sus-sb-ctl__slider:disabled .unity-base-slider__tracker {
+    background-color: var(--sb-line-soft);
+}
+
+.sus-sb-ctl__slider:disabled .unity-base-slider__dragger {
+    background-color: var(--sb-ink-disabled);
+}
+
+.sus-sb-ctl__slider .unity-base-slider__dragger-border {
+    display: none;
+}
+
+/* -- Button: three roles, four states each (D14) ------------------------------
+ *
+ * The mock-up separates chrome buttons by weight -- accent on "share", ghost on the icon-only
+ * ones -- and one appearance across all seventeen is precisely what "the buttons are not styled"
+ * means. The role classes below are the vocabulary; the shell's existing button classes are
+ * grouped onto a role beside them, so the roles are real today without re-tagging the C# that
+ * builds those buttons. This block sits at the end of the sheet on purpose: at equal specificity
+ * the later rule wins, so a role lands on top of whatever an earlier section set.
+ */
+
+/* role 1 -- accent: the one action a reader is meant to find */
+.sb-btn--accent,
+.sus-sb__share,
+.sus-sb-env__share {
+    height: var(--sb-h-ctl);
+    border-width: 1px;
+    border-radius: var(--sb-r-sm);
+    border-color: var(--sb-accent);
+    background-color: var(--sb-accent);
+    color: var(--sb-accent-ink);
+    font-size: var(--sb-fs-12);
+}
+
+.sb-btn--accent:hover,
+.sus-sb__share:hover,
+.sus-sb-env__share:hover {
+    border-color: var(--sb-ink);
+    background-color: var(--sb-ink);
+    color: var(--sb-bg);
+}
+
+.sb-btn--accent:active,
+.sus-sb__share:active,
+.sus-sb-env__share:active {
+    border-color: var(--sb-accent);
+    background-color: var(--sb-accent-soft);
+    color: var(--sb-accent);
+}
+
+.sb-btn--accent:disabled,
+.sus-sb__share:disabled,
+.sus-sb-env__share:disabled {
+    border-color: var(--sb-line);
+    background-color: var(--sb-line-soft);
+    color: var(--sb-ink-disabled);
+}
+
+/* role 2 -- secondary: a framed button that is not the main action */
+.sb-btn--secondary,
+.sus-sb__burger,
+.sus-sb-ctl__list-add,
+.sus-sb-ctl__iconfield {
+    border-width: 1px;
+    border-radius: var(--sb-r-sm);
+    border-color: var(--sb-line);
+    background-color: var(--sb-code);
+    color: var(--sb-ink);
+}
+
+.sb-btn--secondary:hover,
+.sus-sb__burger:hover,
+.sus-sb-ctl__list-add:hover,
+.sus-sb-ctl__iconfield:hover {
+    border-color: var(--sb-muted);
+    background-color: var(--sb-line-soft);
+}
+
+.sb-btn--secondary:active,
+.sus-sb__burger:active,
+.sus-sb-ctl__list-add:active,
+.sus-sb-ctl__iconfield:active {
+    border-color: var(--sb-accent);
+    background-color: var(--sb-accent-soft);
+    color: var(--sb-accent);
+}
+
+.sb-btn--secondary:disabled,
+.sus-sb__burger:disabled,
+.sus-sb-ctl__list-add:disabled,
+.sus-sb-ctl__iconfield:disabled {
+    border-color: var(--sb-line);
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--sb-ink-disabled);
+}
+
+/* role 3 -- ghost: frameless, reads as text until pointed at */
+.sb-btn--ghost,
+.sus-sb-nav__tab,
+.sus-sb-matrix__toggle,
+.sus-sb-ctl__list-summary {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--sb-muted);
+}
+
+.sb-btn--ghost:hover,
+.sus-sb-matrix__toggle:hover,
+.sus-sb-ctl__list-summary:hover {
+    background-color: var(--sb-line-soft);
+    color: var(--sb-ink);
+}
+
+.sb-btn--ghost:active,
+.sus-sb-matrix__toggle:active,
+.sus-sb-ctl__list-summary:active {
+    background-color: var(--sb-accent-soft);
+    color: var(--sb-accent);
+}
+
+.sb-btn--ghost:disabled,
+.sus-sb-nav__tab:disabled,
+.sus-sb-matrix__toggle:disabled,
+.sus-sb-ctl__list-summary:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--sb-ink-disabled);
+}
+
+/* The nav tab is a ghost button that ALSO has to show which of the two lists is open, and the
+ * underline is that signal -- restated after the ghost role so the role does not quietly erase
+ * it. */
+.sus-sb-nav__tab {
+    border-bottom-width: 2px;
+    border-bottom-color: rgba(0, 0, 0, 0);
+}
+
+.sus-sb-nav__tab:hover {
+    color: var(--sb-ink);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.sus-sb-nav__tab--active {
+    color: var(--sb-ink);
+    border-bottom-color: var(--sb-accent);
+}
+
+/* -- zone B: the entry into zone D on a narrow shell (T-3377, D25) ---------- */
+
+.sus-sb-env__props {
+    height: 24px;
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    display: none;
+    margin-left: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    border-width: 1px;
+    border-radius: var(--sb-r-sm);
+    border-color: var(--sb-line);
+    background-color: var(--sb-code);
+    color: var(--sb-ink);
+    font-size: var(--sb-fs-11);
+}
+
+.sus-sb--narrow .sus-sb-env__props {
+    display: flex;
+}
+
+.sus-sb-env__props:hover {
+    border-color: var(--sb-muted);
+    background-color: var(--sb-line-soft);
+}
+
+.sus-sb--panel-open .sus-sb-env__props {
+    border-color: var(--sb-accent);
+    background-color: var(--sb-accent-soft);
+    color: var(--sb-accent);
 }

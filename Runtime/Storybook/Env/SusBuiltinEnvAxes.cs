@@ -11,12 +11,20 @@ namespace Sharq.Core.Storybook.Env
     /// theme, scale and input. Each wraps the real core service directly — a story's rendering is
     /// meant to react exactly as it would in a shipped app, not to a storybook-only stand-in.
     ///
-    /// Breakpoint/density/scale bind to <c>previewRoot</c> (the stage canvas, card T-3033's
-    /// <c>QaCanvas</c>): the preview simulates a viewport for the ONE mounted story without
-    /// resizing zone A's nav list or zone B's own chip row. Theme binds to <c>shellRoot</c> (the
-    /// whole host): dark/light is how the tool itself reads, not a per-component prop, and the
-    /// mock-up's <c>data-theme</c> attribute repaints the entire shell for the same reason. Input
-    /// has no root — <see cref="SusInputDevice"/> is process-global by construction.
+    /// EVERY axis that changes the SUBJECT binds to <c>previewRoot</c> (the stage canvas, card
+    /// T-3033's <c>QaCanvas</c>): breakpoint, density, scale — and, since card T-3371, theme too.
+    ///
+    /// Theme used to bind to <c>shellRoot</c>, which is card T-3371's defect and decision D27 of
+    /// plan ARCH-20260911-STORYBOOK-SHELL.md. One click on the "theme" chip repainted the whole
+    /// instrument: zone A's background went 0.078 → 0.922 while the canvas went to 0.961, which is
+    /// also where the light-text-on-light-canvas came from. The damage is not cosmetic — it makes
+    /// the inspection undemonstrable, because the dark screenshot of a component was then taken in
+    /// a DIFFERENT viewer than the light one, and the difference can no longer be attributed to
+    /// the component. The shell now owns its own two-theme token set (<c>--sb-*</c> in
+    /// <c>Storybook.uss</c>) and its own chip, <see cref="ShellThemeAxis"/>, so "what the tool
+    /// looks like" and "what the component looks like" are two separate switches.
+    ///
+    /// Input has no root — <see cref="SusInputDevice"/> is process-global by construction.
     /// </summary>
     static class SusBuiltinEnvAxes
     {
@@ -24,9 +32,43 @@ namespace Sharq.Core.Storybook.Env
         {
             yield return new BreakpointAxis(previewRoot);
             yield return new DensityAxis(previewRoot);
-            yield return new ThemeAxis(shellRoot);
+            yield return new ThemeAxis(previewRoot);
             yield return new ScaleAxis(previewRoot);
             yield return new InputAxis();
+            yield return new ShellThemeAxis(shellRoot);
+        }
+
+        /// <summary>
+        /// The shell's OWN light/dark switch (card T-3371, decision D4): it puts
+        /// <c>sus-sb--theme-light</c> on the shell root, where <c>Storybook.uss</c> redefines the
+        /// thirteen <c>--sb-*</c> colour names. It touches no core service and therefore no story:
+        /// that is the point of having two chips instead of one.
+        ///
+        /// Values[0] is "dark" — the shell's resting state and the mock-up's default artboard — so
+        /// a shared link only carries <c>env.shell-theme=</c> when the sharer actually flipped the
+        /// instrument, not every time.
+        /// </summary>
+        internal sealed class ShellThemeAxis : ISusStoryEnvAxis
+        {
+            internal const string LightClass = "sus-sb--theme-light";
+            static readonly string[] s_values = { "dark", "light" };
+            readonly VisualElement _root;
+
+            public ShellThemeAxis(VisualElement root) => _root = root;
+
+            public string Id => "shell-theme";
+            public string Icon => "palette";
+            public IReadOnlyList<string> Values => s_values;
+
+            public string Current =>
+                _root != null && _root.ClassListContains(LightClass) ? "light" : "dark";
+
+            public void Apply(string value)
+            {
+                if (_root == null) return;
+                _root.EnableInClassList(LightClass,
+                    string.Equals(value, "light", StringComparison.OrdinalIgnoreCase));
+            }
         }
 
         sealed class BreakpointAxis : ISusStoryEnvAxis

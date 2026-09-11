@@ -22,11 +22,23 @@ namespace Sharq.Core.Storybook.UI
     {
         internal const string EnvQueryPrefix = "env.";
 
-        // Mock-up order: breakpoint, density, theme, skin, scale, input, locale.
-        static readonly string[] Order = { "breakpoint", "density", "theme", "skin", "scale", "input", "locale" };
+        // Mock-up order: breakpoint, density, theme, skin, scale, input, locale. "shell-theme"
+        // comes last on purpose (card T-3371, decision D4): the first seven say what the SUBJECT
+        // is looking at, and the last one says what the INSTRUMENT looks like — putting it next to
+        // "theme" would invite exactly the confusion the two chips exist to end.
+        static readonly string[] Order =
+            { "breakpoint", "density", "theme", "skin", "scale", "input", "locale", "shell-theme" };
+
+        /// <summary>Shell-root class the zone D drawer opens with (card T-3377, decision D25).</summary>
+        internal const string PanelOpenClass = "sus-sb--panel-open";
+
+        const string ScrimClass = "sus-sb__scrim";
 
         readonly Dictionary<string, ISusStoryEnvAxis> _builtin = new(StringComparer.Ordinal);
         readonly ScrollView _chips = new(ScrollViewMode.Horizontal);
+        readonly VisualElement _shellRoot;
+        readonly Button _props;
+        VisualElement _hookedScrim;
         bool _disposed;
 
         /// <summary>Raised after any chip click actually changed a service (route text may be stale now).</summary>
@@ -40,12 +52,64 @@ namespace Sharq.Core.Storybook.UI
             _chips.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             Add(_chips);
 
+            // Card T-3377, decision D25 — the entry into zone D on a narrow shell. Below 800px the
+            // props panel used to be a bare `display: none`: no button, no drawer, no label, so
+            // the storybook at 640 was a viewer with no controls and "how do I change a prop here"
+            // had no answer at all. Zone A had had a burger, a drawer, a scrim and Ctrl+K at that
+            // same threshold since T-3033; this reuses the mechanism instead of inventing one.
+            //
+            // It lives in zone B rather than in zone D for the obvious reason: an entry parked
+            // inside the closed drawer is not an entry. The button carries a WORD, not only a
+            // glyph — the DoD asks for a labelled entry, and an unlabelled icon is how you get the
+            // same complaint back one wave later.
+            _shellRoot = shellRoot;
+            _props = new Button(TogglePanel) { text = "props" };
+            _props.AddToClassList("sus-sb-env__props");
+            _props.tooltip = "zone D — props panel (Esc or the scrim closes it)";
+            Add(_props);
+
+            if (_shellRoot != null)
+                _shellRoot.RegisterCallback<KeyDownEvent>(OnShellKeyDown);
+            RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
+
             foreach (var axis in SusBuiltinEnvAxes.CreateAll(shellRoot, previewRoot))
                 _builtin[axis.Id] = axis;
 
             SusStoryEnvAxisRegistry.Changed += Rebuild;
             Rebuild();
         }
+
+        /// <summary>Opens or closes zone D's drawer (card T-3377). Public so a test can drive it.</summary>
+        public void TogglePanel() => SetPanelOpen(!PanelOpen);
+
+        /// <summary>Whether zone D's drawer is open right now.</summary>
+        public bool PanelOpen => _shellRoot != null && _shellRoot.ClassListContains(PanelOpenClass);
+
+        void SetPanelOpen(bool open)
+        {
+            if (_shellRoot == null) return;
+            _shellRoot.EnableInClassList(PanelOpenClass, open);
+        }
+
+        void OnShellKeyDown(KeyDownEvent evt)
+        {
+            if (evt.keyCode != UnityEngine.KeyCode.Escape || !PanelOpen) return;
+            SetPanelOpen(false);
+            evt.StopPropagation();
+        }
+
+        // The scrim is a sibling built by the host and is NOT parented yet while this constructor
+        // runs, so it cannot be looked up there — the lookup waits for the panel instead.
+        void OnAttachToPanel(AttachToPanelEvent _)
+        {
+            if (_hookedScrim != null || _shellRoot == null) return;
+            var scrim = _shellRoot.Q(className: ScrimClass);
+            if (scrim == null) return;
+            _hookedScrim = scrim;
+            scrim.RegisterCallback<PointerDownEvent>(OnScrimDown);
+        }
+
+        void OnScrimDown(PointerDownEvent _) => SetPanelOpen(false);
 
         /// <summary>Every chip currently shown, in display order (builtin ∪ registry, no gaps).</summary>
         public IEnumerable<ISusStoryEnvAxis> ActiveAxes()
@@ -128,6 +192,10 @@ namespace Sharq.Core.Storybook.UI
                 var chip = new VisualElement { name = "sus-sb-env-chip-" + axis.Id };
                 chip.AddToClassList("sus-sb-env__chip");
                 if (ReferenceEquals(axis, last)) chip.AddToClassList("sus-sb-env__chip--last");
+                // The instrument's own switch is set apart by a rule, not by hope that a reader
+                // notices two chips saying "dark" mean different things (card T-3371, D4).
+                if (string.Equals(axis.Id, "shell-theme", StringComparison.Ordinal))
+                    chip.AddToClassList("sus-sb-env__chip--shell");
 
                 var icon = new SusIconElement(axis.Icon);
                 icon.AddToClassList("sus-sb-env__chip-icon");
@@ -180,6 +248,13 @@ namespace Sharq.Core.Storybook.UI
             if (_disposed) return;
             _disposed = true;
             SusStoryEnvAxisRegistry.Changed -= Rebuild;
+            UnregisterCallback<AttachToPanelEvent>(OnAttachToPanel);
+            if (_shellRoot != null) _shellRoot.UnregisterCallback<KeyDownEvent>(OnShellKeyDown);
+            if (_hookedScrim != null)
+            {
+                _hookedScrim.UnregisterCallback<PointerDownEvent>(OnScrimDown);
+                _hookedScrim = null;
+            }
         }
     }
 }
