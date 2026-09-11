@@ -29,6 +29,7 @@ namespace Sharq.Core.Editor.Tests
         {
             _axisBefore = SusStoryMatrix.AxisPropName;
             SusStateTwins.Reset();
+            SusStateRoles.Reset();
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
         }
@@ -38,6 +39,7 @@ namespace Sharq.Core.Editor.Tests
         {
             SusStoryMatrix.AxisPropName = _axisBefore;
             SusStateTwins.Reset();
+            SusStateRoles.Reset();
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
         }
@@ -191,11 +193,147 @@ namespace Sharq.Core.Editor.Tests
                 Is.EqualTo(SusStateForcing.StateClass));
             Assert.That(disabled.VisualState, Is.EqualTo("disabled"));
 
+        }
+
+        /// <summary>
+        /// Card T-3427, plan ARCH-20260911-KIT-STATE-CONTRACT.md §2.3 and D4 <c>d:da0868</c>.
+        /// The focus column used to call <c>SetVisualState("focused")</c>, which drives the
+        /// <c>&lt;prefix&gt;--focused</c> group — styled by four kit components out of eighty,
+        /// and re-derived from a binding on the next render in three of those. The ring the
+        /// corpus actually draws hangs off <c>.keyboard-focus</c>. The intersection was empty,
+        /// and that — not eighty unstyled components — is why every focus column was a copy of
+        /// rest.
+        /// </summary>
+        [Test]
+        public void The_focus_column_wears_the_class_the_corpus_paints_the_ring_with()
+        {
+            NoTwins();
             var focus = new CoreSwatchDemo();
-            Assert.That(SusStoryStates.Force(focus, SusStoryStates.Focus),
-                Is.EqualTo(SusStateForcing.StateClass));
-            Assert.That(focus.ClassListContains("sus-vs--focused"), Is.True,
-                "the corpus has zero :focus selectors; focus is a class (plan §2.6)");
+
+            var how = SusStoryStates.Force(focus, SusStoryStates.Focus);
+
+            Assert.That(how, Is.EqualTo(SusStateForcing.FocusClass));
+            Assert.That(focus.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.True,
+                "the ring lives on .keyboard-focus (SusKeyboardFocus), and nothing else paints it");
+            Assert.That(focus.ClassListContains("sus-vs--focused"), Is.False,
+                "the old lever drove a class group the corpus does not style");
+            Assert.That(focus.VisualState, Is.EqualTo("normal"),
+                "and it no longer moves the component's mutually-exclusive visual state");
+        }
+
+        /// <summary>
+        /// D5 <c>d:2fead6</c>: for role <c>group</c> the ring rides a CHILD. Dressing the root
+        /// would repeat T-3427 with a better class — the column would still be a copy of rest.
+        /// </summary>
+        [Test]
+        public void For_a_group_the_focus_class_lands_on_the_declared_child()
+        {
+            NoTwins();
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Group, "swatch__item");
+            var group = new CoreSwatchDemo();
+            var item = new VisualElement();
+            item.AddToClassList("swatch__item");
+            group.Add(item);
+
+            var how = SusStoryStates.Force(group, SusStoryStates.Focus);
+
+            Assert.That(how, Is.EqualTo(SusStateForcing.FocusClass));
+            Assert.That(item.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.True);
+            Assert.That(group.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.False,
+                "the group box has no ring of its own; the focused child does");
+        }
+
+        [Test]
+        public void A_declared_target_that_is_not_there_falls_back_to_the_root()
+        {
+            NoTwins();
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Group, "swatch__missing");
+            var group = new CoreSwatchDemo();
+
+            SusStoryStates.Force(group, SusStoryStates.Focus);
+
+            Assert.That(group.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.True,
+                "a focus column that found no target would be the copy of rest all over again");
+        }
+
+        // ── columns: the role half of the matrix (card T-3431) ───────────────
+
+        /// <summary>
+        /// Plan §4.6 and D14 <c>d:5ea31f</c>. A column promising a state the role does not have
+        /// lies exactly as much as a state the role owes and nobody drew.
+        /// </summary>
+        [Test]
+        public void A_role_that_has_no_state_gets_no_matrix_at_all()
+        {
+            AllTwins();
+            SusStoryMatrix.AxisPropName = "Tone";
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Display);
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry(Swatch));
+
+            Assert.That(matrix.Role, Is.EqualTo(SusStateRoles.Display));
+            Assert.That(matrix.SilentReason, Is.Not.Null);
+            Assert.That(matrix.Columns, Is.Empty, "no column of state survives the role");
+            Assert.That(matrix.Rows, Is.Empty);
+            Assert.That(matrix.CellCount, Is.Zero);
+            Assert.That(matrix.ClassListContains("sb-hidden"), Is.True,
+                "not a folded matrix — an absent one; the variant axis below already says the rest");
+        }
+
+        [Test]
+        public void The_columns_of_a_control_stop_at_the_states_the_role_has()
+        {
+            AllTwins();
+            SusStoryMatrix.AxisPropName = "Tone";
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Control);
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry(Swatch));
+
+            Assert.That(matrix.Columns, Is.EqualTo(new[]
+            {
+                SusStoryStates.Rest, SusStoryStates.Hover, SusStoryStates.Focus,
+                SusStoryStates.Active, SusStoryStates.Disabled,
+            }));
+            Assert.That(matrix.SilentReason, Is.Null);
+            Assert.That(matrix.Columns, Does.Not.Contain(SusStoryStates.Error),
+                "a control carries no value, so it has nothing that can be invalid (D13)");
+            Assert.That(matrix.SkippedStates, Is.Empty,
+                "a column the role does not have is not 'skipped' — it was never a column");
+        }
+
+        [Test]
+        public void An_input_keeps_the_error_column_and_a_component_may_override_its_role()
+        {
+            AllTwins();
+            SusStoryMatrix.AxisPropName = "Tone";
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Input);
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry(Swatch));
+
+            Assert.That(matrix.Columns, Is.EqualTo(SusStoryStates.All),
+                "a value that can be invalid is a state, not a colour variant");
+            Assert.That(SusStateRoles.DutyOfName("SusFormField", SusStoryStates.Error),
+                Is.EqualTo(SusStateDuty.Required),
+                "the field wrapper departs from its surface role, and the departure is DATA");
+            Assert.That(SusStateRoles.RoleDuty(SusStateRoles.Surface, SusStoryStates.Error),
+                Is.EqualTo(SusStateDuty.No));
+        }
+
+        [Test]
+        public void A_component_outside_the_registry_keeps_every_column_it_had()
+        {
+            AllTwins();
+            SusStoryMatrix.AxisPropName = "Tone";
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry(Swatch));
+
+            Assert.That(matrix.Role, Is.Null);
+            Assert.That(matrix.Columns, Is.EqualTo(SusStoryStates.All),
+                "silence of the registry is not a statement about a component: wave 6 adds the rest");
         }
 
         // ── the budget ───────────────────────────────────────────────────────

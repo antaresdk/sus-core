@@ -20,9 +20,16 @@ namespace Sharq.Core.Storybook.UI
     /// <item><see cref="SusStoryWeight.Heavy"/> on the story — collapsed whatever the budget says.</item>
     /// </list>
     ///
-    /// A column whose state cannot be forced on THIS component is not drawn at all, and the
-    /// missing ones are named under the grid. See <see cref="SusStateTwins"/> for why hover and
-    /// active are the ones that go missing.
+    /// Two gates decide the columns, and they answer different questions (card T-3431):
+    /// <list type="bullet">
+    /// <item><see cref="SusStoryStates.Declares"/> — does the component's ROLE have this state?
+    /// A <c>disabled</c> column over <c>SusDivider</c> or an <c>error</c> one over
+    /// <c>SusAlert</c> is a caption over a copy of rest, and a role with no state at all leaves
+    /// the matrix unbuilt (<see cref="SilentReason"/>);</item>
+    /// <item><see cref="SusStoryStates.CanForce"/> — can it be forced on THIS instance? The ones
+    /// that cannot are named under the grid; see <see cref="SusStateTwins"/> for why hover and
+    /// active are usually those.</item>
+    /// </list>
     /// </summary>
     public sealed class SusStoryMatrix : VisualElement
     {
@@ -79,6 +86,8 @@ namespace Sharq.Core.Storybook.UI
 
         SusStoryEntry _entry;
         string _axis;
+        string _role;
+        string _silent;
         SusStoryAxisSource _axisSource = SusStoryAxisSource.None;
         bool _open;
         bool _built;
@@ -124,6 +133,22 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>Name of the axis prop the rows came from, or null.</summary>
         public string AxisProp => _axis;
+
+        /// <summary>
+        /// Role of the component of the current story (card T-3431), or null when the registry
+        /// has never heard of it — an engine fixture, or a component of the second corpus until wave 6
+        /// of the plan. Null means "no opinion", never "no states".
+        /// </summary>
+        public string Role => _role;
+
+        /// <summary>
+        /// Why the matrix is not drawn AT ALL for this story, or null. Set when the role has no
+        /// state to show (<c>display</c>, <c>feedback</c>, <c>overlay</c> — §4.6): the widget is
+        /// hidden, <see cref="Columns"/> and <see cref="Rows"/> are empty, and
+        /// <see cref="CellCount"/> is 0. Different from <see cref="CollapseReason"/>, which is a
+        /// matrix that exists and starts folded.
+        /// </summary>
+        public string SilentReason => _silent;
 
         /// <summary>
         /// Who enumerated the axis the rows came from (card T-3379). What the acceptance figure
@@ -216,6 +241,15 @@ namespace Sharq.Core.Storybook.UI
             ResolveRows(probe);
             ResolveColumns(probe);
 
+            if (_silent != null)
+            {
+                // Card T-3431: not a folded matrix, an absent one. The rows go too, so CellCount
+                // is 0 and nobody downstream counts cells that will never be built.
+                _rows.Clear();
+                AddToClassList("sb-hidden");
+                return;
+            }
+
             SetOpen(CollapseReason == null);
         }
 
@@ -249,6 +283,8 @@ namespace Sharq.Core.Storybook.UI
             _skipped.Clear();
             _entry = null;
             _axis = null;
+            _role = null;
+            _silent = null;
             _axisSource = SusStoryAxisSource.None;
             _open = false;
             _scroll.AddToClassList("sb-hidden");
@@ -284,11 +320,34 @@ namespace Sharq.Core.Storybook.UI
 
         void ResolveColumns(SusComponent probe)
         {
+            // Card T-3431. Two different questions, and the order matters. FIRST: does the
+            // component's ROLE have this state at all — a `disabled` column over SusDivider and
+            // an `error` column over SusAlert promise transitions that do not exist, and a
+            // promise nothing can keep is the same forgery as a state the role owes and nobody
+            // drew (plan §4.6, D14 d:5ea31f). SECOND, only for the states that survived: can it
+            // be forced on this instance — the twin question SusStateTwins already answered.
+            //
+            // A role that has no state at all (display, feedback, overlay — 36 of the 80 kit
+            // components) leaves nothing but `rest`, and a one-column matrix of rest cells is
+            // not a smaller matrix, it is a caption over the variant axis that is already drawn
+            // below. So the whole widget stands down and says why.
+            _role = SusStateRoles.RoleOf(probe);
             var all = SusStoryStates.All;
             for (int i = 0; i < all.Count; i++)
             {
-                if (SusStoryStates.CanForce(probe, all[i])) _columns.Add(all[i]);
-                else _skipped.Add(all[i]);
+                var state = all[i];
+                if (!SusStoryStates.Declares(probe, state)) continue;
+                if (state == SusStoryStates.Rest) { _columns.Add(state); continue; }
+                if (SusStoryStates.CanForce(probe, state)) _columns.Add(state);
+                else _skipped.Add(state);
+            }
+
+            if (_columns.Count + _skipped.Count <= 1)
+            {
+                _silent = "role " + (_role ?? "?") + " declares no state";
+                _columns.Clear();
+                _skipped.Clear();
+                return;
             }
 
             if (_skipped.Count == 0)
