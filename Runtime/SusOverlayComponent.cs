@@ -262,8 +262,11 @@ namespace Sharq.Core
         private static readonly System.Collections.Generic.List<SusModalBase> ActiveFocusSessions
             = new System.Collections.Generic.List<SusModalBase>();
 
+        private const int MaxFocusEnterAttempts = 12;
+
         private VisualElement _focusReturn;
         private bool _focusSession;
+        private int _focusEnterAttempts;
         private IVisualElementScheduledItem _focusEnter;
         private EventCallback<KeyDownEvent> _escapeCallback;
         private Func<bool> _escapeGuard;
@@ -324,6 +327,7 @@ namespace Sharq.Core
             }
 
             _focusSession = true;
+            _focusEnterAttempts = 0;
             ActiveFocusSessions.Add(this);
 
             if (inherited != null && inherited.panel != null && !Contains(inherited))
@@ -358,7 +362,8 @@ namespace Sharq.Core
                 return;
             }
 
-            _focusEnter = schedule.Execute(FocusFirstInside).ExecuteLater(0);
+            _focusEnter = schedule.Execute(FocusFirstInside);
+            _focusEnter.ExecuteLater(0);
         }
 
         private void OnAttachArmFocus(AttachToPanelEvent _)
@@ -465,17 +470,30 @@ namespace Sharq.Core
             if (!_focusSession || panel == null) return;
 
             var first = FirstFocusableInside(this);
-            if (first != null)
+            if (first == null)
             {
-                first.Focus();
+                // Nothing focusable inside — the overlay itself takes focus. tabIndex -1 keeps it
+                // out of the Tab cycle: it accepts focus programmatically but is never a Tab stop.
+                focusable = true;
+                tabIndex = -1;
+            }
+
+            var target = first ?? (VisualElement)this;
+            target.Focus();
+
+            // UI Toolkit refuses focus for an element that is not displayed yet, and an overlay
+            // teleported into the OverlayHost resolves its style one frame AFTER the reparent —
+            // so the first attempt legitimately lands nowhere and must be retried rather than
+            // silently dropped (that is the whole defect this obligation exists to close).
+            var landed = focusController?.focusedElement as VisualElement;
+            if (landed != null && (landed == this || Contains(landed)))
+            {
+                _focusEnterAttempts = 0;
                 return;
             }
 
-            // Nothing focusable inside — the overlay itself takes focus. tabIndex -1 keeps it out
-            // of the Tab cycle: it accepts focus programmatically but is never a Tab stop.
-            focusable = true;
-            tabIndex = -1;
-            Focus();
+            if (++_focusEnterAttempts >= MaxFocusEnterAttempts) return;
+            ArmFocusEnter();
         }
 
         /// <summary>
