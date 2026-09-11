@@ -55,9 +55,10 @@ namespace Sharq.Core.Editor.Tests
 
         /// <summary>
         /// A class of the product: kit (<c>sk-</c>) or core (<c>sus-</c>). Card T-3387 is what
-        /// makes this one line instead of two: while the shell was named <c>sus-sb*</c>, every
-        /// test of "is this a product class" had to carve the shell back out of the <c>sus-</c>
-        /// space by hand. With the shell on <c>sb-</c> the two namespaces no longer overlap.
+        /// makes this one line instead of two: while the shell still shared the product's own
+        /// <c>sus-</c> prefix, every test of "is this a product class" had to carve the shell
+        /// back out of that space by hand. With the shell on <c>sb-</c> the two namespaces no
+        /// longer overlap.
         /// </summary>
         private static bool IsProductClass(string cls) =>
             !IsStateContractClass(cls) && (cls.StartsWith("sk-") || cls.StartsWith("sus-"));
