@@ -182,6 +182,7 @@ namespace Sharq.Core.Editor.Tests
             public Vector2 NaturalCellSize { get; set; }
             public int MatrixInstanceCount { get; set; }
             public int MatrixInstancesCreated { get; set; }
+            public Vector2 CellShortfall { get; set; }
             public System.Collections.Generic.IReadOnlyList<SusStoryCellGeometry> Cells { get; set; } =
                 Array.Empty<SusStoryCellGeometry>();
         }

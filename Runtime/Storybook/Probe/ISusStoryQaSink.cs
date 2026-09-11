@@ -31,8 +31,10 @@ namespace Sharq.Core.Storybook.Probe
             Vector2 naturalCell = default,
             int matrixInstances = 0,
             int matrixInstancesCreated = 0,
-            IReadOnlyList<SusStoryCellGeometry> cells = null)
+            IReadOnlyList<SusStoryCellGeometry> cells = null,
+            Vector2 cellShortfall = default)
         {
+            CellShortfall = cellShortfall;
             MatrixMode = matrixMode;
             MatrixModeReason = matrixModeReason;
             NaturalCell = naturalCell;
@@ -145,6 +147,13 @@ namespace Sharq.Core.Storybook.Probe
         /// measurement that did not happen.
         /// </summary>
         public IReadOnlyList<SusStoryCellGeometry> Cells { get; }
+
+        /// <summary>
+        /// How much the widest cell of the grid fell short of one instance measured free of any
+        /// cell. The witness no per-cell comparison can be: a cell that imposes a size on its
+        /// instance makes the instance agree with it.
+        /// </summary>
+        public Vector2 CellShortfall { get; }
     }
 
     /// <summary>

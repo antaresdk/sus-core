@@ -355,7 +355,8 @@ namespace Sharq.Core.Storybook.Probe
                 naturalCell: CellSource?.NaturalCellSize ?? Vector2.zero,
                 matrixInstances: CellSource?.MatrixInstanceCount ?? 0,
                 matrixInstancesCreated: CellSource?.MatrixInstancesCreated ?? 0,
-                cells: CellSource == null ? null : new List<SusStoryCellGeometry>(CellSource.Cells));
+                cells: CellSource == null ? null : new List<SusStoryCellGeometry>(CellSource.Cells),
+                cellShortfall: CellSource?.CellShortfall ?? Vector2.zero);
 
         /// <summary>
         /// Every prop the mounted instance declares. Read straight off <see cref="_instance"/>

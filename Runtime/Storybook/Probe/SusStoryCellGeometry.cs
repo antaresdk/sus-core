@@ -154,5 +154,12 @@ namespace Sharq.Core.Storybook.Probe
 
         /// <summary>Measured geometry of every cell; empty while the layout has not converged.</summary>
         IReadOnlyList<SusStoryCellGeometry> Cells { get; }
+
+        /// <summary>
+        /// How much the widest cell of the grid falls short of one instance measured free of any
+        /// cell, per axis; zero when it does not. The only witness of a grid that makes its own
+        /// instances small - see the property of the same name on the matrix.
+        /// </summary>
+        Vector2 CellShortfall { get; }
     }
 }

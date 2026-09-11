@@ -383,6 +383,35 @@ namespace Sharq.Core.Storybook.UI
         /// </summary>
         public IReadOnlyList<SusStoryCellGeometry> Cells => _cells;
 
+        /// <summary>
+        /// How much the WIDEST cell of the grid falls short of the natural size of one instance
+        /// measured free of any cell, per axis; zero when it does not (card T-3481).
+        ///
+        /// The per-cell judge cannot see the defect this catches. A cell that imposes a size on
+        /// its instance - <c>max-width: 64px</c>, which is what T-3355 did - makes the instance
+        /// measure 64 too, so every per-cell comparison agrees with itself and the grid reports
+        /// health. The only witness is a measurement taken somewhere else: one instance in the
+        /// measuring box, where nothing but the stage's own width is around it. If every cell of
+        /// the grid is narrower than that, the grid is the thing making them narrow.
+        ///
+        /// It is a per-STORY number and not a per-cell one on purpose, because the free
+        /// measurement carries the story's default axis value while the cells carry the others.
+        /// </summary>
+        public Vector2 CellShortfall
+        {
+            get
+            {
+                if (_cells.Count == 0 || _natural == Vector2.zero) return Vector2.zero;
+                float w = 0f, h = 0f;
+                for (int i = 0; i < _cells.Count; i++)
+                {
+                    if (_cells[i].Cell.width > w) w = _cells[i].Cell.width;
+                    if (_cells[i].Cell.height > h) h = _cells[i].Cell.height;
+                }
+                return new Vector2(Mathf.Max(0f, _natural.x - w), Mathf.Max(0f, _natural.y - h));
+            }
+        }
+
         /// <summary>Cells whose instance is not shown whole - the number T-3481 drives to zero.</summary>
         public int CroppedCellCount
         {
@@ -873,11 +902,15 @@ namespace Sharq.Core.Storybook.UI
                 var cellWorld = r.Cell.LocalToWorld(r.Cell.contentRect);
                 var itemWorld = r.Item.worldBound;
                 var scale = ScaleBetween(r.Cell, r.Item);
-                // The stage reference is the size ONE instance took in the measuring box, where
-                // nothing but the stage's own width was around it (card T-3483). Reading it off
-                // the cell instead - the first thing this code did - makes the number a function
-                // of the cell it is supposed to judge, and the comparison says nothing.
-                var stage = _natural;
+                // The stage reference is THIS cell's own unconstrained box, read while the
+                // column had not been sized yet. It cannot be the story-level
+                // NaturalCellSize, which is what this code tried second: that one instance
+                // carries the story's default axis value, and the cells carry six others - on
+                // kit/atoms/button the default measured 126 and the `elevated` row measured 117,
+                // so a story-level reference accused all eighteen cells of a 9px crop that did
+                // not exist. What the story-level number IS good for is the whole grid rather
+                // than one cell of it: see CellShortfall.
+                var stage = r.Natural;
                 _cells.Add(new SusStoryCellGeometry(
                     r.Row, r.State, cellWorld, itemWorld, stage, scale,
                     SusStoryCellGeometry.Judge(cellWorld, itemWorld, stage, scale)));
