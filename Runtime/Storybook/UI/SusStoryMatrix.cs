@@ -263,8 +263,10 @@ namespace Sharq.Core.Storybook.UI
             // producers - the component's own UseAllowed set, and the enumeration a story
             // declares when the component never clamped the prop. Reading DescribeAllowed()
             // here directly (as this method did until T-3379) saw only the first producer, so on
-            // the 9 of 17 kit components whose Variant is an unclamped string the matrix printed
-            // one row and the caption said "no axis".
+            // the nine kit components whose Variant was an unclamped string the matrix printed
+            // one row and the caption said "no axis" (those nine clamp it themselves since
+            // T-3395, which is why the rows now come from the component again - through the
+            // axis, not through a second reading of DescribeAllowed).
             var axis = SusStoryAxis.Resolve(_entry, probe, AxisPropName);
             _axisSource = axis.Source;
 

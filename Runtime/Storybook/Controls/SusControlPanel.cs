@@ -298,9 +298,11 @@ namespace Sharq.Core.Storybook.Controls
         /// The closed set the STORY declared for this prop, or null (card T-3379, decision D26).
         ///
         /// Zone D already turned a closed set into a segmented picker - but only when the
-        /// COMPONENT clamped the prop with <c>UseAllowed</c>. On the 9 of 17 kit components whose
-        /// <c>Variant</c> is an unclamped <c>Prop&lt;string&gt;</c> the buyer got a bare text
-        /// field and had to guess the spelling of a value the component's own USS enumerates.
+        /// COMPONENT clamped the prop with <c>UseAllowed</c>. On the nine kit components (of 17)
+        /// whose <c>Variant</c> was an unclamped <c>Prop&lt;string&gt;</c> the buyer got a bare
+        /// text field and had to guess the spelling of a value the component's own USS
+        /// enumerates. Those nine clamp it themselves since card T-3395, so in the kit corpus
+        /// this producer is currently unused - it is kept for the shape, not for the nine.
         /// This is the other producer: the story names the values once, and zone D can no longer
         /// accept a value outside them, because a picker has no way to type one.
         ///

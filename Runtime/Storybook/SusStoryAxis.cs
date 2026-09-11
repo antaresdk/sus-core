@@ -25,12 +25,18 @@ namespace Sharq.Core.Storybook
     /// state matrix builds one row per legal value (<c>SusStoryMatrix.ResolveRows</c>) and zone D
     /// turns a closed set into a segmented picker (<c>SusControlFactory.KindOf</c>). It had no
     /// PRODUCER for the half of the corpus where the enumeration is known to the story and not to
-    /// the component: 17 kit components declare <c>Prop&lt;string&gt; Variant</c> and only 8 of
-    /// them clamp it with <c>UseAllowed</c>, so on the other 9 the matrix printed
+    /// the component: of the 17 kit components that declare <c>Prop&lt;string&gt; Variant</c>,
+    /// only 8 clamped it with <c>UseAllowed</c>, so on the other 9 the matrix printed
     /// "no axis x state - 1 x 4" and zone D printed a bare text field - the buyer had to GUESS
     /// the spelling of a value that the component's own USS enumerates
     /// (<c>SusAlert.sharq:60</c> against <c>:14-17</c>). One row cannot be compared with another
     /// row, so the showcase judge of D22/D23 had nothing to judge either.
+    ///
+    /// Those nine have since moved (card T-3395): all 17 clamp Variant now, and the ten stories
+    /// that had named the set in the attribute dropped it, so nothing in the kit corpus takes
+    /// this axis from a story any more. The story producer stays for the case it was built for -
+    /// a component whose enumeration lives only in its template - and for downstream packages
+    /// that have not caught up.
     ///
     /// Two producers, in this order of trust:
     /// <list type="number">
