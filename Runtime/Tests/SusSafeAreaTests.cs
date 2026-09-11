@@ -137,5 +137,56 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreEqual(44f, SusSafeArea.Insets.Top, 0.01f);
             Assert.AreEqual(44f, root.style.paddingTop.value.value, 0.01f);
         }
+
+        /// <summary>
+        /// Card T-3498. The insets are one static value and the roots are many, so a page mounted
+        /// TWICE makes two roots take turns overwriting it - and if the application listens to
+        /// Changed by calling Apply (which the safe-area story does, and so would any page that
+        /// prints its own insets), each turn raises the next. Before the coalescing brake the
+        /// depth of that grew without bound: eighteen matrix cells of kit/services/safe-area threw
+        /// StackOverflowException, which does not fail a test, it kills the editor - the sweep of
+        /// T-3474 read it as "the storybook crashed out of Play".
+        ///
+        /// This is the same shape in two elements and without a panel, which is enough: the
+        /// handler re-enters, and the assertion is that re-entering is bounded.
+        /// </summary>
+        [Test]
+        public void A_Changed_handler_that_applies_again_does_not_recurse_without_end()
+        {
+            float sw = Mathf.Max(1, Screen.width);
+            float sh = Mathf.Max(1, Screen.height);
+            var a = new VisualElement();
+            var b = new VisualElement();
+            int calls = 0;
+            bool flip = false;
+
+            // Two roots that disagree about the insets forever - the pathological case, worse
+            // than the real one, where the disagreement settles as soon as both have a panel.
+            SusSafeArea.Provider = () =>
+            {
+                flip = !flip;
+                return new Rect(0f, 0f, sw, sh - (flip ? 44f : 20f));
+            };
+
+            void OnChanged()
+            {
+                calls++;
+                SusSafeArea.Apply(calls % 2 == 0 ? a : b);
+            }
+
+            SusSafeArea.Changed += OnChanged;
+            try
+            {
+                SusSafeArea.Apply(a);
+            }
+            finally
+            {
+                SusSafeArea.Changed -= OnChanged;
+            }
+
+            Assert.That(calls, Is.GreaterThan(0), "the notification still happens");
+            Assert.That(calls, Is.LessThanOrEqualTo(SusSafeArea.MaxNotifyPasses),
+                "a re-entrant Apply is coalesced into the outer pass, never stacked on top of it");
+        }
     }
 }

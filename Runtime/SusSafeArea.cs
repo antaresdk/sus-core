@@ -21,6 +21,14 @@ namespace Sharq.Core
             new Dictionary<VisualElement, IVisualElementScheduledItem>();
         static readonly Dictionary<VisualElement, (ScreenOrientation ori, int w, int h)> s_lastScreen =
             new Dictionary<VisualElement, (ScreenOrientation, int, int)>();
+        // What was last WRITTEN on each root, so an unchanged inset is not re-assigned (card
+        // T-3498). An inline style assignment dirties layout whether or not the value moved, and
+        // a dirtied layout is another GeometryChangedEvent, which is another recompute.
+        static readonly Dictionary<VisualElement, (float T, float R, float B, float L)> s_applied =
+            new Dictionary<VisualElement, (float, float, float, float)>();
+        // Re-entrancy of the Changed fan-out (card T-3498). See RecalcAndApply.
+        static bool s_notifying;
+        static bool s_pending;
 
         /// <summary>
         /// Source of the safe-area rect in screen pixels (Unity bottom-left origin).
@@ -49,6 +57,9 @@ namespace Sharq.Core
             s_wired.Clear();
             s_polls.Clear();
             s_lastScreen.Clear();
+            s_applied.Clear();
+            s_notifying = false;
+            s_pending = false;
             Changed = null;
         }
 #endif
@@ -144,6 +155,7 @@ namespace Sharq.Core
                 s_polls.Remove(root);
             }
             s_lastScreen.Remove(root);
+            s_applied.Remove(root);
         }
 
         static void PollScreen(VisualElement root)
@@ -157,21 +169,86 @@ namespace Sharq.Core
             RecalcAndApply(root, raiseChanged: true);
         }
 
+        /// <summary>
+        /// How many times the <see cref="Changed"/> fan-out may be re-entered before the service
+        /// stops believing it is converging (card T-3498). Four is generous: the honest cause of a
+        /// second pass is a root that computed its insets before it had a panel and again after,
+        /// and that settles in one.
+        /// </summary>
+        internal const int MaxNotifyPasses = 4;
+
+        /// <summary>
+        /// Recomputes, writes, and tells whoever asked - and does none of those three more times
+        /// than it has to.
+        ///
+        /// Card T-3498: mounting the same page TWICE turned this method into an infinite
+        /// recursion, and the storybook matrix was simply the first place that ever happened. The
+        /// insets are STATIC while the roots are many, so eighteen matrix cells of
+        /// <c>kit/services/safe-area</c> take turns overwriting <see cref="s_insets"/>: a cell that
+        /// computes them before it has a panel gets the screen-space fallback, one that has a panel
+        /// gets the mapped value, so <c>changed</c> is true on every single pass. Each pass raises
+        /// <see cref="Changed"/>, whose handler in that story calls <see cref="Apply"/> again, once
+        /// per cell - and the depth of that grows without bound. From the outside it read as "the
+        /// storybook crashed out of Play" (a StackOverflowException kills the domain, not the
+        /// frame), which is why the sweep of T-3474 had to be restarted.
+        ///
+        /// Two brakes, and they are different brakes. The fan-out is COALESCED rather than
+        /// recursive: a re-entrant notification sets a flag and returns, and the outermost call
+        /// keeps going until nothing more is pending - so no notification is lost and none of them
+        /// is a stack frame. And it is BOUNDED, because a pair of roots that disagree about the
+        /// insets forever would otherwise coalesce forever; over the bound it warns and stops,
+        /// which is a defect a reader can see instead of an editor that vanishes.
+        /// </summary>
         static void RecalcAndApply(VisualElement root, bool raiseChanged)
         {
             var next = ComputeInsets(root);
             bool changed = !ApproximatelyEqual(s_insets, next);
             s_insets = next;
 
-            // Insets are measured from Screen.safeArea on the live device - USS has no
-            // number for a notch (R120/D-069).
-            root.style.paddingTop = next.Top;       // sus:uss-impossible inset measured from Screen.safeArea
-            root.style.paddingRight = next.Right;   // sus:uss-impossible inset measured from Screen.safeArea
-            root.style.paddingBottom = next.Bottom; // sus:uss-impossible inset measured from Screen.safeArea
-            root.style.paddingLeft = next.Left;     // sus:uss-impossible inset measured from Screen.safeArea
+            if (!s_applied.TryGetValue(root, out var was) || !ApproximatelyEqual(was, next))
+            {
+                s_applied[root] = next;
+                // Insets are measured from Screen.safeArea on the live device - USS has no
+                // number for a notch (R120/D-069).
+                root.style.paddingTop = next.Top;       // sus:uss-impossible inset measured from Screen.safeArea
+                root.style.paddingRight = next.Right;   // sus:uss-impossible inset measured from Screen.safeArea
+                root.style.paddingBottom = next.Bottom; // sus:uss-impossible inset measured from Screen.safeArea
+                root.style.paddingLeft = next.Left;     // sus:uss-impossible inset measured from Screen.safeArea
+            }
 
-            if (changed && raiseChanged)
-                Changed?.Invoke();
+            if (!changed || !raiseChanged)
+                return;
+
+            if (s_notifying)
+            {
+                s_pending = true;
+                return;
+            }
+
+            s_notifying = true;
+            try
+            {
+                int pass = 0;
+                do
+                {
+                    s_pending = false;
+                    Changed?.Invoke();
+                    if (++pass < MaxNotifyPasses)
+                        continue;
+                    if (!s_pending)
+                        break;
+                    SusLog.Warn("[safe-area] insets did not settle after " + MaxNotifyPasses +
+                                " passes - several roots disagree about them; giving up on this " +
+                                "notification rather than recursing (card T-3498)");
+                    break;
+                }
+                while (s_pending);
+            }
+            finally
+            {
+                s_notifying = false;
+                s_pending = false;
+            }
         }
 
         /// <summary>

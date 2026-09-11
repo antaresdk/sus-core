@@ -124,6 +124,12 @@ namespace Sharq.Core.Storybook.UI
         // any other element - `visibility: hidden` keeps it out of the picture without taking it
         // out of layout - so what it reports is a real natural size and not a declaration.
         readonly VisualElement _measure = new();
+        // The measuring box needs a host of its own for the same reason a cell does (card
+        // T-3189): the instance being measured is a REAL one, and a story that opens itself at
+        // t=0 - every modal story - would otherwise teleport into the nearest host it can reach
+        // and be counted as an escaped cell. It also measures something useful there: an instance
+        // that fills an overlay is exactly the kind that must not be put in a grid.
+        readonly OverlayHost _measureHost = new() { name = CellOverlayName };
 
         readonly List<string> _rows = new();
         readonly List<string> _columns = new();
@@ -146,6 +152,7 @@ namespace Sharq.Core.Storybook.UI
         bool _oversize;
         string _switcherState;
         int _created;
+        SusComponent _probeInstance;
 
         /// <summary>One cell, kept by reference so the measuring pass never re-queries the tree.</summary>
         sealed class CellRef
@@ -177,6 +184,7 @@ namespace Sharq.Core.Storybook.UI
             // geometry event never arrives for an instance that measures 0x0, and a scheduled
             // item does not exist outside a panel (card T-3482).
             _measure.RegisterCallback<GeometryChangedEvent>(_ => FinishMeasure());
+            _measure.Add(_measureHost);
 
             Add(_toggle);
             Add(_scroll);
@@ -443,6 +451,7 @@ namespace Sharq.Core.Storybook.UI
         void BeginMeasure(SusComponent probe)
         {
             _measurePending = true;
+            _probeInstance = probe;
             _measure.Add(probe);
             _measure.schedule.Execute(FinishMeasure);
         }
@@ -457,10 +466,14 @@ namespace Sharq.Core.Storybook.UI
             if (!_measurePending) return;
             _measurePending = false;
 
-            var probe = _measure.childCount > 0 ? _measure[0] : null;
-            var size = probe == null ? Vector2.zero : new Vector2(probe.layout.width, probe.layout.height);
+            // The instance BY REFERENCE and not by index: a story that opened itself is no longer
+            // a child of the measuring box at all, it is in the box's overlay host - and what it
+            // measures there (a full overlay) is the honest answer for it.
+            var size = _probeInstance == null
+                ? Vector2.zero
+                : new Vector2(_probeInstance.layout.width, _probeInstance.layout.height);
             if (float.IsNaN(size.x) || float.IsNaN(size.y)) size = Vector2.zero;
-            _measure.Clear();
+            ClearMeasure();
 
             Decide(size, size != Vector2.zero);
             SetOpen(CollapseReason == null);
@@ -503,10 +516,24 @@ namespace Sharq.Core.Storybook.UI
             RenderNote();
         }
 
+        /// <summary>
+        /// Empties the measuring box. Host FIRST, for the reason spelled out in
+        /// <see cref="ClearCells"/>: a removal through <c>ClearAll</c> carries the flag that stops
+        /// a self-teleported instance from scheduling itself back into the box.
+        /// </summary>
+        void ClearMeasure()
+        {
+            _measureHost.ClearAll();
+            for (int i = _measure.childCount - 1; i >= 0; i--)
+                if (!ReferenceEquals(_measure[i], _measureHost))
+                    _measure.RemoveAt(i);
+            _probeInstance = null;
+        }
+
         void Reset()
         {
             ClearCells();
-            _measure.Clear();
+            ClearMeasure();
             _measurePending = false;
             _measured = false;
             _oversize = false;

@@ -916,8 +916,11 @@
     position: absolute;
     left: 0;
     top: 0;
+    width: 100%;
+    height: var(--sb-canvas-h);
     visibility: hidden;
     align-items: flex-start;
+    justify-content: flex-start;
 }
 
 .sb-matrix__cell-fail {
