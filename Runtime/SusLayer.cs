@@ -20,5 +20,12 @@ namespace Sharq.Core
     /// </summary>
     public abstract class SusLayer : VisualElement
     {
+        /// <summary>
+        /// A layer is a SUS surface too, so it carries the same anchor as a component
+        /// (card T-3416, <see cref="SusComponent.SurfaceClass"/>). This is what keeps popups
+        /// dressed after <c>OverlayHost</c> reparents them out of the component that owns them:
+        /// the moved element no longer has a component ancestor, but it always has the host.
+        /// </summary>
+        protected SusLayer() => AddToClassList(SusComponent.SurfaceClass);
     }
 }

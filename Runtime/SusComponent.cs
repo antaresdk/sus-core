@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -690,6 +690,25 @@ namespace Sharq.Core
         }
 #endif
 
+        // ─── Product-surface marker ───────────────────────────────────────
+
+        /// <summary>
+        /// Class carried by EVERY SUS surface — each <see cref="SusComponent"/> and each
+        /// <see cref="SusLayer"/> (card T-3416). It is the ANCHOR a package stylesheet uses
+        /// when it has to dress Unity's own chrome (<c>.unity-button__label</c>,
+        /// <c>.unity-text-field__input</c>, …): those classes are common ground — every
+        /// <c>Button</c> and <c>Label</c> in the panel carries them, whoever built it — so an
+        /// unanchored rule about them repaints the HOST's interface too, not only ours.
+        ///
+        /// Measured on the storybook shell 2026-09-11: 69 of 142 shell text elements sat on the
+        /// product face and 107 colours moved with the product theme, none of it asked for
+        /// (cards T-3357 / T-3400). The cure has to live where the rule lives, and a rule can
+        /// only be anchored on something the markup actually carries — hence this class.
+        ///
+        /// Do NOT hang looks on it: it is a boundary, not a skin. Nothing in core styles it.
+        /// </summary>
+        public const string SurfaceClass = "sus-component";
+
         // ─── Constructor ──────────────────────────────────────────────────
 
         protected SusComponent()
@@ -697,6 +716,11 @@ namespace Sharq.Core
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevConsole.ShouldTrace(GetType(), "Created", "");
 #endif
+            // Before Build(): the generated tree is queried by class in tests and tooling, and a
+            // surface that is not marked until after its children exist is a surface a descendant
+            // rule can miss on the first layout pass.
+            AddToClassList(SurfaceClass);
+
             Created();
             BeforeMounted();
             Build();
