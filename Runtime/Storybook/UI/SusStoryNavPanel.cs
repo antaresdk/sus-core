@@ -58,14 +58,15 @@ namespace Sharq.Core.Storybook.UI
             // keyboard could move it, so the path a buyer had just walked was rewindable by
             // whoever knew the shortcut (card T-3406, R142 zone A "history-buttons").
             //
-            // Layout borrows the row of the package tabs next to it and the appearance borrows the
-            // GHOST role of the sheet (`sb-btn--ghost`) — the vocabulary the sheet declares for
-            // exactly this, chrome buttons that read as text until pointed at. That role already
-            // declares `:disabled`, which is what makes the edge state of the contract visible
-            // without a rule of its own: at the ends the arrow is dimmed, not merely inert.
+            // Layout is the row's OWN (rules of the sheet, T-3419): until those rules existed the row
+            // borrowed .sus-sb-nav__tabs standing next to it, and with the borrowed layout came the
+            // bottom border of a tab strip. The appearance borrows the GHOST role of the sheet
+            // (`sb-btn--ghost`) — the vocabulary the sheet declares for exactly this, chrome buttons
+            // that read as text until pointed at. That role already declares `:disabled`, which is
+            // what makes the edge state of the contract visible without a rule of its own: at the
+            // ends the arrow is dimmed, not merely inert.
             var history = new VisualElement();
             history.AddToClassList("sus-sb-nav__history");
-            history.AddToClassList("sus-sb-nav__tabs");
 
             _back = new Button(() => GoBack()) { text = BackGlyph, tooltip = "back (Alt+←)" };
             _back.AddToClassList("sus-sb-nav__back");

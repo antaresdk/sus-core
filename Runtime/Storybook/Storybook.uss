@@ -346,6 +346,33 @@
     display: none;
 }
 
+/* Zone A -- the row of history arrows (T-3406, rules T-3419). Its own inline layout: until this
+   rule existed the row borrowed .sus-sb-nav__tabs standing next to it, and with the layout came
+   the bottom border that belongs to a tab strip and not to a pair of arrows. */
+.sus-sb-nav__history {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+/* Square by construction -- ONE rung of the ladder on both axes (R139 L2: half of it is 15, the
+   radius is 4), so the glyph is centred in a box and not in a slab. Appearance comes from the
+   GHOST role at the end of the sheet; declared here is only the box and the glyph inside it. */
+.sus-sb-nav__back,
+.sus-sb-nav__forward {
+    width: var(--sb-h-ctl);
+    height: var(--sb-h-ctl);
+    margin: 0;
+    padding: 0;
+    border-radius: var(--sb-r-sm);
+    -unity-text-align: middle-center;
+    font-size: var(--sb-fs-14);
+}
+
+.sus-sb-nav__forward {
+    margin-left: 4px;
+}
+
 .sus-sb-nav__tabs {
     flex-direction: row;
     margin-top: 10px;
@@ -1117,6 +1144,18 @@
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+}
+
+/* Zone D -- reset to the story's seed (T-3406, rules T-3419). Appearance comes from the SECONDARY
+   role at the end of the sheet; declared here is only the box: the control-height rung, so the
+   button sits on the same baseline as every other control of the panel, and the horizontal
+   padding a text button needs to stop reading as a label with a frame around it. */
+.sus-sb-ctlpanel__reset {
+    height: var(--sb-h-ctl);
+    margin: 0;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: var(--sb-fs-11);
 }
 
 .sus-sb-ctlpanel__count {
