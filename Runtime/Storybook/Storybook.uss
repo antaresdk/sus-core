@@ -136,6 +136,12 @@
        popover must not be able to change it. */
     --sb-canvas-h: 350px;
     --sb-canvas-min-w: 320px;
+    /* Side of the dotted tile of the canvas, card T-3444. It has to be STATED: the initial value
+       of `background-size` in UI Toolkit is 100% 100%, not the image's own size, so a tile left
+       unstated is stretched over the whole box and `background-repeat` has nothing left to
+       repeat. Owner's report: "a grey square in the top-left corner of every preview area" —
+       that square was this 16x16 tile blown up to 880x350 with point filtering. */
+    --sb-canvas-dot: 16px;
     /* The live-size line of zone C, D15: a RESERVED width, so the label does not resize when the
        number it prints changes width. 56 characters is the longest form the writer can emit —
        "h 1080 · fs 13.5 · pad 22.5 · radius 12  (resolvedStyle)" (SusStorySizes.Refresh) — and
@@ -719,8 +725,15 @@
     background-color: var(--sb-bg);
     background-image: url("canvas-dot.png");
     background-repeat: repeat;
-    /* No background-size (R51/D-028): canvas-dot.png is a native 16x16 tile — omitting
-       the property draws it at intrinsic size instead of an explicit stretch pair. */
+    /* Card T-3444. The size is STATED at the tile's own 16x16, and stating it is what keeps the
+       image unstretched (R51/D-028) — the opposite of what the previous comment here claimed.
+       Omitting `background-size` does not mean "intrinsic size": its initial value is
+       100% 100%, so the tile was drawn once across the whole canvas and its single dot came out
+       as a grey rectangle in the top-left corner, which is exactly what the owner reported.
+       Measured in Play before the fix: backgroundSize 100%/100% on an 880x350 canvas carrying a
+       16x16 texture. The container is not resized to the picture and the picture is not
+       stretched to the container: it is drawn at its own size and repeated. */
+    background-size: var(--sb-canvas-dot) var(--sb-canvas-dot);
 
     /* Card T-3378, decision D18. The canvas used to be min-height:120px and grew to 350px the
        moment a popover opened, so every story with a popover jumped 230px — the loudest instance
