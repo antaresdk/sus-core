@@ -138,3 +138,51 @@ INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
 DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
+
+-------------------------------------------------------------------------------
+3) Instrument Sans
+-------------------------------------------------------------------------------
+Component : Instrument Sans (font family)
+Location  : Runtime/Resources/SusRuntime/Fonts/Instrument_Sans/**
+            (Regular, Medium, SemiBold — the three cuts the package asks for)
+Source    : https://github.com/Instrument/instrument-sans
+License   : SIL Open Font License, Version 1.1
+Reserved Font Name: "Instrument Sans"
+
+Copyright 2022 The Instrument Sans Project Authors
+(https://github.com/Instrument/instrument-sans)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+The vendor's own copy of the license ships beside the font files, in
+Runtime/Resources/SusRuntime/Fonts/Instrument_Sans/OFL.txt; the license text is
+word-for-word the OFL 1.1 reproduced in full under (2) above, and is also
+available with a FAQ at https://openfontlicense.org
+
+-------------------------------------------------------------------------------
+4) Geist Mono
+-------------------------------------------------------------------------------
+Component : Geist Mono (font family)
+Location  : Runtime/Resources/SusRuntime/Fonts/Geist_Mono/**
+            (Regular — the one cut the package asks for)
+Source    : https://github.com/vercel/geist-font
+License   : SIL Open Font License, Version 1.1
+Reserved Font Name: "Geist"
+
+Copyright 2024 The Geist Project Authors
+(https://github.com/vercel/geist-font.git)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+The vendor's own copy of the license ships beside the font files, in
+Runtime/Resources/SusRuntime/Fonts/Geist_Mono/OFL.txt; the license text is
+word-for-word the OFL 1.1 reproduced in full under (2) above, and is also
+available with a FAQ at https://openfontlicense.org
+
+-------------------------------------------------------------------------------
+Note on the per-family OFL.txt files (card T-3417)
+-------------------------------------------------------------------------------
+The OFL asks that every copy of the Font Software carry the copyright notice and
+the license. Until 2026-09-11 this file was the only carrier, and it named only
+Montserrat — the two families added with the storybook mock-up rode along with no
+notice of their own. Each family now also keeps the vendor's own OFL.txt next to
+its .ttf files, so the condition holds even for someone who takes a font folder
+out of the package.
