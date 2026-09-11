@@ -24,11 +24,27 @@ namespace Sharq.Core.Storybook.UI
         /// <summary>Note shown while the stage overlay holds something.</summary>
         public const string OverlayNote = "overlay — in the stage OverlayHost, inside the frame";
 
+        /// <summary>
+        /// Note shown while the subject is wider than the visible part of zone C (card T-3389,
+        /// plan §4.7: the fact of scrolling is SAID, it does not stay silent). Without it the
+        /// reader sees a cut-off component and no reason to suspect there is more of it.
+        /// </summary>
+        public const string WideNote = "wider than the stage — scroll sideways for the rest";
+
+        /// <summary>
+        /// Note shown while the canvas cuts the subject off at the bottom. The canvas keeps ONE
+        /// declared height (decision D18) so that two frames of one address stay comparable, and
+        /// that height is not negotiable by the subject — so the cut has to be said out loud.
+        /// </summary>
+        public const string ClipNote = "taller than the canvas — one declared height, the rest is clipped";
+
         readonly Label _sizes = new();
         readonly Label _overlay = new();
+        readonly Label _fit = new();
 
         VisualElement _tracked;
         string _shown = string.Empty;
+        string _shownFit = string.Empty;
         bool _stale = true;
 
         public SusStorySizes()
@@ -38,8 +54,11 @@ namespace Sharq.Core.Storybook.UI
             _overlay.AddToClassList("sb-sizes__overlay");
             _overlay.text = OverlayNote;
             _overlay.AddToClassList("sb-hidden");
+            _fit.AddToClassList("sb-sizes__fit");
+            _fit.AddToClassList("sb-hidden");
             Add(_sizes);
             Add(_overlay);
+            Add(_fit);
             Refresh();
         }
 
@@ -48,6 +67,23 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>True while the overlay note is visible.</summary>
         public bool OverlayNoteVisible => !_overlay.ClassListContains("sb-hidden");
+
+        /// <summary>The fit note as it currently reads; empty when the subject fits.</summary>
+        public string FitText => _fit.text;
+
+        /// <summary>
+        /// The canvas box the subject must fit into. Set by the shell; null in a test that has no
+        /// panel, and then the vertical half of the fit note simply never fires (card T-3389).
+        /// </summary>
+        public VisualElement Canvas { get; set; }
+
+        /// <summary>
+        /// The part of zone C the reader actually sees without scrolling (the stage ScrollView
+        /// viewport). Compared against the SUBJECT rather than against the canvas on purpose: with
+        /// both scroll axes on, a subject wider than the viewport takes the canvas sideways with
+        /// it, so the canvas can no longer report that anything is out of sight (card T-3389).
+        /// </summary>
+        public VisualElement StageViewport { get; set; }
 
         /// <summary>The element being measured, or null.</summary>
         public VisualElement Tracked => _tracked;
@@ -115,11 +151,63 @@ namespace Sharq.Core.Storybook.UI
                     "  (resolvedStyle)";
             }
 
-            if (text == _shown) return;
-            _shown = text;
+            var fit = FitNote();
+
+            if (text == _shown && fit == _shownFit) return;
             Writes++;
-            _sizes.text = text;
+            if (text != _shown)
+            {
+                _shown = text;
+                _sizes.text = text;
+            }
+            if (fit == _shownFit) return;
+            _shownFit = fit;
+            _fit.text = fit;
+            _fit.EnableInClassList("sb-hidden", fit.Length == 0);
         }
+
+        /// <summary>
+        /// What zone C says about a subject that does not fit. Reads the SAME resolvedStyle pass as
+        /// the metrics line above, so saying it costs no extra layout (card T-3362, decision D16).
+        /// </summary>
+        string FitNote()
+        {
+            if (_tracked == null) return string.Empty;
+
+            var s = _tracked.resolvedStyle;
+            return FitNoteFor(s.width, s.height, Width(StageViewport), Height(Canvas));
+        }
+
+        /// <summary>
+        /// The note for a subject <paramref name="width"/> by <paramref name="height"/> inside a
+        /// stage viewport <paramref name="viewportWidth"/> wide and a canvas
+        /// <paramref name="canvasHeight"/> tall. Pure arithmetic on purpose: the sentence the
+        /// reader of zone C gets is then judged by a test with numbers in it and not by a
+        /// screenshot (card T-3389).
+        ///
+        /// Any figure may still be NaN before the first layout pass, and an unmeasured stage must
+        /// claim nothing — silence about an unknown beats a note that turns out to be wrong.
+        /// </summary>
+        public static string FitNoteFor(float width, float height, float viewportWidth, float canvasHeight)
+        {
+            bool wide = Exceeds(width, viewportWidth);
+            bool tall = Exceeds(height, canvasHeight);
+            if (wide && tall) return WideNote + " · " + ClipNote;
+            if (wide) return WideNote;
+            return tall ? ClipNote : string.Empty;
+        }
+
+        /// <summary>True when <paramref name="size"/> sticks out of <paramref name="limit"/>.</summary>
+        static bool Exceeds(float size, float limit)
+        {
+            if (float.IsNaN(size) || float.IsInfinity(size)) return false;
+            if (float.IsNaN(limit) || float.IsInfinity(limit) || limit <= 0f) return false;
+            return size > limit + 0.5f;
+        }
+
+        static float Width(VisualElement box) => box == null ? float.NaN : box.contentRect.width;
+
+        static float Height(VisualElement box) => box == null ? float.NaN : box.contentRect.height;
 
         /// <summary>
         /// How many times the line actually CHANGED (card T-3362). The acceptance figure the

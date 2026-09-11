@@ -58,7 +58,21 @@ namespace Sharq.Core.Storybook
         readonly VisualElement _zonePanel = new();
         readonly VisualElement _zoneProbe = new();
         readonly SusStoryProbe _probe = new();   // zone E, card T-3040
-        readonly ScrollView _stage = new();
+        // Zone C scrolls on BOTH axes (card T-3389, plan ARCH-20260911-STORYBOOK-SHELL.md §4.7).
+        // The default ScrollView mode is Vertical, and with it the horizontal scroller carries
+        // display:None, so a subject wider than the stage was not clipped but UNREACHABLE:
+        // measured in Play on 2026-09-11, an element 1760px wide inside an 880px canvas ended at
+        // x=1783 with the stage content stuck at 880 and no way to reach the last 903px.
+        // With both axes the same element gives contentWidth 1806 against viewport 880 and a
+        // scroll range of 926 — the whole subject is reachable.
+        // The price is named rather than hidden: the canvas is max-width:100%, and a percentage
+        // maximum against a content container of automatic width resolves to nothing, so for
+        // such a subject the canvas box grows sideways with it (880 -> 1806 in the same
+        // measurement). Its HEIGHT is untouched — D18 pins that with a token and it stayed 350 —
+        // and the width is still a function of the address alone, so two frames of one address
+        // stay comparable. The sideways growth is the open half of §4.7 and is carried by its own
+        // card; leaving the axis off is worse, because then the subject cannot be seen at all.
+        readonly ScrollView _stage = new(ScrollViewMode.VerticalAndHorizontal);
         // Zone C (card T-3038).
         readonly Label _stageCrumbs = new();
         readonly Label _stageTitle = new();
@@ -181,6 +195,14 @@ namespace Sharq.Core.Storybook
             _stage.Add(_canvas);
             _stage.Add(_sizes);
             _stage.Add(_stageEmpty);
+
+            // Card T-3389: the two boxes the size line compares the subject against, so that a
+            // subject reaching past either of them is SAID and not left to the reader to notice.
+            // The canvas answers the vertical question (it keeps one declared height, D18); the
+            // stage viewport answers the horizontal one, because a subject wider than the viewport
+            // now takes the canvas sideways with it and the canvas can no longer report the loss.
+            _sizes.Canvas = _canvas;
+            _sizes.StageViewport = _stage.contentViewport;
 
             center.Add(_zoneEnv);
             center.Add(_stage);

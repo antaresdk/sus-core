@@ -884,11 +884,22 @@
 }
 
 .sb-sizes__metrics,
-.sb-sizes__overlay {
+.sb-sizes__overlay,
+.sb-sizes__fit {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
     margin-right: 18px;
+}
+
+/* Card T-3389, plan §4.7: a subject that does not fit says so. The line is the shell's own
+   voice about the frame rather than a measurement of the component, so it takes the accent
+   colour of a hint and not the muted grey of the numbers next to it. It reserves no box: the
+   note is absent far more often than present, and an empty reserved column would cost zone C
+   width on every story that fits. */
+.sb-sizes__fit {
+    color: var(--sb-accent);
+    white-space: normal;
 }
 
 /* D15, card T-3396: the live-size line RESERVES its box. The C# half of the loop is already open
