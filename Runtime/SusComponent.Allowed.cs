@@ -92,7 +92,7 @@ namespace Sharq.Core
         {
             if (allowed == null || allowed.Count == 0) return fallback;
             var fb = fallback ?? allowed[0];
-            return NormalizeString(value, allowed, fb, aliases, allowEmpty, out _);
+            return NormalizeString(value, allowed, fb, aliases, allowEmpty, out _, out _);
         }
 
         /// <summary>One-shot coerce for int option lists.</summary>
@@ -118,12 +118,18 @@ namespace Sharq.Core
             string propName)
         {
             var raw = prop.Peek();
-            var next = NormalizeString(raw, allowed, fallback, aliases, allowEmpty, out var changed);
+            var next = NormalizeString(raw, allowed, fallback, aliases, allowEmpty, out var changed, out var unknown);
             if (!changed) return;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            SusLog.Warn(
-                $"[PropAllowed] {propName ?? "Prop"}: '{raw}' → '{next}' (not in allowed set)");
+            // T-3467: a DECLARED alias (small → sm) and a case variant (Small → small) are legal
+            // input the component itself published — rewriting them is the alias doing its job,
+            // not a mistake, so the clamp stays silent. The warning is reserved for a value that
+            // matched nothing and was replaced by the fallback; otherwise "not in allowed set"
+            // fires on correct code and the buyer learns to ignore it.
+            if (unknown)
+                SusLog.Warn(
+                    $"[PropAllowed] {propName ?? "Prop"}: '{raw}' → '{next}' (not in allowed set)");
 #endif
             prop.Value = next;
         }
@@ -145,15 +151,22 @@ namespace Sharq.Core
             prop.Value = next;
         }
 
+        /// <param name="changed">the prop value has to be rewritten (alias, casing or fallback)</param>
+        /// <param name="unknown">
+        /// the value matched NOTHING — no alias, no allowed entry — and was replaced by the
+        /// fallback. Only this case is a defect worth a warning (T-3467).
+        /// </param>
         static string NormalizeString(
             string value,
             IReadOnlyList<string> allowed,
             string fallback,
             IReadOnlyDictionary<string, string> aliases,
             bool allowEmpty,
-            out bool changed)
+            out bool changed,
+            out bool unknown)
         {
             changed = false;
+            unknown = false;
             var v = value ?? "";
 
             if (aliases != null && aliases.TryGetValue(v, out var mapped))
@@ -163,6 +176,7 @@ namespace Sharq.Core
             {
                 if (allowEmpty || ContainsIgnoreCase(allowed, ""))
                     return value == v ? value : Mark(v, ref changed, value);
+                unknown = true;
                 return Mark(fallback, ref changed, value);
             }
 
@@ -173,6 +187,7 @@ namespace Sharq.Core
                 return Mark(canonical, ref changed, value);
             }
 
+            unknown = true;
             return Mark(fallback, ref changed, value);
         }
 
