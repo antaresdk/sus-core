@@ -332,13 +332,16 @@ namespace Sharq.Core.Storybook.UI
             // not a smaller matrix, it is a caption over the variant axis that is already drawn
             // below. So the whole widget stands down and says why.
             //
-            // The role comes from the probe when there is one and from the story's declared
-            // component type when the probe failed to build. Reading only the probe would hand a
-            // broken story the "no opinion" answer and draw four columns over a component the
-            // story itself named — kit/world/floating-damage did exactly that in the first Play
-            // measurement of T-3431.
-            var roleType = probe != null ? probe.GetType()
-                : _entry != null ? _entry.ComponentType : null;
+            // The role comes from the story's DECLARED component type first, and from the probe
+            // only when the story names none. The probe is not the subject: a story is free to
+            // build a scene wrapper around what it is about, and two of them do —
+            // kit/world/floating-damage and kit/devtools/diagnostics instantiate a story-local
+            // `Scene` component. In the first Play measurement of T-3431 those two came back
+            // with four columns of state each, because the wrapper's type is in no registry and
+            // "unknown" reads as "no opinion". The story had named its subject all along.
+            var roleType = _entry != null && _entry.ComponentType != null
+                ? _entry.ComponentType
+                : probe != null ? probe.GetType() : null;
             _role = SusStateRoles.RoleOf(roleType);
             var all = SusStoryStates.All;
             for (int i = 0; i < all.Count; i++)
