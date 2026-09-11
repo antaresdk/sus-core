@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-11
+
+### Added
+- Storybook shell: its own token set and class prefix (`sb-*`), independent of the product stylesheets — switching skin, theme or density no longer repaints the instrument around the subject (T-3371, T-3387, T-3400).
+- `SusThemeService.MarkScopedCascadeRoot` and `ScopedRootClass` — a subtree can declare itself the cascade root, so a panel can show a component under a theme of its own while the application keeps another.
+- `SusStoryAxis` and `Axis`/`AxisValues` on `[SusStory]`: a story can declare a closed set of variant values, so the state matrix has real rows instead of a single "no axis" line.
+- `SusStoryPackageKind` on `[assembly: SusStoryAssembly]`: engine test fixtures declare themselves as fixtures and stay out of the browsing UI and out of the rules, while their addresses keep working for the suites.
+- `SusStateRoles` — the component role registry (which states a role owes, where the focus ring lives), mirrored from the canonical data.
+- Anomaly vocabulary in `SusUiProbe`: `out-of-bounds`, `clipped`, `overlap`, `off-canvas` next to the former `zero-size`, each with thresholds in data and legal exemptions measured rather than silent.
+- Zone A history buttons and a zone D "reset to story" control; the panel restores the author's seed, not the type defaults.
+- Story stage scrolls on both axes, and zone C says in words when its content is wider than the window.
+
+### Changed
+- Storybook shell fonts come from the mockup family through the font service, by class only.
+- Zone E refreshes on change at 500 ms instead of rebuilding its children 8 times a second.
+- The stage canvas keeps one height for every story and popover; a subject larger than the canvas is clipped and scrolled to instead of pushing the canvas open.
+- The state matrix shows a column only when the component's role owes that state.
+- Overlay components install a focus trap, move focus inside on open and return it on close, from the base class.
+- `SusStoryRegistry.Stories` / `Packages` return product stories; `AllStories` / `AllPackages` return everything including fixtures.
+
+### Fixed
+- Focus ring is visible on a primary fill: the ring ink is its own token, no longer an alias of the brand colour (contrast 1.00 to 3.97 at worst).
+- `SusStateTwins` reads Unity 6.3 stylesheet tables, so a declared twin class is found again.
+- Popup placement is computed in overlay-host coordinates; a stage with its own host no longer throws the card off-canvas.
+- Blank-frame and no-layout refusals in panel capture: an empty frame is no longer reported as taken.
+
 ## [1.0.31] - 2026-09-11
 
 ### Added
