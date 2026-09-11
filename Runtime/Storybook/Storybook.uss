@@ -1843,6 +1843,75 @@
     color: var(--sb-ink);
 }
 
+/* -- ...and so is the FACE (D5, card T-3357) --------------------------------
+ *
+ * Same mechanism as the colour above, same measured cause, and it has to be said separately
+ * because -unity-font-definition is the second inherited property in play. Measured in Play
+ * 2026-09-11 right after the family swap: 142 shell text elements resolved as
+ * InstrumentSans-Regular 29, GeistMono-Regular 36, InstrumentSans-SemiBold 8 — and
+ * Montserrat-Medium 69, i.e. still the PRODUCT face. The ancestor chain was Instrument the
+ * whole way down (shell root, body, nav, its ScrollView) and flipped on the Button itself, which
+ * is the signature of a rule MATCHING the element rather than a cascade problem.
+ *
+ * The rule lives in a component-library sheet layered over this package, not here: an
+ * UNANCHORED selector list (it ends at .unity-progress-bar__progress) that names
+ * .unity-text-element and .unity-button__label,
+ * which EVERY Button and Label carries whoever built it, and declares both
+ * -unity-font-definition: var(--sk-font-family-label) and color: var(--sk-color-text-primary).
+ * A declaration always beats an inherited value, so the shell's root face never reached any
+ * shell element that did not declare its own — and re-typing the product would re-type the
+ * instrument, which is exactly what D5 forbids.
+ *
+ * Hence: every text-bearing shell class that had no face of its own now declares one, and none
+ * of these selectors can leave the shell. Anchoring on .sus-sb and sweeping .unity-text-element
+ * from above was the tempting one-liner and is refused: it would reach INTO the stage canvas and
+ * re-type the subject on display, the same trespass in the other direction (D2, D27).
+ *
+ * 500 and not 400: that is the weight the product rule was handing these buttons
+ * (--sk-font-family-label resolves to the Medium face), so the family changes and the weight
+ * does not. The nav name is declared through its ROW for the same reason as its colour — and
+ * --active needs its own line, or the selected row would lose the 600 face it asks for.
+ */
+
+.sus-sb-nav__row,
+.sus-sb-nav__row > .sus-sb-nav__row-name,
+.sus-sb-nav__tab,
+.sus-sb-env__share > .sus-sb-env__share-label,
+.sb-btn--accent,
+.sb-btn--secondary,
+.sb-btn--ghost,
+.sus-sb__burger,
+.sus-sb__share,
+.sus-sb-env__share,
+.sus-sb-env__props,
+.sus-sb-ctl__list-add,
+.sus-sb-ctl__iconfield {
+    -unity-font-definition: var(--sb-fw-500);
+}
+
+.sus-sb-nav__row--active > .sus-sb-nav__row-name {
+    -unity-font-definition: var(--sb-fw-600);
+}
+
+/* The text INSIDE a shell TextField is a THIRD element, below the field and below
+   #unity-text-input, and the product rule names it too (.unity-text-element on the inner input
+   component — 3 of them measured still on the product face after the swap above). The list is
+   the same one the state block below uses for #unity-text-input, so the two never drift apart;
+   every entry is anchored on the field's own shell class, so no selector here can reach a
+   TextField of the subject on display. */
+.sus-sb-nav__search-input .unity-text-element,
+.sus-sb-iconpicker__search-input .unity-text-element,
+.sus-sb-ctl__text .unity-text-element,
+.sus-sb-ctl__number .unity-text-element,
+.sus-sb-ctl__hex .unity-text-element,
+.sus-sb-ctl__list-row .unity-text-element {
+    -unity-font-definition: var(--sb-font-ui);
+}
+
+.sus-sb-ctl__mono .unity-text-element {
+    -unity-font-definition: var(--sb-font-mono);
+}
+
 /* -- TextField: five states, three properties each (D13) ----------------------
  *
  * rest / hover / focus / disabled / invalid, and each one says background, border and text.
