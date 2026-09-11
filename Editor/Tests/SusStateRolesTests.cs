@@ -95,15 +95,33 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(withError, Is.EqualTo(10), "9 input plus SusFormField (§4.2)");
         }
 
-        /// <summary>D5 <c>d:2fead6</c>: where the ring rides a child, the child is NAMED.</summary>
+        /// <summary>
+        /// D5 <c>d:2fead6</c>: where the ring rides something other than the root, that something
+        /// is NAMED. Measured live: with the root as the target only 15 of 36 ring-bearing
+        /// components differed from rest; with these rows, 36 of 36.
+        /// </summary>
         [Test]
-        public void A_group_whose_ring_lives_on_a_child_declares_that_child()
+        public void Every_ring_that_is_not_on_the_root_names_its_target()
         {
             Assert.That(SusStateRoles.RingTargetClassOfName("SusTabs"), Is.EqualTo("sus-tabs__tab"));
             Assert.That(SusStateRoles.RingTargetClassOfName("SusListGroup"),
                 Is.EqualTo("sus-list-group__item"));
+            Assert.That(SusStateRoles.RingTargetClassOfName("SusRepeatButton"), Is.EqualTo("#repeat-inner"),
+                "an element NAME is a legal target too: this ring hangs off #repeat-inner");
             Assert.That(SusStateRoles.RingTargetClassOfName("SusButton"), Is.Null,
-                "a control takes the focus itself: the ring rides the root and needs no row");
+                "a button takes the ring on its root and needs no row");
+            Assert.That(SusStateRoles.RingTargetClassOfName("SusTextfield"), Is.Null,
+                "and so does the field — its ring is on the ROOT while the focus goes to the "
+                + "inner input, which is why the target is declared rather than deduced");
+
+            int declared = 0;
+            foreach (var n in SusStateRoles.Names)
+            {
+                if (SusStateRoles.RingTargetClassOfName(n) != null) declared++;
+            }
+            Assert.That(declared, Is.EqualTo(21),
+                "16 of the 18 groups (two ring their own root), the dropdown trigger, both slider "
+                + "thumbs, the expansion header and the repeat button's inner box");
         }
 
         /// <summary>

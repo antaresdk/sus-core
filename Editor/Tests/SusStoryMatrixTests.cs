@@ -243,17 +243,38 @@ namespace Sharq.Core.Editor.Tests
                 "the group box has no ring of its own; the focused child does");
         }
 
+        /// <summary>
+        /// A group builds its rows on its FIRST LAYOUT, and a matrix cell forces its state the
+        /// instant the instance exists — so the declared child is genuinely absent at that
+        /// moment. Measured in Play: without the late pass, all 14 components that owed a ring
+        /// and showed none were groups. The class waits on the root and moves when the child
+        /// arrives; a target that never arrives leaves the root wearing it, because a focus
+        /// column with the class nowhere would be the copy of rest all over again.
+        /// </summary>
         [Test]
-        public void A_declared_target_that_is_not_there_falls_back_to_the_root()
+        public void A_declared_target_that_arrives_late_still_gets_the_ring()
         {
             NoTwins();
-            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Group, "swatch__missing");
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Group, "swatch__item");
             var group = new CoreSwatchDemo();
 
             SusStoryStates.Force(group, SusStoryStates.Focus);
 
             Assert.That(group.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.True,
-                "a focus column that found no target would be the copy of rest all over again");
+                "parked on the root while the child is missing");
+
+            var item = new VisualElement();
+            item.AddToClassList("swatch__item");
+            group.Add(item);
+            // What the geometry hook of Force() calls. An element outside a panel gets no
+            // geometry events at all, so the move is asserted through the same method the hook
+            // uses rather than through an event this fixture cannot deliver.
+            Assert.That(SusStoryStates.SettleFocusRing(group), Is.True);
+
+            Assert.That(item.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.True,
+                "and moved onto the child the moment the group had one");
+            Assert.That(group.ClassListContains(SusStateRoles.KeyboardFocusClass), Is.False,
+                "two rings would be worse than none");
         }
 
         // ── columns: the role half of the matrix (card T-3431) ───────────────
@@ -323,14 +344,14 @@ namespace Sharq.Core.Editor.Tests
         }
 
         /// <summary>
-        /// Witness from the first Play measurement of T-3431: a story whose <c>Instantiate</c>
-        /// threw gave the matrix a null probe, the null was read as "no opinion", and four
-        /// columns of state appeared over a <c>display</c> component. The story NAMES its
-        /// component type, so the role was knowable the whole time — the matrix now asks the
-        /// type, and the probe is only about what can be forced.
+        /// Witness from the first Play measurement of T-3431: two kit stories
+        /// (<c>kit/world/floating-damage</c>, <c>kit/devtools/diagnostics</c>) build a story-local
+        /// scene WRAPPER, so the probe's type is in no registry — and "unknown" reads as "no
+        /// opinion", which put four columns of state over a <c>display</c> component. The story
+        /// names its SUBJECT; the probe is only evidence about what can be forced.
         /// </summary>
         [Test]
-        public void The_role_survives_a_probe_that_could_not_be_built()
+        public void The_role_follows_the_story_subject_and_not_the_instance_it_built()
         {
             SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Display);
 
@@ -339,6 +360,15 @@ namespace Sharq.Core.Editor.Tests
                 "rest is the absence of a state, not one a role can refuse");
             Assert.That(SusStoryStates.Declares((System.Type)null, SusStoryStates.Error), Is.True,
                 "an unnamed component is still no opinion");
+
+            SusStoryMatrix.AxisPropName = "Tone";
+            var matrix = new SusStoryMatrix();
+            matrix.Show(Entry(Swatch));
+
+            Assert.That(Entry(Swatch).ComponentType, Is.EqualTo(typeof(CoreSwatchDemo)),
+                "the story declares its subject, and that is what the role is read from");
+            Assert.That(matrix.Role, Is.EqualTo(SusStateRoles.Display));
+            Assert.That(matrix.SilentReason, Is.Not.Null);
         }
 
         [Test]

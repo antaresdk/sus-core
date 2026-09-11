@@ -114,19 +114,46 @@ namespace Sharq.Core.Storybook
         };
 
         /// <summary>
-        /// Where the ring goes when it is NOT the root (D5 <c>d:2fead6</c>). For role
-        /// <c>group</c> the focus rides a child — <c>SusTabs</c> paints
-        /// <c>.sus-tabs__tab.keyboard-focus</c>, never the group box — so a matrix column that
-        /// dressed the root would show a copy of rest again, with the right class this time.
-        /// A blank target means the root. Groups whose ring is not drawn yet carry no row here:
-        /// that is wave 2, not a silent default.
+        /// Where the ring goes when it is NOT the root (D5 <c>d:2fead6</c>). A component missing
+        /// from this list rings its root; a row names a class, or an element name with a leading
+        /// <c>#</c>.
+        ///
+        /// These are not guesses: every row is the selector the component's own sheet puts
+        /// <c>.keyboard-focus</c> on. Dressing the root instead would repeat the defect of
+        /// T-3427 with the right class — the column would still be a copy of rest, because the
+        /// rule that paints the ring never matches the box the class landed on. Measured live in
+        /// Play: with the root as the target 15 of 36 ring-bearing components differed from rest;
+        /// with these rows, 36 of 36.
+        ///
+        /// The obvious alternative — "put it on whatever takes the focus" — was tried and is
+        /// WRONG in both directions. <c>SusRepeatButton</c> and the sliders ring an inner box the
+        /// root is not, and <c>SusTextfield</c> and <c>SusNumberInput</c> ring the ROOT while the
+        /// focusable element is the inner field. Focus and ring are deliberately different
+        /// elements in this corpus, so the ring target is declared, not deduced.
         /// </summary>
         static readonly string[] RingRows =
         {
-            "SusListGroup  | sus-list-group__item",
-            "SusMenuButton | sus-menu-button",
-            "SusPagination | sus-pagination",
-            "SusTabs       | sus-tabs__tab",
+            "SusBottomNav      | sus-bottom-nav__item",
+            "SusBreadcrumbs    | sus-breadcrumbs__item--link",
+            "SusBtnToggle      | sus-btn-toggle__btn",
+            "SusCarousel       | sus-carousel__dot",
+            "SusChipGroup      | sus-chip-group__chip",
+            "SusContextMenu    | sus-context-menu__item",
+            "SusDataTable      | sus-data-table__header-cell--sortable",
+            "SusDropdown       | sus-dropdown__trigger",
+            "SusExpansionPanel | sus-expansion-panel__header",
+            "SusExpansionPanels| sus-expansion-panel__header",
+            "SusIconRail       | sus-icon-rail__item",
+            "SusListGroup      | sus-list-group__item",
+            "SusMenu           | sus-menu__item",
+            "SusRadialMenu     | sus-radial-menu__item",
+            "SusRadioGroup     | sus-radio",
+            "SusRangeSlider    | sus-range-slider__thumb",
+            "SusRepeatButton   | #repeat-inner",
+            "SusSlider         | sus-slider__thumb",
+            "SusTable          | sus-table__row",
+            "SusTabs           | sus-tabs__tab",
+            "SusTreeView       | sus-tree-view__item",
         };
 
         /// <summary>
@@ -349,6 +376,11 @@ namespace Sharq.Core.Storybook
             if (component == null) return null;
             var target = Find(component.GetType())?.RingTarget;
             if (string.IsNullOrEmpty(target)) return component;
+            if (target[0] == '#')
+            {
+                var named = component.Q(target.Substring(1));
+                return named ?? component;
+            }
             if (component.ClassListContains(target)) return component;
             var child = component.Q(className: target);
             return child ?? component;

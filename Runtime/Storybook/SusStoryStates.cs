@@ -159,7 +159,7 @@ namespace Sharq.Core.Storybook
                     // The class goes on the target the role registry names — for a group the ring
                     // rides a child (.sus-tabs__tab), and dressing the root would repeat the same
                     // defect with a better class (D5).
-                    SusStateRoles.RingTarget(component).AddToClassList(SusStateRoles.KeyboardFocusClass);
+                    ApplyFocusRing(component);
                     return SusStateForcing.FocusClass;
 
                 case Disabled:
@@ -175,6 +175,50 @@ namespace Sharq.Core.Storybook
                 default:
                     return SusStateForcing.Unsupported;
             }
+        }
+
+        /// <summary>
+        /// Puts the focus-ring class where the role registry says the ring lives, INCLUDING the
+        /// case where that place does not exist yet.
+        ///
+        /// A group builds its rows on its first layout pass, and a matrix cell forces its state
+        /// the instant the instance is created — so <c>.sus-tabs__tab</c> is simply not in the
+        /// tree at that moment, the lookup falls back to the root, and the cell shows rest under
+        /// a focus label. That is the same defect T-3427 fixed, arriving one frame later.
+        /// Measured in Play: without the late pass 22 of the 44 components that owe a ring
+        /// differed from rest, and all 14 of the missing ones were groups.
+        ///
+        /// So when the target is declared and absent, the class is parked on the root and moved
+        /// the first time the geometry says the children have arrived.
+        /// </summary>
+        static void ApplyFocusRing(SusComponent component)
+        {
+            var target = SusStateRoles.RingTarget(component);
+            target.AddToClassList(SusStateRoles.KeyboardFocusClass);
+
+            var declared = SusStateRoles.RingTargetClass(component.GetType());
+            if (declared == null || !ReferenceEquals(target, component)) return;
+
+            EventCallback<GeometryChangedEvent> once = null;
+            once = _ => { if (SettleFocusRing(component)) component.UnregisterCallback(once); };
+            component.RegisterCallback(once);
+        }
+
+        /// <summary>
+        /// Moves a parked focus ring onto the declared target now that the target exists, and
+        /// says whether it moved. Called by the geometry hook of <see cref="Force"/>; public
+        /// because a rig without a panel has no geometry events to wait for, and the move has to
+        /// be provable without one.
+        /// </summary>
+        public static bool SettleFocusRing(SusComponent component)
+        {
+            if (component == null) return false;
+            if (!component.ClassListContains(SusStateRoles.KeyboardFocusClass)) return false;
+            var late = SusStateRoles.RingTarget(component);
+            if (ReferenceEquals(late, component)) return false;
+            component.RemoveFromClassList(SusStateRoles.KeyboardFocusClass);
+            late.AddToClassList(SusStateRoles.KeyboardFocusClass);
+            return true;
         }
 
         static SusStateForcing Twin(VisualElement element, string twinClass)
