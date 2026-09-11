@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -244,8 +245,20 @@ namespace Sharq.Core.Editor.Tests
             var c = new SusIntrospectionFixture();
             c.Size.Value = "large";                 // alias
             Assert.AreEqual("lg", c.Size.Value);
+            // T-3467: an alias is DECLARED input, so canonicalizing it is the alias working, not
+            // a mistake — the clamp must say nothing. Judged here rather than left to a reader's
+            // eye, because a warning that fires on correct code is a warning nobody reads.
+            LogAssert.NoUnexpectedReceived();
+
+            // An UNKNOWN value is the opposite case and must still be reported. Declared so the
+            // full-run console stays clean while the message keeps being judged (T-3468).
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                @"\[PropAllowed\] SusIntrospectionFixture\.Size: 'nonsense'.*'md'.*not in allowed set"));
             c.Size.Value = "nonsense";
             Assert.AreEqual("md", c.Size.Value, "fallback");
+
+            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
+                @"\[PropAllowed\] SusIntrospectionFixture\.PageSize: 33.*10.*not in allowed set"));
             c.PageSize.Value = 33;
             Assert.AreEqual(10, c.PageSize.Value, "int fallback");
         }
