@@ -47,6 +47,25 @@ namespace Sharq.Core.Storybook.Probe
         /// <summary>Prefix of the warning line listing events that never fired.</summary>
         public const string UnfiredPrefix = "not fired: ";
 
+        /// <summary>
+        /// Shortest gap between two refreshes of the strip, in milliseconds (plan
+        /// ARCH-20260911-STORYBOOK-SHELL.md §4.8, decision D17, card T-3358).
+        ///
+        /// Until T-3358 the shell refreshed the strip on its 120 ms overlay tick, unconditionally
+        /// - 8,3 refreshes a second, each of them recomputing health by walking the whole canvas
+        /// subtree, rewriting three texts and rebuilding the anomaly list from scratch. The strip
+        /// visibly trembled, and the trembling was not cosmetic: rewriting a text changes the
+        /// width of a flex row, which is a layout pass, which is one of the three named sources of
+        /// "everything jumps" (card T-3362).
+        ///
+        /// The number lives here and not in the shell because the shell only schedules it: one
+        /// declared interval, two readers, no second literal to drift.
+        /// </summary>
+        public const long RefreshIntervalMs = 500;
+
+        /// <summary>The strip's own label for "nothing is wrong".</summary>
+        public const string HealthOkText = "0 anomalies";
+
         readonly SusStoryEventLog _events = new();
 
         readonly VisualElement _strip = new();
@@ -68,6 +87,16 @@ namespace Sharq.Core.Storybook.Probe
         SusControlPanel _panel;   // card T-3143: zone D's ledger, reused instead of re-plumbing SusStoryContext
         SusStoryFrameResult _frameResult = SusStoryFrameResult.Unavailable;
         bool _disposed;
+
+        // Card T-3358: what the strip last WROTE, so a refresh that found nothing new writes
+        // nothing. Comparing rendered text against the text already on screen is cheaper than
+        // the layout pass an identical assignment costs.
+        string _healthShown;
+        string _frameShown;
+        string _unfiredShown;
+        string _chipsShown;
+        string _anomaliesShown;
+        bool _dirty = true;
 
         public SusStoryProbe()
         {
@@ -227,18 +256,61 @@ namespace Sharq.Core.Storybook.Probe
             _events.Reset();
             _frameResult = SusStoryFrameResult.Unavailable;
             SetAnomalies(Array.Empty<string>());
+            _dirty = false;
             Render();
         }
 
         /// <summary>
-        /// Re-reads health and the frame verdict and redraws. Called by the shell on its stage
-        /// tick; public so a test asks for it directly instead of waiting for a scheduler.
+        /// Something happened that the strip may have to show: a story mounted, a prop was
+        /// written, an environment axis moved, a layout pass finished (card T-3358, D17).
+        ///
+        /// This is the whole reason the strip no longer needs a fast tick. Health has no event of
+        /// its own - a story that collapses to zero size does it silently, during layout - so the
+        /// shell cannot subscribe to "health changed". But it CAN name every occasion on which
+        /// health could have changed, and then the timer's only job is to be a floor under how
+        /// often those occasions are honoured.
+        /// </summary>
+        public void MarkDirty() => _dirty = true;
+
+        /// <summary>True while something asked for a refresh that has not happened yet.</summary>
+        public bool Dirty => _dirty;
+
+        /// <summary>
+        /// How many times the strip actually CHANGED something on screen (card T-3358). The
+        /// acceptance figure of D17 is "writes without a change == 0", and a counter is the only
+        /// way to state it: a screenshot cannot tell an identical rewrite from no rewrite, while
+        /// the layout engine can.
+        /// </summary>
+        public int Writes { get; private set; }
+
+        /// <summary>
+        /// Refreshes only if <see cref="MarkDirty"/> was called since the last one. Returns
+        /// whether it did. What the shell's <see cref="RefreshIntervalMs"/> tick calls: an idle
+        /// story costs one boolean read per tick and not one canvas walk.
+        /// </summary>
+        public bool RefreshIfDirty()
+        {
+            if (_disposed || !_dirty) return false;
+            Refresh();
+            return true;
+        }
+
+        /// <summary>
+        /// Re-reads health and the frame verdict and redraws. Public so a test asks for it
+        /// directly instead of waiting for a scheduler; the shell goes through
+        /// <see cref="RefreshIfDirty"/> instead (card T-3358).
         /// </summary>
         public void Refresh()
         {
             if (_disposed) return;
+            _dirty = false;
 
-            _frameResult = _entry == null
+            // Card T-3358, plan §4.8: "a field that does not exist is not polled at all". Core
+            // ships a comparer that never has a canon, so while nothing else is registered the
+            // verdict is not a dash worth computing - it is a line worth not drawing. The old
+            // code called Compare 8,3 times a second to print "frame: -": the buyer lost nothing
+            // by its absence, which is exactly the test for a dead indicator.
+            _frameResult = _entry == null || SusStoryFrame.IsStub
                 ? SusStoryFrameResult.Unavailable
                 : SusStoryFrame.Compare(_entry.Id, _canvas);
 
@@ -323,15 +395,22 @@ namespace Sharq.Core.Storybook.Probe
             RenderChips();
             RenderUnfired();
             RenderHealth();
-            _frame.text = _frameResult.Describe();
-            _frame.EnableInClassList("sus-sb-probe__frame--bad", _frameResult.IsAnomaly);
+            RenderFrame();
             RenderAnomalies();
         }
 
         void RenderChips()
         {
+            // Card T-3358: the four chips of "OnOpen() OnClose() OnOpen() OnClose()" collapse to
+            // two carrying "x2". Same facts, half the width, and - because the signature below is
+            // compared before the row is touched - no rebuild at all while nothing new fired.
+            var recent = _events.RecentCollapsed;
+            var signature = string.Join("␟", recent);
+            if (signature == _chipsShown) return;
+            _chipsShown = signature;
+            Writes++;
+
             _chips.Clear();
-            var recent = _events.Recent;
             for (int i = 0; i < recent.Count; i++)
             {
                 var chip = new Label(recent[i]);
@@ -344,21 +423,59 @@ namespace Sharq.Core.Storybook.Probe
         void RenderUnfired()
         {
             var unfired = _events.Unfired;
-            _unfired.text = unfired.Count == 0 ? string.Empty : UnfiredPrefix + string.Join(", ", unfired);
+            var text = unfired.Count == 0 ? string.Empty : UnfiredPrefix + string.Join(", ", unfired);
+            if (text == _unfiredShown) return;
+            _unfiredShown = text;
+            Writes++;
+
+            _unfired.text = text;
             _unfired.EnableInClassList("sus-sb-hidden", unfired.Count == 0);
         }
 
         void RenderHealth()
         {
             int n = _anomalies.Count;
-            _health.text = "health " + n.ToString(CultureInfo.InvariantCulture);
+
+            // Card T-3358 defect 2: the strip used to print "health 0" beside a GREEN dot, and
+            // "health 0" reads as "no health left" while it means "no anomalies found" - the
+            // caption promised the opposite of what the colour said. The number counts anomalies,
+            // so the word next to it is the one it counts.
+            var text = n == 0
+                ? HealthOkText
+                : n.ToString(CultureInfo.InvariantCulture) + (n == 1 ? " anomaly" : " anomalies");
+            if (text == _healthShown) return;
+            _healthShown = text;
+            Writes++;
+
+            _health.text = text;
             bool bad = n > 0;
             _dot.EnableInClassList("sus-sb-probe__dot--bad", bad);
             _health.EnableInClassList("sus-sb-probe__health--bad", bad);
         }
 
+        void RenderFrame()
+        {
+            // While nothing can answer, the field is not drawn (card T-3358 defect 3): a dash
+            // that never becomes anything else is a column of width taken from the strip for no
+            // decision and no knowledge.
+            bool available = !SusStoryFrame.IsStub;
+            var text = available ? _frameResult.Describe() : string.Empty;
+            if (text == _frameShown) return;
+            _frameShown = text;
+            Writes++;
+
+            _frame.text = text;
+            _frame.EnableInClassList("sus-sb-hidden", !available);
+            _frame.EnableInClassList("sus-sb-probe__frame--bad", _frameResult.IsAnomaly);
+        }
+
         void RenderAnomalies()
         {
+            var signature = string.Join("␟", _anomalies);
+            if (signature == _anomaliesShown) return;
+            _anomaliesShown = signature;
+            Writes++;
+
             _anomalyList.Clear();
             for (int i = 0; i < _anomalies.Count; i++)
             {

@@ -229,6 +229,8 @@ namespace Sharq.Core.Storybook
                         Weight = attr.Weight,                                       // card T-3038
                         ComponentType = ValidComponent(attr.Component, id),         // card T-3137
                         NoComponentReason = Trim(attr.NoComponent),
+                        AxisProp = AxisName(attr.Axis),                             // card T-3379
+                        AxisValues = AxisSet(attr.Axis, attr.AxisValues, id),
                     });
                     Remember(pkg, stamp, stamps, known);
                 }
@@ -272,12 +274,42 @@ namespace Sharq.Core.Storybook
                     Weight = def.Weight,                                        // card T-3038
                     ComponentType = ValidComponent(def.Component, defId),       // card T-3137
                     NoComponentReason = Trim(def.NoComponent),
+                    AxisProp = AxisName(def.Axis),                              // card T-3379
+                    AxisValues = AxisSet(def.Axis, def.AxisValues, defId),
                 });
                 Remember(p, stamp, stamps, known);
             }
         }
 
         static string Trim(string s) => string.IsNullOrWhiteSpace(s) ? string.Empty : s.Trim();
+
+        /// <summary>
+        /// The prop a story hung its closed axis on (card T-3379), defaulted to
+        /// <see cref="SusStoryAxis.DefaultPropName"/> so the entry never carries a null name.
+        /// </summary>
+        static string AxisName(string declared) =>
+            string.IsNullOrWhiteSpace(declared) ? SusStoryAxis.DefaultPropName : declared.Trim();
+
+        /// <summary>
+        /// The axis values a story declared, cleaned by <see cref="SusStoryAxis.Normalize"/>
+        /// (card T-3379).
+        ///
+        /// The one warning here is for the half-declaration: naming <c>Axis</c> and then giving
+        /// no values is not a closed axis, it is a story that looks like it declared one. Silence
+        /// there would read as "the engine ignored my axis"; the message says which half is
+        /// missing. The opposite half-declaration (values without a name) is legal and common -
+        /// it means the default prop.
+        /// </summary>
+        static IReadOnlyList<string> AxisSet(string declaredAxis, string[] declaredValues, string storyId)
+        {
+            var clean = SusStoryAxis.Normalize(declaredValues);
+            if (clean.Count == 0 && !string.IsNullOrWhiteSpace(declaredAxis))
+                SusLog.Warn("[storybook] story '" + storyId + "' names Axis = '" + declaredAxis.Trim() +
+                            "' but lists no AxisValues - an axis without its values is not a closed " +
+                            "axis, and the matrix will still show one row. Either list the values or " +
+                            "drop the Axis.");
+            return clean;
+        }
 
         /// <summary>
         /// The declared <c>Component</c>, or null with a warning when it is not a component

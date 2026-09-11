@@ -346,8 +346,17 @@ namespace Sharq.Core.Editor.Tests
                 "a popup must land in the stage canvas, not at the panel root (T-3032)");
         }
 
+        /// <summary>
+        /// Card T-3362, plan ARCH-20260911-STORYBOOK-SHELL.md §4.7 and D18. Opening a popup used
+        /// to put <c>sus-sb-stage__canvas--overlay</c> on the canvas, and the shell sheet answers
+        /// that class with <c>min-height: 350px</c> against a base of 120 — so every popover,
+        /// tooltip and menu moved the canvas and everything below it by 230 px, and closing moved
+        /// it back. The fork was decided the other way: the canvas keeps ONE declared height and
+        /// the popup stays in the frame because the overlay host lives INSIDE the canvas
+        /// (T-3032, asserted by the test above). The note still says where the popup went.
+        /// </summary>
         [Test]
-        public void An_open_overlay_grows_the_canvas_and_says_where_the_popup_went()
+        public void An_open_overlay_says_where_the_popup_went_and_does_not_move_the_canvas()
         {
             using var host = new SusStorybookHost();
             host.ShowStoryById(Floating);
@@ -355,8 +364,8 @@ namespace Sharq.Core.Editor.Tests
             host.CanvasOverlay.AddToOverlay(new Label("popup"), OverlayCategory.Dropdown);
             host.SyncOverlay();
 
-            Assert.That(host.QaCanvas.ClassListContains("sus-sb-stage__canvas--overlay"), Is.True,
-                "the canvas grows so the popup stays inside the frame");
+            Assert.That(host.QaCanvas.ClassListContains("sus-sb-stage__canvas--overlay"), Is.False,
+                "the canvas has one declared height: opening a popup must not grow it by 230px");
             Assert.That(host.Sizes.OverlayNoteVisible, Is.True);
 
             host.CanvasOverlay.ClearAll();

@@ -28,6 +28,8 @@ namespace Sharq.Core.Storybook.UI
         readonly Label _overlay = new();
 
         VisualElement _tracked;
+        string _shown = string.Empty;
+        bool _stale = true;
 
         public SusStorySizes()
         {
@@ -51,39 +53,79 @@ namespace Sharq.Core.Storybook.UI
         public VisualElement Tracked => _tracked;
 
         /// <summary>
-        /// Points the line at a new instance (null clears it). Re-reads on every layout pass of
-        /// that instance, because a prop changed in zone D changes the numbers.
+        /// Points the line at a new instance (null clears it).
+        ///
+        /// Until card T-3362 this also subscribed the line to the tracked element's
+        /// <c>GeometryChangedEvent</c>. That closed a loop with no stopping condition (plan
+        /// ARCH-20260911-STORYBOOK-SHELL.md §2.5, decision D16): the handler wrote the measured
+        /// numbers into a label, the label is a participant in the layout of the same row, a
+        /// different text is a different width, and a different width is another layout pass.
+        /// The line now waits to be ASKED — by a prop write, by an environment axis, or by the
+        /// shell's throttled tick after a canvas layout pass (<see cref="MarkStale"/>).
         /// </summary>
         public void Track(VisualElement element)
         {
-            if (_tracked != null) _tracked.UnregisterCallback<GeometryChangedEvent>(OnGeometry);
             _tracked = element;
-            if (_tracked != null) _tracked.RegisterCallback<GeometryChangedEvent>(OnGeometry);
+            _stale = true;
             Refresh();
+        }
+
+        /// <summary>
+        /// Records that the numbers may have changed and the line has not caught up yet — raised by
+        /// the shell when the canvas finished a layout pass (card T-3362).
+        /// </summary>
+        public void MarkStale() => _stale = true;
+
+        /// <summary>True while a <see cref="MarkStale"/> has not been honoured.</summary>
+        public bool Stale => _stale;
+
+        /// <summary>
+        /// Re-reads only if <see cref="MarkStale"/> was called since the last read; returns
+        /// whether it did. What the shell's throttled tick calls, so a still stage costs one
+        /// boolean and not four <c>resolvedStyle</c> reads.
+        /// </summary>
+        public bool RefreshIfStale()
+        {
+            if (!_stale) return false;
+            Refresh();
+            return true;
         }
 
         /// <summary>Shows or hides the "the popup is in the stage host" note.</summary>
         public void SetOverlayOpen(bool open) => _overlay.EnableInClassList("sus-sb-hidden", !open);
 
-        /// <summary>Re-reads <c>resolvedStyle</c> — the seam a test drives instead of a frame.</summary>
+        /// <summary>
+        /// Re-reads <c>resolvedStyle</c> — the seam a test drives instead of a frame. Writes the
+        /// label only when the text actually changed: an identical assignment still costs the
+        /// layout pass this whole card is about (T-3362).
+        /// </summary>
         public void Refresh()
         {
-            if (_tracked == null)
+            _stale = false;
+
+            var text = string.Empty;
+            if (_tracked != null)
             {
-                _sizes.text = string.Empty;
-                return;
+                var s = _tracked.resolvedStyle;
+                text =
+                    "h " + N(s.height) +
+                    " · fs " + N(s.fontSize) +
+                    " · pad " + N(s.paddingLeft) +
+                    " · radius " + N(s.borderTopLeftRadius) +
+                    "  (resolvedStyle)";
             }
 
-            var s = _tracked.resolvedStyle;
-            _sizes.text =
-                "h " + N(s.height) +
-                " · fs " + N(s.fontSize) +
-                " · pad " + N(s.paddingLeft) +
-                " · radius " + N(s.borderTopLeftRadius) +
-                "  (resolvedStyle)";
+            if (text == _shown) return;
+            _shown = text;
+            Writes++;
+            _sizes.text = text;
         }
 
-        void OnGeometry(GeometryChangedEvent _) => Refresh();
+        /// <summary>
+        /// How many times the line actually CHANGED (card T-3362). The acceptance figure the
+        /// judge of D15/D16 reads: two layout passes over an unchanged stage must add zero.
+        /// </summary>
+        public int Writes { get; private set; }
 
         static string N(float value) =>
             float.IsNaN(value) || float.IsInfinity(value)

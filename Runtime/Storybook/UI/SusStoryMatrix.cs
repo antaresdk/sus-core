@@ -61,9 +61,11 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>
         /// Prop the rows come from. The plan names <c>Variant</c>; it is a property rather than a
-        /// constant so a rig can point the matrix at another closed axis without a fork.
+        /// constant so a rig can point the matrix at another closed axis without a fork. The
+        /// default is <see cref="SusStoryAxis.DefaultPropName"/> and not a second literal: the
+        /// story attribute defaults to the same name, and two literals would drift (card T-3379).
         /// </summary>
-        public static string AxisPropName { get; set; } = "Variant";
+        public static string AxisPropName { get; set; } = SusStoryAxis.DefaultPropName;
 
         readonly Button _toggle = new();
         readonly ScrollView _scroll = new(ScrollViewMode.Horizontal);
@@ -77,6 +79,7 @@ namespace Sharq.Core.Storybook.UI
 
         SusStoryEntry _entry;
         string _axis;
+        SusStoryAxisSource _axisSource = SusStoryAxisSource.None;
         bool _open;
         bool _built;
 
@@ -121,6 +124,13 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>Name of the axis prop the rows came from, or null.</summary>
         public string AxisProp => _axis;
+
+        /// <summary>
+        /// Who enumerated the axis the rows came from (card T-3379). What the acceptance figure
+        /// of D26 counts: a story whose rows came from <see cref="SusStoryAxisSource.None"/> is
+        /// still a story with one row, whatever the caption says.
+        /// </summary>
+        public SusStoryAxisSource AxisSource => _axisSource;
 
         /// <summary>Cells the matrix WOULD draw — the figure the budget is compared against.</summary>
         public int CellCount => _rows.Count * _columns.Count;
@@ -239,6 +249,7 @@ namespace Sharq.Core.Storybook.UI
             _skipped.Clear();
             _entry = null;
             _axis = null;
+            _axisSource = SusStoryAxisSource.None;
             _open = false;
             _scroll.AddToClassList("sus-sb-hidden");
             _note.AddToClassList("sus-sb-hidden");
@@ -248,24 +259,24 @@ namespace Sharq.Core.Storybook.UI
 
         void ResolveRows(SusComponent probe)
         {
-            var allowed = probe?.DescribeAllowed();
-            if (allowed != null && allowed.Count > 0)
-            {
-                foreach (var pair in allowed)
-                {
-                    if (!string.Equals(pair.Key, AxisPropName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-                    var values = pair.Value?.Values;
-                    if (values == null || values.Count == 0) break;
+            // Card T-3379: the rows come from the CLOSED AXIS of the story, and the axis has two
+            // producers - the component's own UseAllowed set, and the enumeration a story
+            // declares when the component never clamped the prop. Reading DescribeAllowed()
+            // here directly (as this method did until T-3379) saw only the first producer, so on
+            // the 9 of 17 kit components whose Variant is an unclamped string the matrix printed
+            // one row and the caption said "no axis".
+            var axis = SusStoryAxis.Resolve(_entry, probe, AxisPropName);
+            _axisSource = axis.Source;
 
-                    _axis = pair.Key;
-                    for (int i = 0; i < values.Count; i++) _rows.Add(values[i]);
-                    return;
-                }
+            if (axis.IsClosed)
+            {
+                _axis = axis.PropName;
+                for (int i = 0; i < axis.Values.Count; i++) _rows.Add(axis.Values[i]);
+                return;
             }
 
             // No closed axis under that name: one row, and the caption says "no axis" rather than
-            // inventing a second axis the component never declared.
+            // inventing a second axis nobody declared.
             _rows.Add(DefaultRow);
         }
 

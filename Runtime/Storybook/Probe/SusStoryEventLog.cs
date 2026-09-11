@@ -24,6 +24,13 @@ namespace Sharq.Core.Storybook.Probe
         /// <summary>How many of the most recent calls the strip shows (mock-up: 4).</summary>
         public const int ChipCount = 4;
 
+        /// <summary>
+        /// How far back <see cref="RecentCollapsed"/> counts repeats. Bounded on purpose: a
+        /// hold-to-repeat story fires dozens of calls a second, and an unbounded scan would make
+        /// the strip cost grow with the length of the session (card T-3358).
+        /// </summary>
+        public const int CollapseWindow = 64;
+
         /// <summary>Longest argument text kept in a chip before it is cut.</summary>
         public const int ArgTextLimit = 24;
 
@@ -50,6 +57,52 @@ namespace Sharq.Core.Storybook.Probe
             {
                 if (_calls.Count <= ChipCount) return _calls;
                 return _calls.GetRange(_calls.Count - ChipCount, ChipCount);
+            }
+        }
+
+        /// <summary>
+        /// The last <see cref="ChipCount"/> DISTINCT calls, oldest first, each carrying how many
+        /// times it repeated inside the last <see cref="CollapseWindow"/> calls:
+        /// <c>OnOpen() x2</c> (card T-3358).
+        ///
+        /// Why the strip does not simply print <see cref="Recent"/>: a story whose trigger is
+        /// clicked twice produced <c>OnOpen() OnClose() OnOpen() OnClose()</c> - four chips that
+        /// say the same two things, and four chips are wider than two, so the flex row was
+        /// re-measured on every repeat. The count is the information; the repetition was noise
+        /// that also cost a layout pass.
+        /// </summary>
+        public IReadOnlyList<string> RecentCollapsed
+        {
+            get
+            {
+                if (_calls.Count == 0) return Array.Empty<string>();
+
+                var order = new List<string>(ChipCount);
+                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                int stop = _calls.Count - CollapseWindow;
+                if (stop < 0) stop = 0;
+                for (int i = _calls.Count - 1; i >= stop; i--)
+                {
+                    var call = _calls[i];
+                    if (counts.TryGetValue(call, out var seen))
+                    {
+                        counts[call] = seen + 1;
+                        continue;
+                    }
+                    if (order.Count == ChipCount) break;
+                    counts[call] = 1;
+                    order.Add(call);
+                }
+
+                var chips = new string[order.Count];
+                for (int i = 0; i < order.Count; i++)
+                {
+                    // order is newest-first; the strip reads oldest-first.
+                    var call = order[order.Count - 1 - i];
+                    var n = counts[call];
+                    chips[i] = n > 1 ? call + " x" + n.ToString(CultureInfo.InvariantCulture) : call;
+                }
+                return chips;
             }
         }
 

@@ -252,7 +252,7 @@ namespace Sharq.Core.Storybook.Controls
                     continue;
                 }
 
-                var control = SusControlFactory.Build(prop, Context);
+                var control = SusControlFactory.Build(prop, Context, DeclaredAxisSet(story, prop));
                 if (control == null)
                 {
                     // No control and no declared reason: a hole, and the footer will say so.
@@ -292,6 +292,30 @@ namespace Sharq.Core.Storybook.Controls
             bool empty = PropCount == 0;
             _empty.EnableInClassList(SusControl.HiddenClass, !empty);
             _groups.EnableInClassList(SusControl.HiddenClass, empty);
+        }
+
+        /// <summary>
+        /// The closed set the STORY declared for this prop, or null (card T-3379, decision D26).
+        ///
+        /// Zone D already turned a closed set into a segmented picker - but only when the
+        /// COMPONENT clamped the prop with <c>UseAllowed</c>. On the 9 of 17 kit components whose
+        /// <c>Variant</c> is an unclamped <c>Prop&lt;string&gt;</c> the buyer got a bare text
+        /// field and had to guess the spelling of a value the component's own USS enumerates.
+        /// This is the other producer: the story names the values once, and zone D can no longer
+        /// accept a value outside them, because a picker has no way to type one.
+        ///
+        /// Returns null the moment the component speaks for itself: <see cref="SusStoryAxis"/>
+        /// resolves the two producers in one place, and a second resolution order here would
+        /// eventually disagree with the matrix.
+        /// </summary>
+        static IReadOnlyList<string> DeclaredAxisSet(SusStoryContext story, SusPropInfo prop)
+        {
+            var entry = story?.Entry;
+            if (entry == null || !entry.DeclaresAxis) return null;
+            if (prop.ReadOnly || prop.ValueType != typeof(string)) return null;
+
+            var axis = SusStoryAxis.FromStory(entry, prop.Name);
+            return axis.IsClosed ? axis.Values : null;
         }
 
         void ApplyRoute(SusStoryRoute route)

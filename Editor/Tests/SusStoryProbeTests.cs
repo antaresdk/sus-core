@@ -201,7 +201,8 @@ namespace Sharq.Core.Editor.Tests
             probe.Attach(Entry(Counter), demo, stage);
 
             Assert.That(probe.AnomalyCount, Is.EqualTo(1));
-            Assert.That(probe.HealthText, Is.EqualTo("health 1"));
+            Assert.That(probe.HealthText, Is.EqualTo("1 anomaly"),
+                "card T-3358: the number counts anomalies, so the word beside it says anomalies");
             Assert.That(probe.Anomalies.Single(), Does.Contain("visible but zero-size"));
 
             var rows = probe.Query<VisualElement>(className: "sus-sb-probe__anomaly").ToList();
@@ -220,7 +221,10 @@ namespace Sharq.Core.Editor.Tests
             probe.Attach(Entry(Counter), demo, stage);
 
             Assert.That(probe.AnomalyCount, Is.Zero);
-            Assert.That(probe.HealthText, Is.EqualTo("health 0"));
+            // Card T-3358: "health 0" beside a GREEN dot read as "no health left" while it
+            // meant "no anomalies found" — the caption promised the opposite of the colour.
+            Assert.That(probe.HealthText, Is.EqualTo(SusStoryProbe.HealthOkText));
+            Assert.That(SusStoryProbe.HealthOkText, Is.EqualTo("0 anomalies"));
             Assert.That(probe.Query<VisualElement>(className: "sus-sb-probe__anomaly").ToList(), Is.Empty);
         }
 
@@ -242,8 +246,14 @@ namespace Sharq.Core.Editor.Tests
             var demo = new ProbeEventDemo();
             using var probe = Attached(demo);
 
+            // Card T-3358 defect 3: while nothing can answer, the field is not DRAWN — the old
+            // strip spent a canvas compare 8,3 times a second to print a dash that never became
+            // anything else, and a reader lost nothing when it was gone.
             Assert.That(SusStoryFrame.IsStub, Is.True);
-            Assert.That(probe.FrameText, Is.EqualTo(SusStoryFrameResult.UnavailableText));
+            Assert.That(probe.FrameText, Is.Empty);
+            Assert.That(probe.Query<Label>(className: "sus-sb-probe__frame")
+                    .First().ClassListContains("sus-sb-hidden"), Is.True,
+                "a field nobody can answer is hidden, not filled with a dash");
             Assert.That(probe.Frame.IsAnomaly, Is.False, "'cannot tell' is not an anomaly");
         }
 
@@ -274,6 +284,8 @@ namespace Sharq.Core.Editor.Tests
 
             using var probe = Attached(demo);
 
+            // A REGISTERED comparer that throws is not the stub: the field stays drawn and says
+            // it cannot tell, because somebody was supposed to be able to answer (T-3358).
             Assert.That(probe.FrameText, Is.EqualTo(SusStoryFrameResult.UnavailableText));
         }
 
@@ -570,14 +582,18 @@ namespace Sharq.Core.Editor.Tests
             host.Probe.HealthSource = _ => new[] { "CoreCounterDemo: visible but zero-size" };
 
             host.ShowStoryById(Counter);
-            host.SyncOverlay();   // the stage tick that re-reads health
+            host.RefreshProbe();   // zone E's own throttled tick (card T-3358)
 
             Assert.That(host.Probe.AnomalyCount, Is.EqualTo(1));
             Assert.That(host.Nav.AnomalyCount, Is.EqualTo(1),
                 "zone A carries the same number, so a broken story is visible from the list");
 
             host.Probe.HealthSource = _ => Array.Empty<string>();
-            host.SyncOverlay();
+            // Swapping the source is not one of D17's named occasions, so the tick has nothing to
+            // honour until something says so — which is the whole point of the flag (T-3358).
+            Assert.That(host.RefreshProbe(), Is.False);
+            host.Probe.MarkDirty();
+            Assert.That(host.RefreshProbe(), Is.True);
 
             Assert.That(host.Nav.AnomalyCount, Is.Zero);
         }

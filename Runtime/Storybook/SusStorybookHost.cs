@@ -79,6 +79,8 @@ namespace Sharq.Core.Storybook
         SusControlPanel _controls;
         IVisualElementScheduledItem _shareReset;
         IVisualElementScheduledItem _overlayWatch;   // card T-3038
+        IVisualElementScheduledItem _probeTick;      // card T-3358: zone E, its own slower tick
+        bool _overlayOpen;
         SusComponent _current;
         bool _disposed;
 
@@ -123,6 +125,9 @@ namespace Sharq.Core.Storybook
 
             _env = new SusStoryEnvBar(this, _canvas);
             _env.Changed += RefreshAddress;
+            // An environment axis (breakpoint, density, theme, scale, input) re-lays out the
+            // stage, so it is one of D17's named occasions for zone E (card T-3358).
+            _env.Changed += () => { _probe.MarkDirty(); _sizes.Refresh(); };
 
             _address.AddToClassList("sus-sb__link");
             _address.AddToClassList("sus-sb-env__link");
@@ -214,6 +219,13 @@ namespace Sharq.Core.Storybook
             RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
             RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
 
+            // A finished layout pass of the CANVAS is the fourth named occasion of D17: a story
+            // that collapses to zero size does it during layout and raises nothing else (cards
+            // T-3358, T-3362). Registered on the canvas and not on the mounted instance on
+            // purpose — the canvas is a fixture of the shell, so the subscription survives every
+            // story switch and needs no re-registration.
+            _canvas.RegisterCallback<GeometryChangedEvent>(OnCanvasGeometryChanged);
+
             ShowStoryFromUrlOrFirst();
         }
 
@@ -292,20 +304,52 @@ namespace Sharq.Core.Storybook
         public OverlayHost CanvasOverlay => _canvasOverlay;
 
         /// <summary>
-        /// Re-reads the stage overlay and mirrors its state into zone C: the canvas grows so a
-        /// popup is not clipped out of the frame, and the bottom line says where the popup went.
-        /// Called on a timer while a story is mounted; public so a test can ask for it directly
+        /// Re-reads the stage overlay and tells zone C where a popup went. Called on the
+        /// <see cref="OverlayWatchMs"/> timer while a story is mounted, because UI Toolkit raises
+        /// no event when an overlay host gains a child; public so a test can ask for it directly
         /// instead of waiting for the scheduler.
+        ///
+        /// Two things this used to do and no longer does.
+        ///
+        /// It used to GROW THE CANVAS (<c>sus-sb-stage__canvas--overlay</c>, min-height 120 → 350
+        /// in the shell sheet): every popover, tooltip and menu opening on the stage moved the
+        /// canvas and everything under it by 230 px, and closing moved it back — the single most
+        /// visible source of "all the elements jump" (card T-3362). It was done deliberately, so
+        /// a screenshot would catch the popup; plan ARCH-20260911-STORYBOOK-SHELL §4.7 and D18
+        /// decide that fork the other way: the canvas has ONE declared height, and the popup is
+        /// kept in the frame by positioning the overlay host inside the canvas — which is what
+        /// <c>SusBootstrap.GetOrCreateOverlay(_canvas)</c> already does (T-3032). Frames of one
+        /// address then stay comparable between runs, which a canvas of two heights never was.
+        ///
+        /// It used to REFRESH ZONE E, so the probe inherited this tick: 8,3 canvas walks and
+        /// three text rewrites a second, unconditionally (card T-3358). Zone E now has its own
+        /// <see cref="SusStoryProbe.RefreshIntervalMs"/> tick over a dirty flag, and this poll
+        /// only raises that flag — and only when the overlay state actually changed.
         /// </summary>
         public void SyncOverlay()
         {
             bool open = _canvasOverlay != null && _canvasOverlay.Count > 0;
-            _canvas.EnableInClassList("sus-sb-stage__canvas--overlay", open);
-            _sizes.SetOverlayOpen(open);
+            if (open == _overlayOpen) return;
 
-            // Zone E rides the same tick (card T-3040): health has no event to listen to either —
-            // a story that collapses to zero size does it silently, during layout.
-            _probe.Refresh();
+            _overlayOpen = open;
+            _sizes.SetOverlayOpen(open);
+            _probe.MarkDirty();
+        }
+
+        /// <summary>
+        /// Honours a pending zone E refresh, if one is pending (card T-3358). The seam a test
+        /// drives instead of waiting <see cref="SusStoryProbe.RefreshIntervalMs"/>; returns
+        /// whether the strip was actually re-read.
+        /// </summary>
+        public bool RefreshProbe()
+        {
+            // The live-size line rides this tick too (card T-3362, D16): it lost its own
+            // subscription to the geometry of the element it measures, because that subscription
+            // WAS the loop. One throttled reader for both, so the two can never disagree about
+            // how often the stage is allowed to be re-read.
+            bool sizes = _sizes.RefreshIfStale();
+            bool probe = _probe.RefreshIfDirty();
+            return probe || sizes;
         }
 
         /// <summary>Goes back one route; false when there is nowhere to go.</summary>
@@ -424,10 +468,20 @@ namespace Sharq.Core.Storybook
             _probe.Attach(entry, component, _canvas, _controls);
 
             // UI Toolkit raises no event when an overlay gains a child, so the stage looks. The
-            // tick is cheap (two class flips) and stops with the story.
+            // tick is cheap (one bool compare, then one class flip on a change) and stops with
+            // the story.
             _overlayWatch?.Pause();
             _overlayWatch = schedule.Execute(SyncOverlay).Every(OverlayWatchMs);
+            _overlayOpen = false;
             SyncOverlay();
+
+            // Zone E on its OWN tick, four times slower, and over a dirty flag (card T-3358,
+            // D17). Health cannot be subscribed to, but every occasion on which it could change
+            // can be named — a mount, a prop write, an environment axis, a finished layout pass —
+            // and this tick is the floor under how often those are honoured.
+            _probeTick?.Pause();
+            _probeTick = schedule.Execute(() => RefreshProbe()).Every(SusStoryProbe.RefreshIntervalMs);
+            _probe.MarkDirty();
 
             SetStageEmpty(false);
         }
@@ -507,6 +561,12 @@ namespace Sharq.Core.Storybook
         void OnControlValueChanged()
         {
             if (_disposed || _controls == null || CurrentStory == null) return;
+
+            // A prop write can change the health of the canvas and the live-size line; both are
+            // named occasions of D17 rather than things with an event of their own (T-3358/T-3362).
+            _probe.MarkDirty();
+            _sizes.Refresh();
+
             var route = _controls.BuildRoute(CurrentStory.Id);
             var withEnv = WithEnv(route);
             _address.text = withEnv.ToHash();
@@ -578,6 +638,9 @@ namespace Sharq.Core.Storybook
             // Zone C, card T-3038.
             _overlayWatch?.Pause();
             _overlayWatch = null;
+            _probeTick?.Pause();       // card T-3358
+            _probeTick = null;
+            _overlayOpen = false;
             _matrix.Clear();
             _sizes.Track(null);
             _probe.Clear();   // card T-3040: reset on story change
@@ -693,6 +756,16 @@ namespace Sharq.Core.Storybook
 
         void CloseDrawer() => RemoveFromClassList("sus-sb--drawer-open");
 
+        // Card T-3362: this handler writes NOTHING that participates in layout. It raises the
+        // dirty flag of zone E and asks the size line for a re-read; the size line is what used
+        // to close the loop by re-measuring itself (D16), and it no longer does.
+        void OnCanvasGeometryChanged(GeometryChangedEvent _)
+        {
+            if (_disposed) return;
+            _probe.MarkDirty();
+            _sizes.MarkStale();
+        }
+
         void OnGeometryChanged(GeometryChangedEvent evt)
         {
             float width = evt.newRect.width;
@@ -744,6 +817,7 @@ namespace Sharq.Core.Storybook
             _disposed = true;
             _shareReset?.Pause();
             _overlayWatch?.Pause();   // card T-3038
+            _probeTick?.Pause();      // card T-3358
             _history.Changed -= ApplyRoute;
             _env.Changed -= RefreshAddress;
             _env.Dispose();

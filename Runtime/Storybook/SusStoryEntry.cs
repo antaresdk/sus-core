@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Sharq.Core.Storybook.Nav;
 
@@ -88,6 +89,24 @@ namespace Sharq.Core.Storybook
         /// registry right after construction; <see cref="SusStoryWeight.Normal"/> otherwise.
         /// </summary>
         public SusStoryWeight Weight { get; internal set; } = SusStoryWeight.Normal;
+
+        /// <summary>
+        /// Prop the story declared its closed variant axis on
+        /// (<see cref="SusStoryAttribute.Axis"/>, card T-3379). Always a name, never null:
+        /// <see cref="SusStoryAxis.DefaultPropName"/> when the story named none.
+        /// </summary>
+        public string AxisProp { get; internal set; } = SusStoryAxis.DefaultPropName;
+
+        /// <summary>
+        /// Legal values of <see cref="AxisProp"/> as the STORY declared them, normalised by
+        /// <see cref="SusStoryAxis.Normalize"/>; empty when the story declared none. Empty is not
+        /// "no axis" on its own — the component may still clamp the prop itself, and
+        /// <see cref="SusStoryAxis.Resolve"/> is what puts the two halves together.
+        /// </summary>
+        public IReadOnlyList<string> AxisValues { get; internal set; } = Array.Empty<string>();
+
+        /// <summary>True when the STORY itself enumerated the axis.</summary>
+        public bool DeclaresAxis => AxisValues.Count > 0;
 
         /// <summary>The <c>[SusStory]</c> class, or the provider type for data-born stories.</summary>
         public Type DeclaringType { get; }

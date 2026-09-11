@@ -64,18 +64,23 @@ namespace Sharq.Core.Storybook.Controls
         /// underlying type (an <c>int</c> with an allowed set is a picker, not a slider), and
         /// read-only beats everything (a control that cannot write must not look writable).
         /// </summary>
-        public static SusControlKind KindOf(SusPropInfo prop)
+        /// <param name="prop">The prop to dress.</param>
+        /// <param name="declaredSet">
+        /// A closed set the CALLER knows and the prop does not - today the variant axis a story
+        /// enumerated for a component that never clamped the prop (<see cref="SusStoryAxis"/>,
+        /// card T-3379). It fills a hole; it never overrides the component's own set, because
+        /// that set is the one the runtime enforces.
+        /// </param>
+        public static SusControlKind KindOf(SusPropInfo prop, IReadOnlyList<string> declaredSet = null)
         {
             if (prop == null) throw new ArgumentNullException(nameof(prop));
             if (prop.ReadOnly) return SusControlKind.ReadOnly;
 
             var t = prop.ValueType;
 
-            if (prop.Allowed != null && prop.Allowed.Values != null && prop.Allowed.Values.Count > 0)
-                return prop.Allowed.Values.Count <= SegmentLimit ? SusControlKind.Segment : SusControlKind.Dropdown;
-
-            if (t != null && t.IsEnum)
-                return Enum.GetNames(t).Length <= SegmentLimit ? SusControlKind.Segment : SusControlKind.Dropdown;
+            var options = OptionsOf(prop, declaredSet);
+            if (options.Count > 0)
+                return options.Count <= SegmentLimit ? SusControlKind.Segment : SusControlKind.Dropdown;
 
             if (t == typeof(bool)) return SusControlKind.Toggle;
             if (t == typeof(Color) || t == typeof(Color32)) return SusControlKind.Color;
@@ -92,13 +97,17 @@ namespace Sharq.Core.Storybook.Controls
         /// Legal values of a closed-set prop in display order, or an empty list when the prop is
         /// not a closed set.
         /// </summary>
-        public static IReadOnlyList<string> OptionsOf(SusPropInfo prop)
+        public static IReadOnlyList<string> OptionsOf(SusPropInfo prop, IReadOnlyList<string> declaredSet = null)
         {
             if (prop == null) throw new ArgumentNullException(nameof(prop));
             if (prop.Allowed?.Values != null && prop.Allowed.Values.Count > 0)
                 return prop.Allowed.Values;
             if (prop.ValueType != null && prop.ValueType.IsEnum)
                 return Enum.GetNames(prop.ValueType);
+            // Card T-3379: the set the component never declared but the story did. Last, so a
+            // component that clamps the prop itself is always the answer.
+            if (declaredSet != null && declaredSet.Count > 0 && prop.ValueType == typeof(string))
+                return declaredSet;
             return Array.Empty<string>();
         }
 
@@ -106,7 +115,8 @@ namespace Sharq.Core.Storybook.Controls
         /// Builds the control for one prop. Returns null only when a registered provider claims
         /// the prop and then declines to build it - the panel counts that as uncovered.
         /// </summary>
-        public static SusControl Build(SusPropInfo prop, SusControlContext context)
+        public static SusControl Build(
+            SusPropInfo prop, SusControlContext context, IReadOnlyList<string> declaredSet = null)
         {
             if (prop == null) throw new ArgumentNullException(nameof(prop));
 
@@ -132,20 +142,21 @@ namespace Sharq.Core.Storybook.Controls
                 }
             }
 
-            return BuildBuiltIn(prop, context);
+            return BuildBuiltIn(prop, context, declaredSet);
         }
 
         /// <summary>The built-in table alone, with no provider asked.</summary>
-        public static SusControl BuildBuiltIn(SusPropInfo prop, SusControlContext context)
+        public static SusControl BuildBuiltIn(
+            SusPropInfo prop, SusControlContext context, IReadOnlyList<string> declaredSet = null)
         {
-            switch (KindOf(prop))
+            switch (KindOf(prop, declaredSet))
             {
                 case SusControlKind.Toggle:
                     return new SusToggleControl(prop, context);
                 case SusControlKind.Segment:
-                    return new SusSegmentControl(prop, context, OptionsOf(prop));
+                    return new SusSegmentControl(prop, context, OptionsOf(prop, declaredSet));
                 case SusControlKind.Dropdown:
-                    return new SusDropdownControl(prop, context, OptionsOf(prop));
+                    return new SusDropdownControl(prop, context, OptionsOf(prop, declaredSet));
                 case SusControlKind.Text:
                     return new SusTextControl(prop, context);
                 case SusControlKind.Icon:

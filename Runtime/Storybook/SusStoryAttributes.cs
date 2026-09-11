@@ -70,6 +70,32 @@ namespace Sharq.Core.Storybook
         public int Order { get; set; }
 
         /// <summary>
+        /// Prop that carries the CLOSED axis of variants (plan ARCH-20260911-STORYBOOK-SHELL.md
+        /// D26, card T-3379). Defaults to <see cref="SusStoryAxis.DefaultPropName"/>; name another
+        /// prop only when the variants of this component genuinely live somewhere else.
+        /// </summary>
+        public string Axis { get; set; }
+
+        /// <summary>
+        /// The legal values of <see cref="Axis"/>, in the order the matrix should draw its rows
+        /// and zone D its buttons:
+        /// <c>[SusStory("kit/atoms/alert", AxisValues = new[]{"tonal","outlined","text","flat"})]</c>.
+        ///
+        /// This is the PRODUCER half of the closed axis (<see cref="SusStoryAxis"/>). It is for
+        /// the case where only the STORY knows the enumeration: the component declares
+        /// <c>Prop&lt;string&gt; Variant</c> and branches on four literals in its own template,
+        /// but never clamped the prop with <c>UseAllowed</c> - so the engine could not tell the
+        /// four apart from any other string, printed one matrix row, and gave the buyer a text
+        /// field to guess the spelling in.
+        ///
+        /// When the component DOES clamp the prop, that set wins and this one is only checked
+        /// against it (a mismatch is logged, not silently preferred): the runtime coerces to the
+        /// component's set no matter what a story says, so a story that disagrees is wrong, and
+        /// hiding that would move the guess from the buyer to the author.
+        /// </summary>
+        public string[] AxisValues { get; set; }
+
+        /// <summary>
         /// How expensive one instance of this component is to build (plan §0.3). A
         /// <see cref="SusStoryWeight.Heavy"/> story keeps its state matrix COLLAPSED regardless of
         /// the cell budget: a table, an inventory, a battle grid or a minimap costs more per

@@ -366,6 +366,70 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
+    // ── the story-declared closed axis, card T-3379 (plan D26) ─────────────
+
+    /// <summary>
+    /// The shape the story-declared axis exists for: a variant prop that is a BARE
+    /// <c>Prop&lt;string&gt;</c>. No <c>UseAllowed</c>, so <c>DescribeAllowed</c> says nothing
+    /// about it — exactly the 9 of 17 kit components of the T-3379 measurement.
+    /// </summary>
+    public sealed class CoreVariantDemo : SusComponent
+    {
+        public Prop<string> Variant = new("tonal");
+
+        protected override void Build()
+        {
+        }
+    }
+
+    /// <summary>
+    /// A variant prop the component DOES clamp, plus a story that lists something else — the
+    /// disagreement case: the component's set is what the runtime enforces, so it wins and the
+    /// story is told off in the log.
+    /// </summary>
+    public sealed class CoreClampedVariantDemo : SusComponent
+    {
+        public Prop<string> Variant = new("tonal");
+
+        protected override void Created()
+        {
+            UseAllowed(Variant, new[] { "tonal", "outlined" }, "tonal",
+                propName: "CoreClampedVariantDemo.Variant");
+        }
+
+        protected override void Build()
+        {
+        }
+    }
+
+    [SusStory("core/showcase/variant",
+        Name = "Variant axis",
+        Component = typeof(CoreVariantDemo),
+        Purpose = "closed axis declared by the STORY, not by the component",
+        AxisValues = new[] { "tonal", "outlined", "text" })]
+    public sealed class CoreVariantStory : ISusStory
+    {
+        public SusComponent Create() => new CoreVariantDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
+    [SusStory("core/showcase/variant-clash",
+        Name = "Variant clash",
+        Component = typeof(CoreClampedVariantDemo),
+        Purpose = "story lists values the component does not allow",
+        AxisValues = new[] { "tonal", "outlined", "invented" })]
+    public sealed class CoreVariantClashStory : ISusStory
+    {
+        public SusComponent Create() => new CoreClampedVariantDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+        }
+    }
+
     // ── the tail collision, card T-3137 (plan §4.1a) ────────────────────────
     // Two stories whose LAST segment is the same and whose addresses are not. Keyed by the tail
     // one of them disappears without a word (that is exactly what happened to menu-button, menu,

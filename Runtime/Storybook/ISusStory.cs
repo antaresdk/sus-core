@@ -67,6 +67,18 @@ namespace Sharq.Core.Storybook
         /// <summary>Sort key inside its group.</summary>
         public int Order { get; set; }
 
+        /// <summary>
+        /// Prop carrying the closed axis of variants — see <see cref="SusStoryAttribute.Axis"/>.
+        /// </summary>
+        public string Axis { get; set; }
+
+        /// <summary>
+        /// Legal values of <see cref="Axis"/> — see <see cref="SusStoryAttribute.AxisValues"/>.
+        /// Data-born stories declare the axis exactly like class-born ones: a provider that
+        /// generates one story per preset knows the presets it generated.
+        /// </summary>
+        public string[] AxisValues { get; set; }
+
         /// <summary>Build cost of one instance (card T-3038) — see <see cref="SusStoryAttribute.Weight"/>.</summary>
         public SusStoryWeight Weight { get; set; } = SusStoryWeight.Normal;
 
