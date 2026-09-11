@@ -119,6 +119,11 @@
        popover must not be able to change it. */
     --sb-canvas-h: 350px;
     --sb-canvas-min-w: 320px;
+    /* The live-size line of zone C, D15: a RESERVED width, so the label does not resize when the
+       number it prints changes width. 56 characters is the longest form the writer can emit —
+       "h 1080 · fs 13.5 · pad 22.5 · radius 12  (resolvedStyle)" (SusStorySizes.Refresh) — and
+       340px holds it at --sb-fs-11 with room for a wider face later. */
+    --sb-sizes-w: 340px;
     /* Scrollbar band, mock-up: 8px and no arrow buttons (D12). */
     --sb-scrollbar: 8px;
 
@@ -680,15 +685,6 @@
     overflow: hidden;
 }
 
-/* The popover state carries NO geometry any more — that is the whole point of D18. The class is
- * still toggled by the stage (zone C also says in words that an overlay is open), and the stage's
- * own OverlayHost is absolutely positioned, so a popup lays out INSIDE the canvas box without
- * enlarging it. Kept as an explicit empty-of-geometry rule rather than deleted, so the next reader
- * sees that the decision was made here and not forgotten. */
-.sus-sb-stage__canvas--overlay {
-    border-color: var(--sb-line-soft);
-}
-
 .sus-sb-stage__crumbs {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
@@ -823,6 +819,18 @@
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
     margin-right: 18px;
+}
+
+/* D15, card T-3396: the live-size line RESERVES its box. The C# half of the loop is already open
+   (SusStorySizes stopped subscribing to the geometry of the element it measures, and writes only
+   on a real text change) — but the WIDTH of the label was still a function of its text, so a
+   story going from "h 8" to "h 1080" still moved zone C sideways. One declared number ends that:
+   the box is the same whatever it prints. The face is still --sb-font-mono, which today resolves
+   to Montserrat; swapping the family to the mock-up Geist Mono is card T-3357, and this reserve
+   is sized so that swap cannot overflow it either. */
+.sus-sb-sizes__metrics {
+    min-width: var(--sb-sizes-w);
+    flex-shrink: 0;
 }
 
 .sus-sb-stage__empty {
