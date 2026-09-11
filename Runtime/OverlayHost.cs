@@ -640,38 +640,13 @@ namespace Sharq.Core
 
         /// <summary>
         /// Traps focus within a given overlay (for modals). Tab/Shift+Tab wrap.
+        ///
+        /// Kept as public API for external mounters; the traversal itself lives in
+        /// <see cref="SusModalBase.InstallFocusTrapOn"/>, which every overlay component already
+        /// gets from its base constructor (T-3430). One implementation, one traversal order.
         /// </summary>
         public void InstallFocusTrap(VisualElement overlayElement)
-        {
-            if (overlayElement == null) return;
-
-            overlayElement.RegisterCallback<KeyDownEvent>(evt =>
-            {
-                if (evt.keyCode != KeyCode.Tab) return;
-
-                var focusables = overlayElement.Query<VisualElement>()
-                    .Where(e => e.focusable && e.enabledInHierarchy)
-                    .ToList();
-
-                if (focusables.Count == 0) return;
-
-                var current = overlayElement.focusController?.focusedElement as VisualElement;
-                var currentIndex = focusables.IndexOf(current);
-
-                if (evt.shiftKey)
-                {
-                    var target = currentIndex <= 0 ? focusables[focusables.Count - 1] : focusables[currentIndex - 1];
-                    target.Focus();
-                }
-                else
-                {
-                    var target = currentIndex >= focusables.Count - 1 ? focusables[0] : focusables[currentIndex + 1];
-                    target.Focus();
-                }
-
-                evt.StopPropagation();
-            }, TrickleDown.NoTrickleDown);
-        }
+            => SusModalBase.InstallFocusTrapOn(overlayElement);
 
         // ── Companion USS inheritance ──────────────────────────────────────
 

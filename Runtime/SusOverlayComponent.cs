@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core
@@ -233,17 +234,275 @@ namespace Sharq.Core
     {
         protected sealed override OverlayCategory Layer => OverlayCategory.Modal;
 
+        // ── The three overlay-role obligations (ARCH-20260911-KIT-STATE-CONTRACT D11/D12, T-3430) ──
+        //
+        //   1. ENTER   — on show, focus moves to the first focusable element INSIDE the overlay;
+        //                if there is none, to the overlay itself (focusable, tabIndex -1) so that
+        //                the trap becomes reachable at all.
+        //   2. HOLD    — Tab / Shift+Tab cycle inside the overlay and never leave it.
+        //   3. RETURN  — the element focused BEFORE the show gets focus back after the close.
+        //
+        // Why this lives in the base and not in each overlay component: a trap WITHOUT an initial
+        // focus is INERT. It hangs on the overlay's KeyDownEvent, but key events go to the focused
+        // element and bubble up from there — while focus is outside, neither Tab nor Escape ever
+        // reaches the overlay. That was exactly the state of SusModal and SusSpotlightTour: the
+        // trap was installed and the dialog still could not be operated from the keyboard. Enter,
+        // hold and return are therefore one obligation with one home.
+        //
+        // The trap is installed IN THE CONSTRUCTOR: a subclass of the overlay base gets it by the
+        // fact of inheritance rather than by a call someone can forget. Registering a callback
+        // needs no panel, and an overlay with nothing focusable costs the trap nothing (zero
+        // focusables — the handler returns immediately).
+
+        /// <summary>
+        /// Overlays that currently hold a focus session. Only ever holds elements that are on a
+        /// panel (pruned on every claim); it exists so that "who is the presenter" can be decided
+        /// by containment rather than by the order in which two nested overlays opened.
+        /// </summary>
+        private static readonly System.Collections.Generic.List<SusModalBase> ActiveFocusSessions
+            = new System.Collections.Generic.List<SusModalBase>();
+
+        private VisualElement _focusReturn;
+        private bool _focusSession;
+        private IVisualElementScheduledItem _focusEnter;
+        private EventCallback<KeyDownEvent> _escapeCallback;
+        private Func<bool> _escapeGuard;
+        private Action _escapeClose;
+
+        protected SusModalBase()
+        {
+            InstallFocusTrapOn(this);
+            RegisterCallback<DetachFromPanelEvent>(_ =>
+            {
+                // Safety net for the return: a close that bypasses CloseFromOverlay
+                // (OverlayHost.RemoveFromOverlay called directly, a service teardown, panel
+                // destruction). A relocation into/out of the overlay is NOT a close — that is
+                // what IsRelocatingToOverlay distinguishes.
+                if (_focusSession && !IsRelocatingToOverlay)
+                    EndOverlayFocus();
+            });
+        }
+
+        /// <summary>True while this overlay holds the focus session (entered, not yet returned).</summary>
+        protected bool HasOverlayFocusSession => _focusSession;
+
+        /// <summary>
+        /// Obligation 1, plus the capture for obligation 3. Called from the component's own POINT
+        /// OF SHOW: a self-teleporting overlay gets it from <see cref="OpenInOverlay"/> (which
+        /// calls this itself), an in-place one (drawer, bottom sheet, dialogue box) calls it from
+        /// its own transition into the open state.
+        ///
+        /// Nesting: an overlay sitting INSIDE another overlay's content is not the presenter and
+        /// holds no session of its own — otherwise the dialogue box inside the tutorial modal
+        /// would pull focus off the modal's buttons onto itself. The outermost presenter always
+        /// wins, whichever of the two opened first: an inner claim is refused, and an outer claim
+        /// takes over a session already held by its own content (inheriting the return target the
+        /// inner one had captured). Testing "is there a SusModalBase ancestor" instead would be
+        /// wrong — a wrapper such as SusTutorialModal is such an ancestor while its inner modal
+        /// falls back to inline display, and the real dialog would then get no initial focus.
+        /// </summary>
+        protected void BeginOverlayFocus()
+        {
+            if (_focusSession) return;
+
+            PruneFocusSessions();
+
+            for (int i = 0; i < ActiveFocusSessions.Count; i++)
+            {
+                var outer = ActiveFocusSessions[i];
+                if (outer != this && outer.Contains(this))
+                    return; // an enclosing overlay is the presenter
+            }
+
+            VisualElement inherited = null;
+            for (int i = ActiveFocusSessions.Count - 1; i >= 0; i--)
+            {
+                var inner = ActiveFocusSessions[i];
+                if (inner == this || !Contains(inner)) continue;
+                inherited = inherited ?? inner._focusReturn;
+                inner.CancelOverlayFocus();
+            }
+
+            _focusSession = true;
+            ActiveFocusSessions.Add(this);
+
+            if (inherited != null && inherited.panel != null && !Contains(inherited))
+            {
+                _focusReturn = inherited;
+            }
+            else
+            {
+                var focused = focusController?.focusedElement as VisualElement;
+                if (focused != null && focused != this && !Contains(focused))
+                    _focusReturn = focused;
+            }
+
+            _focusEnter?.Pause();
+            _focusEnter = schedule.Execute(FocusFirstInside).ExecuteLater(0);
+        }
+
+        /// <summary>
+        /// Drops the session without returning focus: used when an enclosing overlay takes the
+        /// presentation over (the outer one owns the return target from then on).
+        /// </summary>
+        private void CancelOverlayFocus()
+        {
+            if (!_focusSession) return;
+            _focusSession = false;
+            ActiveFocusSessions.Remove(this);
+            _focusEnter?.Pause();
+            _focusEnter = null;
+            _focusReturn = null;
+        }
+
+        private static void PruneFocusSessions()
+        {
+            for (int i = ActiveFocusSessions.Count - 1; i >= 0; i--)
+            {
+                var s = ActiveFocusSessions[i];
+                if (s == null || s.panel == null)
+                {
+                    if (s != null) { s._focusSession = false; s._focusReturn = null; }
+                    ActiveFocusSessions.RemoveAt(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Obligation 3. Called from the point of close; <see cref="CloseFromOverlay"/> calls it
+        /// itself. The return happens BEFORE the unmount — the element is still on the panel, so
+        /// focus is moved synchronously with no frame of limbo in between.
+        /// </summary>
+        protected void EndOverlayFocus()
+        {
+            if (!_focusSession) return;
+            _focusSession = false;
+            ActiveFocusSessions.Remove(this);
+
+            _focusEnter?.Pause();
+            _focusEnter = null;
+
+            var target = _focusReturn;
+            _focusReturn = null;
+
+            var focused = focusController?.focusedElement as VisualElement;
+            if (focused != null && (focused == this || Contains(focused)))
+                focused.Blur();
+
+            if (target == null || target.panel == null) return;
+            target.Focus();
+        }
+
+        /// <summary>
+        /// Obligation 4 (Escape) as a single declaration: <paramref name="canClose"/> is the
+        /// component's policy (Persistent / Permanent / "the step is still running"),
+        /// <paramref name="close"/> its own close path. The mechanism — registration,
+        /// StopPropagation, idempotence — lives here. Escape reaches the overlay at all only
+        /// because obligation 1 moved focus inside it.
+        /// </summary>
+        protected void InstallEscapeClose(Func<bool> canClose, Action close)
+        {
+            if (close == null) return;
+            _escapeGuard = canClose;
+            _escapeClose = close;
+            if (_escapeCallback != null) return;
+
+            _escapeCallback = evt =>
+            {
+                if (evt.keyCode != KeyCode.Escape) return;
+                if (_escapeGuard != null && !_escapeGuard()) return;
+                _escapeClose?.Invoke();
+                evt.StopPropagation();
+            };
+            RegisterCallback(_escapeCallback);
+        }
+
         /// <summary>Opens the modal in the overlay (with focus trap). Falls back to inline display.</summary>
         protected bool OpenInOverlay(bool dismissOnClickOutside, Action onDismiss)
         {
             var mounted = MountSelfInOverlay(dismissOnClickOutside, onDismiss);
-            if (mounted)
-                ResolvedHost?.InstallFocusTrap(this);
+            BeginOverlayFocus();
             return mounted;
         }
 
         /// <summary>Closes the modal, restoring it to its original parent.</summary>
-        protected void CloseFromOverlay() => UnmountSelfFromOverlay();
+        protected void CloseFromOverlay()
+        {
+            EndOverlayFocus();
+            UnmountSelfFromOverlay();
+        }
+
+        private void FocusFirstInside()
+        {
+            if (!_focusSession || panel == null) return;
+
+            var first = FirstFocusableInside(this);
+            if (first != null)
+            {
+                first.Focus();
+                return;
+            }
+
+            // Nothing focusable inside — the overlay itself takes focus. tabIndex -1 keeps it out
+            // of the Tab cycle: it accepts focus programmatically but is never a Tab stop.
+            focusable = true;
+            tabIndex = -1;
+            Focus();
+        }
+
+        /// <summary>
+        /// The Tab / Shift+Tab trap. The single implementation in the framework:
+        /// <see cref="OverlayHost.InstallFocusTrap"/> delegates here so the traversal cannot drift
+        /// apart in two places.
+        /// </summary>
+        public static void InstallFocusTrapOn(VisualElement overlayElement)
+        {
+            if (overlayElement == null) return;
+
+            overlayElement.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode != KeyCode.Tab) return;
+
+                var focusables = CollectFocusables(overlayElement);
+                if (focusables.Count == 0) return;
+
+                var current = overlayElement.focusController?.focusedElement as VisualElement;
+                var currentIndex = focusables.IndexOf(current);
+
+                VisualElement target;
+                if (evt.shiftKey)
+                    target = currentIndex <= 0 ? focusables[focusables.Count - 1] : focusables[currentIndex - 1];
+                else
+                    target = currentIndex >= focusables.Count - 1 ? focusables[0] : focusables[currentIndex + 1];
+
+                target.Focus();
+                evt.StopPropagation();
+            }, TrickleDown.NoTrickleDown);
+        }
+
+        private static System.Collections.Generic.List<VisualElement> CollectFocusables(VisualElement root)
+        {
+            return root.Query<VisualElement>()
+                .Where(e => e != root && e.focusable && e.tabIndex >= 0
+                            && e.enabledInHierarchy && IsDisplayed(e, root))
+                .ToList();
+        }
+
+        private static VisualElement FirstFocusableInside(VisualElement root)
+        {
+            var list = CollectFocusables(root);
+            return list.Count > 0 ? list[0] : null;
+        }
+
+        private static bool IsDisplayed(VisualElement el, VisualElement root)
+        {
+            for (var e = el; e != null && e != root.parent; e = e.parent)
+            {
+                if (e.resolvedStyle.display == DisplayStyle.None) return false;
+                if (!e.visible) return false;
+            }
+            return true;
+        }
     }
 
     /// <summary>
