@@ -83,8 +83,8 @@ namespace Sharq.Core.Storybook.Probe
     }
 
     /// <summary>
-    /// Compares the live stage with the story's canonical frame (plan §4.7: "canon = live
-    /// сравнивается на месте"). The ENGINE only declares this contract: taking a picture needs
+    /// Compares the live stage with the story's canonical frame (plan §4.7: "canon = live is
+    /// compared in place"). The ENGINE only declares this contract: taking a picture needs
     /// a render target, a canon store and a diff, all of which live in the screenshot conveyor —
     /// card T-3045 implements it there and registers the implementation in
     /// <see cref="SusStoryFrame.Comparer"/>.

@@ -9,7 +9,7 @@ namespace Sharq.Core.Storybook.Env
     /// (breakpoint, density, theme, scale, input) are core services the engine already owns and
     /// need no provider; <c>skin</c> and <c>locale</c> have none in core and reach zone B only
     /// through <see cref="SusStoryEnvAxisRegistry"/> — no provider registered means no chip, by
-    /// design ("провайдеров нет — оси нет").
+    /// design ("no providers, no axis").
     ///
     /// <see cref="Values"/>[0] is the axis's default/auto value: a route only carries an
     /// <c>env.&lt;Id&gt;=</c> entry for an axis sitting away from that first value (mirrors

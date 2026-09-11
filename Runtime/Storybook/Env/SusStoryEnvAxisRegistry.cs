@@ -12,7 +12,7 @@ namespace Sharq.Core.Storybook.Env
     ///
     /// No provider registered for an id means the chip is absent, not empty: <c>TryGet</c>
     /// returning false is the caller's cue to skip the slot entirely (plan D9-style rule
-    /// "провайдеров нет — оси нет").
+    /// "no providers, no axis").
     /// </summary>
     public static class SusStoryEnvAxisRegistry
     {

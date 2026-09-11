@@ -116,8 +116,9 @@ namespace Sharq.Core.Storybook
 
             // Zone B — environment (plan §4.4, card T-3036): chip group left, deep-link and share
             // right. The deep-link label and the share button are the SAME instances the T-3033
-            // scaffold put in the top bar — moved here, not duplicated (card text: "уже есть в
-            // каркасе — переиспользуй, не дублируй"). Share stops setting Button.text directly so
+            // scaffold put in the top bar — moved here, not duplicated (card text: "already in
+            // the scaffold — reuse it, do not duplicate"). Share stops setting Button.text
+            // directly so
             // narrow mode can hide the label and keep only the icon (mock-up, card T-3036).
             _zoneEnv.name = "sus-storybook-zone-b";
             _zoneEnv.AddToClassList("sb-zone");
@@ -417,14 +418,15 @@ namespace Sharq.Core.Storybook
 
             // env.* entries apply to their axis and leave the route BEFORE anything renders, so a
             // story mounted from a shared link comes up already in the environment it was shared
-            // from (plan §4.4: "чтение из адреса при старте"). What Mount/BuildControls see below
+            // from (plan §4.4: "read from the address at start"). What Mount/BuildControls see
+            // below
             // is the clean route — control props only, exactly like before this card.
             route = _env.ConsumeFromRoute(route);
 
             // The address bar is written only for routes that did NOT come from it (§4.6 loop
             // guard). SusStoryUrl.Push enforces the same rule; asking twice is cheap and makes
             // the intention readable at the call site. WithEnv puts env.* BACK for display/share
-            // only (plan §4.4: "поделиться" must reproduce the environment).
+            // only (plan §4.4: "share" must reproduce the environment).
             if (route != null)
             {
                 var withEnv = WithEnv(route);
@@ -641,7 +643,7 @@ namespace Sharq.Core.Storybook
         /// <summary>
         /// Re-derives the address text from the CURRENT route and the environment, without
         /// touching history — a chip click never navigates. Wired to
-        /// <see cref="SusStoryEnvBar.Changed"/> so "поделиться" is never stale by one click.
+        /// <see cref="SusStoryEnvBar.Changed"/> so "share" is never stale by one click.
         /// </summary>
         void RefreshAddress()
         {
@@ -808,13 +810,13 @@ namespace Sharq.Core.Storybook
             }
 
             // Zone B's deep-link only fits a host wide enough to show it without crowding the
-            // chips (card T-3036, mock-up: "деролинк... только ≥1200").
+            // chips (card T-3036, mock-up: "deep-link... only ≥1200").
             EnableInClassList("sb-shell--wide", width >= WideWidth);
         }
 
         void OnKeyDown(KeyDownEvent evt)
         {
-            // Ctrl+K / Cmd+K focuses the search field of zone A (mock-up "поиск стори ⌘K").
+            // Ctrl+K / Cmd+K focuses the search field of zone A (mock-up "story search ⌘K").
             if (evt.keyCode == UnityEngine.KeyCode.K && (evt.ctrlKey || evt.commandKey))
             {
                 if (ClassListContains("sb-shell--narrow")) EnableInClassList("sb-shell--drawer-open", true);

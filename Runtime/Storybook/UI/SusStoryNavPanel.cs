@@ -53,7 +53,7 @@ namespace Sharq.Core.Storybook.UI
             var head = new VisualElement();
             head.AddToClassList("sb-nav__head");
 
-            // ── the two arrows (plan §4.6: "кнопки назад/вперёд — в зоне A, плюс Alt+←/Alt+→") ──
+            // ── the two arrows (plan §4.6: "back/forward buttons — in zone A, plus Alt+←/Alt+→") ──
             // The cursor of SusStoryHistory existed from the first day of the engine and only the
             // keyboard could move it, so the path a buyer had just walked was rewindable by
             // whoever knew the shortcut (card T-3406, R142 zone A "history-buttons").

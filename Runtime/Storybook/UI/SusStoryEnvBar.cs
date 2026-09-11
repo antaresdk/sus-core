@@ -129,9 +129,9 @@ namespace Sharq.Core.Storybook.UI
 
         /// <summary>
         /// Query entries for every axis sitting away from its default (<c>Values[0]</c>), keyed
-        /// <c>env.&lt;Id&gt;</c> (plan §4.4: "оси среды пишутся в query deep-link отдельным
-        /// префиксом"). Empty when the whole environment is at default — the reason an untouched
-        /// link stays short.
+        /// <c>env.&lt;Id&gt;</c> (plan §4.4: "environment axes are written into the deep-link
+        /// query under a separate prefix"). Empty when the whole environment is at default — the
+        /// reason an untouched link stays short.
         /// </summary>
         public IReadOnlyDictionary<string, string> CurrentDeltas()
         {

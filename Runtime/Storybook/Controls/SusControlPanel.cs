@@ -273,7 +273,8 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>
         /// Puts every control back to the value the STORY seeded it with (card T-3406, contract of
-        /// zone D: "возвращает засев, а не дефолты типа"). Returns how many props actually moved.
+        /// zone D: "restores the seed, not the type defaults"). Returns how many props actually
+        /// moved.
         ///
         /// Three things it deliberately does NOT do:
         /// <list type="bullet">

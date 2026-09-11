@@ -670,8 +670,8 @@
 }
 
 /* Share — the SAME Button the top bar used before this card; icon always shown, its text label
- * hidden in narrow mode so the button collapses to an icon (card T-3036, mock-up: "кнопка share —
- * иконкой"). */
+ * hidden in narrow mode so the button collapses to an icon (card T-3036, mock-up: "the share
+ * button becomes an icon"). */
 .sb-env__share {
     flex-shrink: 0;
     flex-direction: row;
