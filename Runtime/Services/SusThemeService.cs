@@ -34,12 +34,65 @@ namespace Sharq.Core
         private SusThemeService() { }
 
         /// <summary>
+        /// USS class that declares an element a SCOPED cascade root: <see cref="ResolveCascadeRoot"/>
+        /// stops there instead of climbing on to <see cref="SusBootstrap.TokenCascadeRoot"/>, so a
+        /// theme written through this service lands on that element and repaints its subtree only.
+        /// Put it on with <see cref="MarkScopedCascadeRoot"/>.
+        ///
+        /// The name carries no <c>sus-</c> prefix on purpose: this belongs to the same family as
+        /// <c>theme-dark</c> / <c>theme-light</c> / <c>breakpoint-*</c> — classes that say what a
+        /// cascade root IS, not what a product component looks like. A <c>sus-</c> name here would
+        /// also read as a product class on a host that is deliberately not the product (the
+        /// storybook shell — see SusStorybookShellIsolation and its EditMode boundary test).
+        /// </summary>
+        public const string ScopedRootClass = "theme-scope";
+
+        /// <summary>
+        /// Declares <paramref name="root"/> a scoped cascade root — "when someone asks for the
+        /// cascade root from inside here, the answer is THIS element".
+        ///
+        /// The case this exists for is a panel that shows a component under a theme of its own
+        /// while the application around it keeps another: the storybook stage (plan
+        /// ARCH-20260911-STORYBOOK-SHELL D27), a theme preview, a side-by-side compare. Handing
+        /// such a subtree to <see cref="SetTheme"/> was not enough on its own, because
+        /// <see cref="ResolveCascadeRoot"/> preferred the global cascade root whenever it shared a
+        /// panel with the hint — so the class went on the panel root and the whole instrument
+        /// repainted (card T-3400: 107 shell elements changed colour from one stage chip).
+        ///
+        /// Only the declaration is done here. Token sheets are NOT loaded onto the element: the
+        /// normal case is a subtree that already sits under a loaded cascade and only needs a
+        /// theme of its own. A detached subtree that needs the sheets too asks
+        /// <see cref="SusBootstrap.EnsureTokenCascade"/> for them, as before. Idempotent.
+        /// </summary>
+        public static void MarkScopedCascadeRoot(VisualElement root)
+        {
+            if (root == null) return;
+            if (!root.ClassListContains(ScopedRootClass))
+                root.AddToClassList(ScopedRootClass);
+        }
+
+        /// <summary>Whether <paramref name="el"/> carries <see cref="ScopedRootClass"/>.</summary>
+        public static bool IsScopedCascadeRoot(VisualElement el) =>
+            el != null && el.ClassListContains(ScopedRootClass);
+
+        /// <summary>
         /// Resolves the element that owns the design-token cascade (theme classes + L1–L5 sheets).
-        /// Prefer <see cref="SusBootstrap.TokenCascadeRoot"/>; never use bare <c>panel.visualTree</c>
+        /// A scoped root declared by <see cref="MarkScopedCascadeRoot"/> wins; otherwise prefer
+        /// <see cref="SusBootstrap.TokenCascadeRoot"/>; never use bare <c>panel.visualTree</c>
         /// when a UIDocument content root was cascaded (sheets/classes would not match).
         /// </summary>
         public static VisualElement ResolveCascadeRoot(VisualElement hint)
         {
+            // A declared scope is an ANSWER, not a hint: it is checked before the global root,
+            // because the whole point of declaring it is that the global root is the wrong answer
+            // here (card T-3400). Nothing changes for a tree that declares no scope — the loop
+            // finds nothing and the preference below runs exactly as it did.
+            for (var scope = hint; scope != null; scope = scope.parent)
+            {
+                if (scope.ClassListContains(ScopedRootClass))
+                    return scope;
+            }
+
             var cascaded = SusBootstrap.TokenCascadeRoot;
             if (cascaded != null)
             {
@@ -90,7 +143,11 @@ namespace Sharq.Core
             // OverlayHost (popups, tooltips, modals) — needs theme class
             // for --thm-* / --sk-* variable resolution. Name is "overlay-host", not a USS class.
             var overlayHost = target.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
-            if (overlayHost == null && target.panel?.visualTree != null)
+            // The panel-wide search is skipped for a SCOPED root (card T-3400): a scope that asked
+            // to repaint itself only must not reach the application's overlay host through the back
+            // door. A scope with popups of its own owns an OverlayHost inside itself — which is
+            // what SusBootstrap.GetOrCreateOverlay(canvas) already gives the storybook stage.
+            if (overlayHost == null && !IsScopedCascadeRoot(target) && target.panel?.visualTree != null)
                 overlayHost = target.panel.visualTree.Q<OverlayHost>(name: OverlayHost.OverlayHostName);
 
             if (overlayHost != null)

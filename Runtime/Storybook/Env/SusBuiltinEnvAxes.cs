@@ -162,7 +162,16 @@ namespace Sharq.Core.Storybook.Env
             static readonly string[] s_values = { "dark", "light" };
             readonly VisualElement _root;
 
-            public ThemeAxis(VisualElement root) => _root = root;
+            public ThemeAxis(VisualElement root)
+            {
+                _root = root;
+                // The axis DECLARES its root a scoped cascade root (card T-3400), and that
+                // declaration is what lets SusThemeService.SetTheme below mean "this element".
+                // Declared here as well as in SusStorybookHost so the guarantee holds for every
+                // tree this axis is built over, including the detached EditMode fixtures where
+                // there is no host at all. Idempotent and null-safe.
+                SusThemeService.MarkScopedCascadeRoot(root);
+            }
 
             public string Id => "theme";
             public string Icon => string.Equals(Current, "light", StringComparison.Ordinal) ? "sun" : "moon";
@@ -176,31 +185,28 @@ namespace Sharq.Core.Storybook.Env
                     : SusTheme.Dark;
                 if (_root == null) return;
 
-                // The class is put on THIS element by hand, and not through
-                // SusThemeService.SetTheme(_root, theme), because that method cannot mean "this
-                // element": it calls ResolveCascadeRoot first, which prefers
-                // SusBootstrap.TokenCascadeRoot whenever it shares a panel with the hint. In the
-                // live storybook the cascade root is the UIDocument's rootVisualElement
-                // (SusStorybookBehaviour.OnEnable → SusBootstrap.LoadTokenCascade) and the shell
-                // is its CHILD — so the chip kept repainting the whole instrument, above the
-                // shell, while this file claimed the stage (card T-3394: D27 was true in detached
-                // EditMode, where TokenCascadeRoot is null, and false in the editor). DensityAxis
-                // and ScaleAxis were never affected — SusDensityService/SusScaleService write the
-                // element they are handed — and BreakpointAxis buys the same guarantee by
-                // Attach()ing the preview root in its constructor.
+                // ONE mechanism, and it lives in the service (card T-3400; this supersedes the
+                // hand-rolled class layout the axis carried for card T-3394). Back then
+                // SetTheme could not mean "this element": it resolved the cascade root first
+                // and preferred SusBootstrap.TokenCascadeRoot — in the live storybook the
+                // UIDocument root, an ANCESTOR of the shell — so the chip repainted the whole
+                // instrument. The fix then was to write the class here by hand; the fix now is
+                // that the root is DECLARED a scope (constructor above) and ResolveCascadeRoot
+                // stops there, so the service behaves that way for every caller instead of for
+                // this one chip. Keeping both would be two mechanisms arguing over one class.
+                //
+                // Going back through the service also buys what the hand-rolled version could
+                // not do: the stage's own OverlayHost and its open children are given the theme
+                // class too, so a popup opened on the stage is painted in the theme the stage is
+                // showing. The scope check inside SetTheme is what keeps that search from
+                // reaching the application's overlay host above the shell.
                 //
                 // A class lower down is enough: .theme-dark/.theme-light only re-alias --thm-*
-                // (_theme.uss L2, ":root, .theme-dark" — dark is the sheet's default), and Unity
-                // resolves var() from the CONSUMING element upwards, so the nearest theme class
-                // above a component wins. That is the same scoped override kit stories already
-                // ship (Samples~/Stories/Store*Story.cs "ThemedCardPanel").
-                _root.RemoveFromClassList(SusTheme.Dark.CssClass);
-                _root.RemoveFromClassList(SusTheme.Light.CssClass);
-                _root.AddToClassList(theme.CssClass);
-
-                // Process prop last, exactly like SusThemeService.SetTheme: a Watch(Current)
-                // handler that re-reads the tree must not see it half-applied.
-                SusThemeService.Current.Value = theme;
+                // (_theme.uss L2, ":root, .theme-dark"), and Unity resolves var() from the
+                // CONSUMING element upwards, so the nearest theme class above a component wins.
+                // That is the same scoped override kit stories already ship
+                // (Samples~/Stories/Store*Story.cs "ThemedCardPanel").
+                SusThemeService.Instance.SetTheme(_root, theme);
             }
         }
 

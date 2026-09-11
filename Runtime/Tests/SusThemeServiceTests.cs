@@ -79,6 +79,72 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreSame(cascade, resolved);
         }
 
+        /// <summary>
+        /// Card T-3400 / plan ARCH-20260911-STORYBOOK-SHELL D27. A subtree that declares itself a
+        /// scoped cascade root IS the answer — the nearest theme root ABOVE it is not. This is the
+        /// exact shape of the live defect: the storybook shell hangs under the UIDocument cascade
+        /// root, the stage hangs under the shell, and handing the stage to SetTheme repainted the
+        /// root above it (107 shell elements changed colour from one stage chip).
+        /// </summary>
+        [Test]
+        public void ResolveCascadeRoot_ScopedRoot_WinsOverTheThemeRootAbove()
+        {
+            var outer = new VisualElement();
+            outer.AddToClassList("theme-dark");
+            var scope = new VisualElement();
+            var child = new VisualElement();
+            outer.Add(scope);
+            scope.Add(child);
+
+            Assert.AreSame(outer, SusThemeService.ResolveCascadeRoot(child),
+                "undeclared: the nearest theme root above still wins");
+
+            SusThemeService.MarkScopedCascadeRoot(scope);
+
+            Assert.IsTrue(SusThemeService.IsScopedCascadeRoot(scope));
+            Assert.AreSame(scope, SusThemeService.ResolveCascadeRoot(child),
+                "declared: the scope is the cascade root for everything inside it");
+            Assert.AreSame(scope, SusThemeService.ResolveCascadeRoot(scope),
+                "the scope resolves to itself, not to the root above");
+        }
+
+        /// <summary>
+        /// The consequence the card asks for in words: an axis bound to the scope repaints the
+        /// scope and leaves the tree above it alone.
+        /// </summary>
+        [Test]
+        public void SetTheme_OnScopedRoot_PaintsTheScope_AndLeavesTheRootAboveAlone()
+        {
+            var outer = new VisualElement();
+            outer.AddToClassList("theme-dark");
+            var scope = new VisualElement();
+            outer.Add(scope);
+            SusThemeService.MarkScopedCascadeRoot(scope);
+
+            SusThemeService.Instance.SetTheme(scope, SusTheme.Light);
+
+            Assert.IsTrue(scope.ClassListContains("theme-light"));
+            Assert.IsTrue(outer.ClassListContains("theme-dark"), "the root above must not be repainted");
+            Assert.IsFalse(outer.ClassListContains("theme-light"));
+        }
+
+        /// <summary>Marking twice must not double the class (idempotent declaration).</summary>
+        [Test]
+        public void MarkScopedCascadeRoot_IsIdempotent_AndNullSafe()
+        {
+            var el = new VisualElement();
+            SusThemeService.MarkScopedCascadeRoot(el);
+            SusThemeService.MarkScopedCascadeRoot(el);
+
+            int seen = 0;
+            foreach (var c in el.GetClasses())
+                if (c == SusThemeService.ScopedRootClass) seen++;
+
+            Assert.AreEqual(1, seen);
+            Assert.DoesNotThrow(() => SusThemeService.MarkScopedCascadeRoot(null));
+            Assert.IsFalse(SusThemeService.IsScopedCascadeRoot(null));
+        }
+
         [Test]
         public void ResolveCascadeRoot_NullHint_WithoutBootstrap_ReturnsNull()
         {

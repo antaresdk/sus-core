@@ -155,6 +155,15 @@ namespace Sharq.Core.Storybook
             _liveHint.AddToClassList("sus-sb-stage__live-hint");
             _canvas.name = "sus-storybook-canvas";
             _canvas.AddToClassList("sus-sb-stage__canvas");
+            // The canvas is a cascade root of its own (card T-3400, plan D27): the stage axes must
+            // be able to say "this element" and be believed. Without the declaration
+            // SusThemeService.ResolveCascadeRoot answers with SusBootstrap.TokenCascadeRoot — in
+            // the live storybook the UIDocument root, ABOVE the shell — so every service routed
+            // through it (theme here, and anything else that resolves a root from inside the
+            // stage) painted the whole instrument instead of the subject on display. Declared here
+            // rather than in the axis, so it holds for every caller that resolves a root from
+            // inside the canvas, not only for the chip that was measured.
+            SusThemeService.MarkScopedCascadeRoot(_canvas);
 
             _stageEmpty.AddToClassList("sus-sb-stage__empty");
             _stageEmptyTitle.AddToClassList("sus-sb-stage__empty-title");

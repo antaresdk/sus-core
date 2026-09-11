@@ -1711,6 +1711,48 @@
     display: none;
 }
 
+/* -- Shell text colour is DECLARED, never borrowed (D27, card T-3400) --------
+ *
+ * Measured 2026-09-11 (sus-dev, Play, resolvedStyle of 541 shell elements outside the stage
+ * canvas, before and after ONE flip of the stage theme chip): background changed on 0 of them and
+ * geometry on 0, but COLOUR changed on 107 — .sus-sb-nav__row-name x95, .sus-sb-ctl__text x5,
+ * .sus-sb-ctl__switch x3, .sus-sb-ctl__knob x3, .sus-sb-env__share-label x1. Two of the four chip
+ * combinations were unreadable as a result: a story name at 0.059 on a 0.122 nav, and at 0.941 on
+ * a 0.984 one.
+ *
+ * color is the one INHERITED property this sheet uses, and these five classes never declared it
+ * — so their value came from whatever rule outside the shell happened to match them, and that
+ * value is a function of a theme class the shell does not own. Declaring the colour from the
+ * shell's own --sb-* set closes the path by itself, and closes it for every cascade above, not just
+ * for the one axis that was measured (R138: the shell and the subject exchange no tokens).
+ *
+ * The nav name is declared through its ROW on purpose: a bare .sus-sb-nav__row-name { color }
+ * would out-specify the accent that --active passes down by inheritance, and the selected row
+ * would lose its highlight.
+ */
+
+.sus-sb-nav__row > .sus-sb-nav__row-name {
+    color: var(--sb-ink);
+}
+
+.sus-sb-nav__row--active > .sus-sb-nav__row-name {
+    color: var(--sb-accent);
+}
+
+.sus-sb-env__share > .sus-sb-env__share-label {
+    color: var(--sb-ink);
+}
+
+.sus-sb-ctl__text,
+.sus-sb-ctl__number,
+.sus-sb-ctl__hex,
+.sus-sb-ctl__mono,
+.sus-sb-ctl__list-row,
+.sus-sb-ctl__switch,
+.sus-sb-ctl__knob {
+    color: var(--sb-ink);
+}
+
 /* -- TextField: five states, three properties each (D13) ----------------------
  *
  * rest / hover / focus / disabled / invalid, and each one says background, border and text.
