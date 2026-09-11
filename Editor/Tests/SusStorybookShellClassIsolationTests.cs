@@ -41,15 +41,13 @@ namespace Sharq.Core.Editor.Tests
         /// </summary>
         private static List<VisualElement> ShellChrome(SusStorybookHost host) =>
             host.Query<VisualElement>().ToList()
-                // A mounted instance is PRODUCT even while the shell has put a class of its own on
-                // it: SusStoryMatrix adds sus-sb-matrix__item to the SusComponent itself rather
-                // than to a wrapper (SusStoryMatrix.cs:382), so without this line every matrix cell
-                // reads as "shell chrome wearing sus-alert". This never fired before card T-3409
-                // because the default story of an EditMode host was a CORE fixture, and the core
-                // fixtures wear no product classes; with the fixture package out of the product
-                // selection the default story is a real kit component. The shell class ON a product
-                // instance is a separate question, filed as its own card.
-                .Where(e => !(e is SusComponent))
+                // No carve-out for mounted instances (card T-3421): the shell no longer puts a
+                // class of its own on a SusComponent at all - the state matrix wraps each cell's
+                // instance in a box of the shell's own, and the instance inside wears the
+                // product's names only. Until T-3421 this selection had to drop every
+                // SusComponent, because sus-sb-matrix__item sat on the instance itself and every
+                // matrix cell read as "shell chrome wearing sus-alert" (it first fired at T-3409,
+                // when the default story of an EditMode host stopped being a core fixture).
                 .Where(e => e.GetClasses().Any(c => c.StartsWith(ShellPrefix)))
                 .ToList();
 
@@ -116,6 +114,33 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(painted.Count, Is.EqualTo(0),
                 "shell elements carrying an injected product class: " + string.Join(", ",
                     painted.Take(5).Select(e => string.Join(".", e.GetClasses()))));
+        }
+
+        [Test]
+        public void No_product_instance_carries_a_shell_class()
+        {
+            // The OTHER direction of the same boundary (card T-3421). The shell may mount an
+            // instance wherever it likes - the stage, zone D, a cell of the state matrix - but it
+            // dresses a box of its OWN around it. What a buyer mounts in an application and what
+            // the stand shows must carry the same class list, or the stand stops being evidence.
+            //
+            // The witness that made this a card: SusStoryMatrix put sus-sb-matrix__item on the
+            // SusComponent itself, and 16 matrix cells came out as sus-alert...sus-sb-matrix__item
+            // (card T-3409, when the default story of an EditMode host stopped being a core
+            // fixture and became a real kit component).
+            using var host = new SusStorybookHost();
+            WalkedRootWith(host);
+
+            var mounted = host.Query<SusComponent>().ToList();
+            Assert.That(mounted.Count, Is.GreaterThan(0),
+                "no instance is mounted - this test would pass on an empty shell");
+
+            var dressed = mounted
+                .Where(e => e.GetClasses().Any(c => c.StartsWith(ShellPrefix)))
+                .ToList();
+            Assert.That(dressed.Count, Is.EqualTo(0),
+                "product instances wearing a class of the shell: " + string.Join(", ",
+                    dressed.Take(5).Select(e => string.Join(".", e.GetClasses()))));
         }
 
         [Test]

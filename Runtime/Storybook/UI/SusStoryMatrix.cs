@@ -379,9 +379,19 @@ namespace Sharq.Core.Storybook.UI
             if (_axis != null && rowValue != DefaultRow) SetAxis(item, rowValue);
             SusStoryStates.Force(item, state);
 
-            item.AddToClassList("sus-sb-matrix__item");
+            // Card T-3421. The shell's name goes on a WRAPPER; the instance inside stays clean.
+            // Before this the class sat on the SusComponent itself, so a kit component on the
+            // stand wore a name from the SHELL's namespace - the exact thing campaign T-3388
+            // forbids, and the reason SusStorybookShellClassIsolationTests had to carve mounted
+            // instances out of its corpus (every matrix cell read as "shell chrome wearing
+            // sus-alert"). The box contract of D19 (card T-3355) is unchanged: the wrapper is
+            // what the cell measures and what clips on both axes.
+            var box = new VisualElement();
+            box.AddToClassList("sus-sb-matrix__item");
+            box.pickingMode = PickingMode.Ignore;
             item.pickingMode = PickingMode.Ignore;
-            cell.Add(item);
+            box.Add(item);
+            cell.Add(box);
             // The cell's OWN host, added after the instance so the back-to-front scan of
             // SusBootstrap.FindOverlayHost meets it first (card T-3189). A cell that opens itself
             // now fills its cell instead of the whole matrix.

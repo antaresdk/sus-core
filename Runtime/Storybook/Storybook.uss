@@ -835,7 +835,11 @@
  * is most interactive kit components — hung out of its cell and broke the row it sat in
  * (kit/atoms/dropdown, 44px in a 34px cell, was the witness). D19 gives the cell the same contract
  * as the canvas: fixed step, clipped on BOTH axes, and a subject bigger than the cell stretches
- * neither the row nor the block. */
+ * neither the row nor the block.
+ *
+ * Card T-3421: this dresses the cell's WRAPPER, not the instance. The shell names its own boxes
+ * and leaves the product's classes to the product (campaign T-3388); the instance is the single
+ * child of this box and is sized by it. */
 .sus-sb-matrix__item {
     max-width: 64px;
     max-height: 28px;
