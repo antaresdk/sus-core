@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine.UIElements;
 
 namespace Sharq.Core.Storybook
@@ -190,34 +191,80 @@ namespace Sharq.Core.Storybook
         ///
         /// So when the target is declared and absent, the class is parked on the root and moved
         /// the first time the geometry says the children have arrived.
+        ///
+        /// Arriving is only half of it (card T-3450). The child carrying the ring is the OUTPUT of
+        /// a reactive render, and the next render throws it away: <c>BindListFor</c> starts with
+        /// <c>container.Clear()</c>, so the element wearing <c>.keyboard-focus</c> is destroyed and
+        /// a fresh one takes its place bare. Measured on the matrix: <c>SusListGroup</c> and
+        /// <c>SusDataTable</c> lit their ring and then lost it before the first frame, which read
+        /// as "focus equals rest" — the very verdict T-3427 was about, one layer deeper. So the
+        /// request is REMEMBERED for the life of the instance and re-satisfied after every
+        /// re-render, instead of being applied once and hoped for.
         /// </summary>
         static void ApplyFocusRing(SusComponent component)
         {
-            var target = SusStateRoles.RingTarget(component);
-            target.AddToClassList(SusStateRoles.KeyboardFocusClass);
+            RingWanted.Remove(component);
+            RingWanted.Add(component, RingRequest);
+            SettleFocusRing(component);
 
-            var declared = SusStateRoles.RingTargetClass(component.GetType());
-            if (declared == null || !ReferenceEquals(target, component)) return;
+            if (SusStateRoles.RingTargetClass(component.GetType()) == null) return;
 
-            EventCallback<GeometryChangedEvent> once = null;
-            once = _ => { if (SettleFocusRing(component)) component.UnregisterCallback(once); };
-            component.RegisterCallback(once);
+            // A child target has to be watched, a root one does not: nothing rebuilds the root's
+            // own class list. The keeper is permanent on purpose — the late arrival of T-3427 and
+            // the re-render of T-3450 are the same event seen twice, and unregistering after the
+            // first one is what let the second one win. It cannot loop: the callback mutates only
+            // when the class is MISSING, so the geometry pass it may provoke finds nothing to do.
+            component.RegisterCallback<GeometryChangedEvent>(_ => SettleFocusRing(component));
         }
 
+        // The instances whose focus ring must survive their own renders. Weak on purpose: a
+        // matrix rebuild drops hundreds of instances and a static set of strong references would
+        // keep every one of them alive for the session.
+        static readonly ConditionalWeakTable<SusComponent, object> RingWanted = new();
+        static readonly object RingRequest = new();
+
         /// <summary>
-        /// Moves a parked focus ring onto the declared target now that the target exists, and
-        /// says whether it moved. Called by the geometry hook of <see cref="Force"/>; public
-        /// because a rig without a panel has no geometry events to wait for, and the move has to
-        /// be provable without one.
+        /// Puts the focus ring back where the role registry says it belongs — after a late child
+        /// arrives, and again after a re-render throws that child away — and says whether it had
+        /// to do anything. Only instances that ASKED for the ring through
+        /// <see cref="Force"/> are dressed: the request cannot be read back off the tree, because
+        /// a stripped ring leaves no trace anywhere in it.
+        ///
+        /// Called by the geometry keeper of <see cref="Force"/>; public because an element outside
+        /// a panel gets no geometry events at all, and both the arrival and the restore have to be
+        /// provable in a rig that has no panel.
         /// </summary>
         public static bool SettleFocusRing(SusComponent component)
         {
             if (component == null) return false;
-            if (!component.ClassListContains(SusStateRoles.KeyboardFocusClass)) return false;
-            var late = SusStateRoles.RingTarget(component);
-            if (ReferenceEquals(late, component)) return false;
-            component.RemoveFromClassList(SusStateRoles.KeyboardFocusClass);
-            late.AddToClassList(SusStateRoles.KeyboardFocusClass);
+            if (!RingWanted.TryGetValue(component, out _)) return false;
+
+            var target = SusStateRoles.RingTarget(component);
+            if (!ReferenceEquals(target, component) &&
+                component.ClassListContains(SusStateRoles.KeyboardFocusClass))
+            {
+                // Parked on the root while the child was missing; two rings are worse than none.
+                component.RemoveFromClassList(SusStateRoles.KeyboardFocusClass);
+            }
+            if (target.ClassListContains(SusStateRoles.KeyboardFocusClass)) return false;
+            target.AddToClassList(SusStateRoles.KeyboardFocusClass);
+
+            // Watch for the ring's own destruction rather than only for a size change. A
+            // re-render that rebuilds identical rows changes no rect and fires no
+            // GeometryChangedEvent, but it DOES detach the element that wore the class, and that
+            // detach is the event the defect is made of. The restore is scheduled rather than
+            // immediate because the replacement child does not exist yet while the old one is
+            // being torn out (`Clear()` first, `Add()` after).
+            if (!ReferenceEquals(target, component))
+            {
+                EventCallback<DetachFromPanelEvent> once = null;
+                once = _ =>
+                {
+                    target.UnregisterCallback(once);
+                    component.schedule.Execute(() => SettleFocusRing(component));
+                };
+                target.RegisterCallback(once);
+            }
             return true;
         }
 
