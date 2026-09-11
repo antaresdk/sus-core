@@ -68,6 +68,8 @@ namespace Sharq.Core.Storybook
         {
             Resolver = null;
             Scanned.Clear();
+            SelectorLayout = "unknown";
+            _warned = false;
         }
 
         /// <summary>
@@ -99,41 +101,151 @@ namespace Sharq.Core.Storybook
             return names.Contains(className);
         }
 
-        // ── the reflective part ─────────────────────────────────────────────
-        // StyleSheet keeps its selector table in serialized private fields (m_ComplexSelectors →
-        // m_Selectors → m_Parts → m_Value); UI Toolkit exposes none of it publicly. Reflection
-        // over SERIALIZED fields is used rather than over the internal properties because a
+
+        // -- the reflective part ---------------------------------------------
+        // UI Toolkit exposes NO public way to enumerate the selectors of a StyleSheet: every
+        // handle on the way -- StyleComplexSelector, StyleSelector, StyleSelectorPart -- is
+        // internal, and the public surface of StyleSheet is limited to its asset identity. So the
+        // access is reflective, and the whole of it is isolated in this one region: the next time
+        // the editor moves the storage, one place changes.
+        //
+        // The storage HAS moved, and both layouts are read (card T-3448):
+        //   * Unity 6.2 and earlier -- one flat array field `m_ComplexSelectors`;
+        //   * Unity 6.3             -- three hash tables `m_Tables`
+        //                              (Dictionary of string to StyleComplexSelector, keyed by
+        //                              the type / id / class of the RIGHTMOST simple selector)
+        //                              plus the two chain heads `firstRootSelector` and
+        //                              `firstWildCardSelector`; selectors sharing a bucket are
+        //                              chained through `nextInTable`.
+        // Verified live on 6000.3.17f1 (project sus-dev): the m_Tables walk of SusButton.g.uss
+        // yields 186 complex selectors and 38 class names -- exactly the set of class tokens in
+        // the file -- while `m_ComplexSelectors` does not exist on that version at all. That
+        // missing field is what made the scan answer "no twin" for EVERY class, which in turn hid
+        // the hover/active columns of the matrix no matter what the skin declared.
+        //
+        // Reflection goes over SERIALIZED fields rather than internal properties because a
         // serialized field name is part of the asset format and therefore the most stable handle
-        // Unity offers here. Any failure degrades to "no twin" and says so once.
+        // Unity offers here. Any failure degrades to "no twin", says so once, and leaves the
+        // reason readable in SelectorLayout instead of only in a log nobody reads.
 
         const BindingFlags Any = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+
+        /// <summary>
+        /// Which storage layout the last scan actually read: <c>m_ComplexSelectors</c> (Unity 6.2
+        /// and earlier), <c>m_Tables</c> (Unity 6.3), <c>none</c> when neither could be reached.
+        /// That last value is the BLIND scan, and it means every answer of <see cref="Has"/> is a
+        /// default <c>false</c> rather than a reading of the skin; <c>unknown</c> until the first
+        /// scan. A test asserts this is never <c>none</c>, because a blind scan is invisible in
+        /// the matrix -- it looks exactly like a skin that declares no twins.
+        /// </summary>
+        public static string SelectorLayout { get; private set; } = "unknown";
 
         static bool _warned;
 
         static HashSet<string> CollectSelectorParts(StyleSheet sheet)
         {
             var found = new HashSet<string>(StringComparer.Ordinal);
+            var layout = "none";
             try
             {
-                foreach (var complex in Enumerate(sheet, "m_ComplexSelectors", "complexSelectors"))
+                foreach (var complex in ComplexSelectors(sheet, ref layout))
                 foreach (var selector in Enumerate(complex, "m_Selectors", "selectors"))
                 foreach (var part in Enumerate(selector, "m_Parts", "parts"))
                 {
+                    if (!IsClassPart(part)) continue;
                     var value = Member(part, "m_Value", "value") as string;
                     if (!string.IsNullOrEmpty(value)) found.Add(value);
                 }
             }
             catch (Exception e)
             {
-                if (!_warned)
-                {
-                    _warned = true;
-                    SusLog.Warn("[storybook] cannot read USS selectors of '" + sheet.name +
-                                "' (" + e.Message + "); hover/active columns stay hidden. " +
-                                "Set SusStateTwins.Resolver to answer another way.");
-                }
+                layout = "none";
+                Warn("[storybook] cannot read USS selectors of '" + sheet.name + "' (" +
+                     e.Message + "); hover/active columns stay hidden. " +
+                     "Set SusStateTwins.Resolver to answer another way.");
+            }
+            SelectorLayout = layout;
+            if (layout == "none")
+            {
+                Warn("[storybook] no known USS selector storage on the StyleSheet of this editor " +
+                     "(neither m_ComplexSelectors nor m_Tables); hover/active columns stay " +
+                     "hidden. Card T-3448 names the two layouts that are read.");
             }
             return found;
+        }
+
+        static void Warn(string message)
+        {
+            if (_warned) return;
+            _warned = true;
+            SusLog.Warn(message);
+        }
+
+        /// <summary>
+        /// Every complex selector of the sheet, whichever layout holds them; <paramref name="layout"/>
+        /// comes back naming the one that answered.
+        /// </summary>
+        static List<object> ComplexSelectors(StyleSheet sheet, ref string layout)
+        {
+            var selectors = new List<object>();
+
+            // Layout of Unity 6.2 and earlier: one array with everything in it.
+            if (Member(sheet, "m_ComplexSelectors", "complexSelectors") is System.Collections.IEnumerable flat)
+            {
+                layout = "m_ComplexSelectors";
+                foreach (var item in flat)
+                {
+                    if (item != null) selectors.Add(item);
+                }
+                return selectors;
+            }
+
+            // Layout of Unity 6.3: bucket tables plus the two chain heads. `nextInTable` is a
+            // forward chain, but it is walked with a visited set anyway -- a selector reachable
+            // from two buckets must not be walked twice, and a malformed chain must not hang the
+            // editor.
+            var seen = new HashSet<object>();
+            var heads = new List<object>();
+            if (Member(sheet, "m_Tables", "tables") is System.Collections.IEnumerable tables)
+            {
+                // The layout is named by the PRESENCE of the storage, not by the number of
+                // selectors read out of it: an empty sheet is not a blind scan, and calling it
+                // one would raise a false alarm on every sheet that happens to hold no rules.
+                layout = "m_Tables";
+                foreach (var table in tables)
+                {
+                    if (table is not System.Collections.IDictionary bucket) continue;
+                    foreach (var head in bucket.Values)
+                    {
+                        if (head != null) heads.Add(head);
+                    }
+                }
+            }
+            var root = Member(sheet, "firstRootSelector");
+            if (root != null) heads.Add(root);
+            var wildcard = Member(sheet, "firstWildCardSelector");
+            if (wildcard != null) heads.Add(wildcard);
+
+            foreach (var head in heads)
+            {
+                for (var cursor = head; cursor != null; cursor = Member(cursor, "nextInTable"))
+                {
+                    if (!seen.Add(cursor)) break;
+                    selectors.Add(cursor);
+                }
+            }
+            return selectors;
+        }
+
+        /// <summary>
+        /// True when the part names a CLASS. The part type is an internal enum, so it is read by
+        /// NAME rather than by ordinal -- a renumbering must not turn ids into classes. When the
+        /// type cannot be read at all the part is accepted, which is the older, laxer reading.
+        /// </summary>
+        static bool IsClassPart(object part)
+        {
+            var type = Member(part, "m_Type", "type");
+            return type == null || string.Equals(type.ToString(), "Class", StringComparison.Ordinal);
         }
 
         static IEnumerable<object> Enumerate(object owner, params string[] names)
