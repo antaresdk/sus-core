@@ -23,7 +23,7 @@
 - The stage canvas keeps one height for every story and popover, scrolls on both axes and says in words when its content is wider than the window.
 - Overlay components install a focus trap, move focus inside on open and return it on close, from `SusModalBase`.
 - The value clamp is silent on a declared alias and complains only about an unknown value.
-- Public package hygiene: font faces trimmed from 42 to 10 with licences alongside; every human-readable string, comment and diagnostic is English.
+- Font assets trimmed from 42 faces to the 10 actually used, with the OFL licence texts alongside them.
 
 ### Fixed
 - The focus ring is visible on a primary fill: the ring ink has its own token instead of aliasing the brand colour (worst-case contrast 1.00 to 3.97).
