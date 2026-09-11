@@ -72,25 +72,29 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(host.Sizes.Canvas, Is.SameAs(host.QaCanvas),
                 "the vertical question is asked of the canvas: it keeps one declared height (D18)");
+            Assert.That(host.Sizes.StageContent, Is.SameAs(stage.contentContainer),
+                "sideways the question is about the whole of zone C, not about the subject: at a " +
+                "narrow window the stage furniture sticks out first (content 615 vs viewport 272)");
             Assert.That(host.Sizes.StageViewport, Is.SameAs(stage.contentViewport),
-                "the horizontal question is asked of the viewport: with both axes on, a wide " +
-                "subject takes the canvas sideways with it and the canvas stops being a witness");
+                "and it is asked against what the reader can actually see");
         }
 
         // ── the sentence itself, in numbers ──────────────────────────────────
 
         [TestCase(400f, 200f, 880f, 350f, "")]
         [TestCase(880f, 350f, 880f, 350f, "")]
-        public void A_subject_that_fits_says_nothing(
-            float w, float h, float viewport, float canvas, string expected)
+        public void A_stage_that_fits_says_nothing(
+            float content, float height, float viewport, float canvas, string expected)
         {
-            Assert.That(SusStorySizes.FitNoteFor(w, h, viewport, canvas), Is.EqualTo(expected));
+            Assert.That(SusStorySizes.FitNoteFor(content, height, viewport, canvas),
+                Is.EqualTo(expected));
         }
 
+        /// <summary>The narrow window measured in Play: content 615 against a viewport of 272.</summary>
         [Test]
-        public void A_subject_wider_than_the_viewport_says_where_the_rest_is()
+        public void A_stage_wider_than_the_window_says_where_the_rest_is()
         {
-            Assert.That(SusStorySizes.FitNoteFor(1760f, 200f, 880f, 350f),
+            Assert.That(SusStorySizes.FitNoteFor(615f, 200f, 272f, 350f),
                 Is.EqualTo(SusStorySizes.WideNote));
         }
 
@@ -102,14 +106,14 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
-        public void A_subject_bigger_both_ways_says_both_things()
+        public void A_stage_over_on_both_counts_says_both_things()
         {
             Assert.That(SusStorySizes.FitNoteFor(1760f, 900f, 880f, 350f),
                 Is.EqualTo(SusStorySizes.WideNote + " · " + SusStorySizes.ClipNote));
         }
 
         /// <summary>
-        /// Before the first layout pass every figure is NaN. Saying "wider than the stage" then
+        /// Before the first layout pass every figure is NaN. Saying "wider than the window" then
         /// would be a guess printed as a fact, and the reader has no way to tell the two apart.
         /// </summary>
         [Test]

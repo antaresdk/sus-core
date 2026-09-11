@@ -25,11 +25,11 @@ namespace Sharq.Core.Storybook.UI
         public const string OverlayNote = "overlay — in the stage OverlayHost, inside the frame";
 
         /// <summary>
-        /// Note shown while the subject is wider than the visible part of zone C (card T-3389,
+        /// Note shown while zone C reaches past the part of it the reader can see (card T-3389,
         /// plan §4.7: the fact of scrolling is SAID, it does not stay silent). Without it the
-        /// reader sees a cut-off component and no reason to suspect there is more of it.
+        /// reader sees a cut-off stage and no reason to suspect there is more of it.
         /// </summary>
-        public const string WideNote = "wider than the stage — scroll sideways for the rest";
+        public const string WideNote = "wider than the window — scroll sideways for the rest";
 
         /// <summary>
         /// Note shown while the canvas cuts the subject off at the bottom. The canvas keeps ONE
@@ -78,10 +78,17 @@ namespace Sharq.Core.Storybook.UI
         public VisualElement Canvas { get; set; }
 
         /// <summary>
+        /// Everything zone C holds (the stage ScrollView content container), which is what the
+        /// horizontal question is asked of. Not the subject: at a narrow window it is zone C's own
+        /// furniture that sticks out first — measured in Play on 2026-09-11, the stage content is
+        /// 615px wide at every window from 320 to 560, against a viewport of 272 to 512. Asking the
+        /// subject would stay silent through all of it while a third of the stage sat out of reach.
+        /// </summary>
+        public VisualElement StageContent { get; set; }
+
+        /// <summary>
         /// The part of zone C the reader actually sees without scrolling (the stage ScrollView
-        /// viewport). Compared against the SUBJECT rather than against the canvas on purpose: with
-        /// both scroll axes on, a subject wider than the viewport takes the canvas sideways with
-        /// it, so the canvas can no longer report that anything is out of sight (card T-3389).
+        /// viewport). Null in a test with no panel, and then the note simply never fires.
         /// </summary>
         public VisualElement StageViewport { get; set; }
 
@@ -174,24 +181,27 @@ namespace Sharq.Core.Storybook.UI
         {
             if (_tracked == null) return string.Empty;
 
-            var s = _tracked.resolvedStyle;
-            return FitNoteFor(s.width, s.height, Width(StageViewport), Height(Canvas));
+            return FitNoteFor(Width(StageContent), _tracked.resolvedStyle.height,
+                Width(StageViewport), Height(Canvas));
         }
 
         /// <summary>
-        /// The note for a subject <paramref name="width"/> by <paramref name="height"/> inside a
-        /// stage viewport <paramref name="viewportWidth"/> wide and a canvas
-        /// <paramref name="canvasHeight"/> tall. Pure arithmetic on purpose: the sentence the
-        /// reader of zone C gets is then judged by a test with numbers in it and not by a
-        /// screenshot (card T-3389).
+        /// The note for a zone C <paramref name="contentWidth"/> wide inside a viewport
+        /// <paramref name="viewportWidth"/> wide, holding a subject <paramref name="subjectHeight"/>
+        /// tall in a canvas <paramref name="canvasHeight"/> tall. The two questions have two
+        /// different witnesses on purpose: sideways it is the whole stage that runs out of window,
+        /// downwards it is the subject that runs out of canvas.
+        ///
+        /// Pure arithmetic, so the sentence the reader gets is judged by a test with numbers in it
+        /// and not by a screenshot (card T-3389).
         ///
         /// Any figure may still be NaN before the first layout pass, and an unmeasured stage must
         /// claim nothing — silence about an unknown beats a note that turns out to be wrong.
         /// </summary>
-        public static string FitNoteFor(float width, float height, float viewportWidth, float canvasHeight)
+        public static string FitNoteFor(float contentWidth, float subjectHeight, float viewportWidth, float canvasHeight)
         {
-            bool wide = Exceeds(width, viewportWidth);
-            bool tall = Exceeds(height, canvasHeight);
+            bool wide = Exceeds(contentWidth, viewportWidth);
+            bool tall = Exceeds(subjectHeight, canvasHeight);
             if (wide && tall) return WideNote + " · " + ClipNote;
             if (wide) return WideNote;
             return tall ? ClipNote : string.Empty;

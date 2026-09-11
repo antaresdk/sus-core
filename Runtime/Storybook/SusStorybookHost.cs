@@ -196,12 +196,14 @@ namespace Sharq.Core.Storybook
             _stage.Add(_sizes);
             _stage.Add(_stageEmpty);
 
-            // Card T-3389: the two boxes the size line compares the subject against, so that a
-            // subject reaching past either of them is SAID and not left to the reader to notice.
-            // The canvas answers the vertical question (it keeps one declared height, D18); the
-            // stage viewport answers the horizontal one, because a subject wider than the viewport
-            // now takes the canvas sideways with it and the canvas can no longer report the loss.
+            // Card T-3389: what the size line compares against, so that a stage reaching past
+            // what the reader can see is SAID and not left to be noticed. Two questions, two
+            // witnesses. Downwards it is the subject against the canvas, which keeps one declared
+            // height (D18). Sideways it is the whole of zone C against the viewport: at a narrow
+            // window zone C's own furniture sticks out before any subject does — measured in Play,
+            // content 615px against a viewport of 272px at a 320px window.
             _sizes.Canvas = _canvas;
+            _sizes.StageContent = _stage.contentContainer;
             _sizes.StageViewport = _stage.contentViewport;
 
             center.Add(_zoneEnv);
