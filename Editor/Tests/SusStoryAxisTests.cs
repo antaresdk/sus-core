@@ -26,10 +26,10 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStoryAxisTests
     {
-        const string StoryAxis = "core/showcase/variant";
-        const string StoryClash = "core/showcase/variant-clash";
-        const string Counter = "core/primitives/counter";
-        const string Swatch = "core/primitives/swatch";
+        const string StoryAxis = "enginetests/showcase/variant";
+        const string StoryClash = "enginetests/showcase/variant-clash";
+        const string Counter = "enginetests/primitives/counter";
+        const string Swatch = "enginetests/primitives/swatch";
 
         string _axisBefore;
 

@@ -62,7 +62,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Switching_away_clears_an_overlay_that_escaped_to_the_panel_root()
         {
-            Assert.IsTrue(_host.ShowStoryById("core/overlay/root-leak"));
+            Assert.IsTrue(_host.ShowStoryById("enginetests/overlay/root-leak"));
 
             // Sanity: the bug actually reproduced — the leaked label is NOT a descendant of the
             // host (it escaped past it, to panel.visualTree) and IS sitting somewhere under the
@@ -83,7 +83,7 @@ namespace Sharq.Core.Editor.Tests
             // to zero", which holds regardless of how many times it fired going in.
             Assert.That(LeakedLabelCount(_host), Is.GreaterThanOrEqualTo(1), "sanity: the leak must reproduce");
 
-            Assert.IsTrue(_host.ShowStoryById("core/primitives/counter"), "switch away -> Unmount()");
+            Assert.IsTrue(_host.ShowStoryById("enginetests/primitives/counter"), "switch away -> Unmount()");
 
             Assert.That(LeakedLabelCount(_host), Is.Zero,
                 "T-3131: Unmount must clear the panel-root overlay too, not only _canvasOverlay");
@@ -92,8 +92,8 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Switching_away_leaves_the_canvas_and_its_own_overlay_empty()
         {
-            Assert.IsTrue(_host.ShowStoryById("core/overlay/root-leak"));
-            Assert.IsTrue(_host.ShowStoryById("core/primitives/counter"));
+            Assert.IsTrue(_host.ShowStoryById("enginetests/overlay/root-leak"));
+            Assert.IsTrue(_host.ShowStoryById("enginetests/primitives/counter"));
 
             Assert.That(_host.CanvasOverlay, Is.Not.Null);
             Assert.That(_host.CanvasOverlay.Count, Is.Zero, "the canvas's own overlay is empty");

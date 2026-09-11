@@ -38,9 +38,9 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStorySceneTeardownTests
     {
-        const string Declared = "core/overlay/scenery";
-        const string Diy = "core/overlay/scenery-diy";
-        const string Counter = "core/primitives/counter";
+        const string Declared = "enginetests/overlay/scenery";
+        const string Diy = "enginetests/overlay/scenery-diy";
+        const string Counter = "enginetests/primitives/counter";
 
         EditorWindow _window;
         SusStorybookHost _host;
@@ -153,7 +153,7 @@ namespace Sharq.Core.Editor.Tests
             yield return null;
             Assert.IsTrue(_host.ShowStoryById(Declared));
             yield return null;
-            Assert.IsTrue(_host.ShowStoryById("core/primitives/swatch"));
+            Assert.IsTrue(_host.ShowStoryById("enginetests/primitives/swatch"));
             yield return null;
             Assert.IsTrue(_host.ShowStoryById(Counter));
             yield return null;

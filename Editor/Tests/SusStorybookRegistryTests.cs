@@ -34,18 +34,18 @@ namespace Sharq.Core.Editor.Tests
         {
             var ids = SusStoryRegistry.LastRegisteredStoryIds;
 
-            Assert.That(ids, Contains.Item("core/primitives/counter"));
-            Assert.That(ids, Contains.Item("core/primitives/swatch"));
-            Assert.That(ids, Contains.Item("core/overlay/floating"));
+            Assert.That(ids, Contains.Item("enginetests/primitives/counter"));
+            Assert.That(ids, Contains.Item("enginetests/primitives/swatch"));
+            Assert.That(ids, Contains.Item("enginetests/overlay/floating"));
         }
 
         [Test]
         public void Discovery_finds_provider_born_stories_too()
         {
             Assert.That(SusStoryRegistry.LastRegisteredStoryIds,
-                Contains.Item("core/primitives/swatch-error"));
+                Contains.Item("enginetests/primitives/swatch-error"));
 
-            var entry = SusStoryRegistry.Find("core/primitives/swatch-error");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/swatch-error");
             Assert.That(entry, Is.Not.Null);
             Assert.That(entry.DeclaringType, Is.EqualTo(typeof(CoreSwatchPresetProvider)));
         }
@@ -53,11 +53,11 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Entry_carries_the_text_the_attribute_declared()
         {
-            var entry = SusStoryRegistry.Find("core/primitives/counter");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/counter");
 
             Assert.That(entry.Name, Is.EqualTo("Counter"));
             Assert.That(entry.Purpose, Does.Contain("reactive props"));
-            Assert.That(entry.Package, Is.EqualTo("core"));
+            Assert.That(entry.Package, Is.EqualTo("enginetests"));
             Assert.That(entry.Group, Is.EqualTo("primitives"));
             Assert.That(entry.Slug, Is.EqualTo("counter"));
         }
@@ -72,7 +72,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Stories_group_into_packages_and_groups_in_display_order()
         {
-            var core = SusStoryRegistry.FindPackage("core");
+            var core = SusStoryRegistry.FindPackage("enginetests");
             Assert.That(core, Is.Not.Null);
             Assert.That(core.IsEmpty, Is.False);
 
@@ -91,7 +91,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Package_stamp_comes_from_the_editor_package_manager_not_from_a_literal()
         {
-            var core = SusStoryRegistry.FindPackage("core");
+            var core = SusStoryRegistry.FindPackage("enginetests");
 
             Assert.That(core.PackageId, Is.EqualTo("com.sharq-it.sus.core"));
             // The test assembly ships inside sus-core, so the live PackageInfo lookup must have
@@ -125,7 +125,10 @@ namespace Sharq.Core.Editor.Tests
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
             var keys = SusStoryRegistry.Packages.Select(p => p.Key).ToList();
-            Assert.That(keys, Is.EqualTo(new[] { "core", "router", "skin" }));
+            // "router" and "skin" are declared PRODUCT tabs and keep their PackageOrder places;
+            // the bench is not in that order list, so it follows alphabetically at the end
+            // (card T-3409 - the tab exists here only because this suite lists fixtures).
+            Assert.That(keys, Is.EqualTo(new[] { "router", "skin", "enginetests" }));
         }
 
         [Test]
@@ -142,7 +145,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void PropCount_is_the_number_DescribeProps_reports()
         {
-            var entry = SusStoryRegistry.Find("core/primitives/counter");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/counter");
             var probe = entry.Create();
 
             Assert.That(entry.PropCount, Is.EqualTo(probe.DescribeProps().Count));
@@ -152,7 +155,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Instantiate_runs_Configure_and_honours_the_route_query()
         {
-            var entry = SusStoryRegistry.Find("core/primitives/counter");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/counter");
             var route = new SusStoryRoute(entry.Id,
                 new System.Collections.Generic.Dictionary<string, string> { ["Label"] = "Taps" });
 
@@ -168,7 +171,7 @@ namespace Sharq.Core.Editor.Tests
         {
             // The matrix of step 5 builds one instance per cell from the same factory; a story
             // that handed back a cached element would make every cell the same element.
-            var entry = SusStoryRegistry.Find("core/primitives/swatch");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/swatch");
             Assert.That(entry.Create(), Is.Not.SameAs(entry.Create()));
         }
 
@@ -177,7 +180,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Entry_carries_the_component_the_attribute_named()
         {
-            var entry = SusStoryRegistry.Find("core/primitives/counter");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/counter");
 
             Assert.That(entry.ComponentType, Is.EqualTo(typeof(CoreCounterDemo)));
             Assert.That(entry.NoComponentReason, Is.Empty);
@@ -189,7 +192,7 @@ namespace Sharq.Core.Editor.Tests
         {
             // The provider path must not be the hole in the link: a skin-preset provider knows
             // its component, and a story generated from data is a story like any other.
-            var entry = SusStoryRegistry.Find("core/primitives/swatch-error");
+            var entry = SusStoryRegistry.Find("enginetests/primitives/swatch-error");
 
             Assert.That(entry.ComponentType, Is.EqualTo(typeof(CoreSwatchDemo)));
             Assert.That(entry.DeclaresComponentLink, Is.True);
@@ -200,7 +203,7 @@ namespace Sharq.Core.Editor.Tests
         {
             // "No catalogue face" is a RECORD, not a silence: the layer that hunts orphaned
             // catalogue entries has to tell "shows a set of components" from "nobody said".
-            var entry = SusStoryRegistry.Find("core/showcase/set");
+            var entry = SusStoryRegistry.Find("enginetests/showcase/set");
 
             Assert.That(entry.ComponentType, Is.Null);
             Assert.That(entry.NoComponentReason, Is.Not.Empty);
@@ -210,7 +213,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void A_story_that_says_nothing_is_not_the_same_as_one_that_waived_the_link()
         {
-            var silent = SusStoryRegistry.Find("core/showcase/silent");
+            var silent = SusStoryRegistry.Find("enginetests/showcase/silent");
 
             Assert.That(silent.ComponentType, Is.Null);
             Assert.That(silent.NoComponentReason, Is.Empty);
@@ -224,7 +227,7 @@ namespace Sharq.Core.Editor.Tests
             // Moving the guess from the blurb into the attribute would buy nothing: a type that
             // is not a SusComponent cannot be a catalogue face, and the registry says so out loud
             // instead of registering the link.
-            var entry = SusStoryRegistry.Find("core/showcase/bogus");
+            var entry = SusStoryRegistry.Find("enginetests/showcase/bogus");
 
             Assert.That(entry, Is.Not.Null, "the story itself still registers");
             Assert.That(entry.ComponentType, Is.Null);
@@ -254,12 +257,12 @@ namespace Sharq.Core.Editor.Tests
             // shop each exist in two groups, and a map keyed by the tail kept the first only.
             var ids = SusStoryRegistry.LastRegisteredStoryIds;
 
-            Assert.That(ids, Contains.Item("core/primitives/twin"));
-            Assert.That(ids, Contains.Item("core/overlay/twin"));
+            Assert.That(ids, Contains.Item("enginetests/primitives/twin"));
+            Assert.That(ids, Contains.Item("enginetests/overlay/twin"));
 
-            Assert.That(SusStoryRegistry.Find("core/primitives/twin").ComponentType,
+            Assert.That(SusStoryRegistry.Find("enginetests/primitives/twin").ComponentType,
                 Is.EqualTo(typeof(CoreCounterDemo)));
-            Assert.That(SusStoryRegistry.Find("core/overlay/twin").ComponentType,
+            Assert.That(SusStoryRegistry.Find("enginetests/overlay/twin").ComponentType,
                 Is.EqualTo(typeof(CoreOverlayDemo)),
                 "the second twin is a different story, not a shadow of the first");
         }

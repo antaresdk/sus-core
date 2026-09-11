@@ -336,7 +336,8 @@ namespace Sharq.Core.Storybook.Probe
                 controls: _panel == null ? Array.Empty<string>() : new List<string>(_panel.ControlledProps),
                 uncovered: _panel == null ? Array.Empty<string>() : new List<string>(_panel.Uncovered),
                 excluded: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.Exclusions.Keys),
-                manualControls: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.ManualControls.Keys));
+                manualControls: _panel?.Context?.Story == null ? Array.Empty<string>() : new List<string>(_panel.Context.Story.ManualControls.Keys),
+                kind: _entry?.Kind ?? SusStoryPackageKind.Product);   // card T-3411
 
         /// <summary>
         /// Every prop the mounted instance declares. Read straight off <see cref="_instance"/>

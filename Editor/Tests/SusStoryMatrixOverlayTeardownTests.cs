@@ -29,8 +29,8 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStoryMatrixOverlayTeardownTests
     {
-        const string MatrixLeak = "core/overlay/matrix-modal";
-        const string Counter = "core/primitives/counter";
+        const string MatrixLeak = "enginetests/overlay/matrix-modal";
+        const string Counter = "enginetests/primitives/counter";
 
         EditorWindow _window;
         SusStorybookHost _host;

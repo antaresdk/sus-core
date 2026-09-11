@@ -29,8 +29,8 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusControlPanelResetTests
     {
-        const string SwatchPreset = "core/primitives/swatch-error";   // story seeds Tone = "error"
-        const string StoryAxis = "core/showcase/variant";             // closed axis from the STORY
+        const string SwatchPreset = "enginetests/primitives/swatch-error";   // story seeds Tone = "error"
+        const string StoryAxis = "enginetests/showcase/variant";             // closed axis from the STORY
 
         SusLogLevel _levelBefore;
 

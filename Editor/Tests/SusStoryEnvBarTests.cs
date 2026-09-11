@@ -301,7 +301,7 @@ namespace Sharq.Core.Editor.Tests
         public void ConsumeFromRoute_applies_env_entries_and_strips_them_leaving_control_props_alone()
         {
             using var bar = NewBar(out _, out var preview);
-            var route = new SusStoryRoute("core/primitives/counter", new Dictionary<string, string>
+            var route = new SusStoryRoute("enginetests/primitives/counter", new Dictionary<string, string>
             {
                 ["env.theme"] = "light",
                 ["env.density"] = "compact",
@@ -321,7 +321,7 @@ namespace Sharq.Core.Editor.Tests
         public void ConsumeFromRoute_is_a_no_op_when_the_route_carries_no_env_entries()
         {
             using var bar = NewBar(out _, out _);
-            var route = new SusStoryRoute("core/primitives/counter",
+            var route = new SusStoryRoute("enginetests/primitives/counter",
                 new Dictionary<string, string> { ["Label"] = "Taps" });
 
             Assert.That(bar.ConsumeFromRoute(route), Is.SameAs(route));
@@ -345,11 +345,11 @@ namespace Sharq.Core.Editor.Tests
         public void Switching_a_chip_does_not_reset_the_current_story_and_the_link_reproduces_it()
         {
             using var host = new SusStorybookHost();
-            host.ShowStoryById("core/primitives/counter");
+            host.ShowStoryById("enginetests/primitives/counter");
 
             host.Env.CycleForTest("theme");
 
-            Assert.That(host.CurrentStory.Id, Is.EqualTo("core/primitives/counter"),
+            Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/primitives/counter"),
                 "plan §4.4: switching an environment axis must not reset the story");
             Assert.That(host.Url.Address, Does.Contain("env.theme=light"));
 
@@ -362,10 +362,10 @@ namespace Sharq.Core.Editor.Tests
         public void Environment_survives_navigating_to_a_different_story()
         {
             using var host = new SusStorybookHost();
-            host.ShowStoryById("core/primitives/counter");
+            host.ShowStoryById("enginetests/primitives/counter");
             host.Env.CycleForTest("density");
 
-            host.ShowStoryById("core/overlay/floating");
+            host.ShowStoryById("enginetests/overlay/floating");
 
             var density = host.Env.ActiveAxes().First(a => a.Id == "density");
             Assert.That(density.Current, Is.EqualTo("comfortable"),
@@ -377,10 +377,10 @@ namespace Sharq.Core.Editor.Tests
         {
             using var host = new SusStorybookHost();
 
-            host.Url.HandleExternal("#/core/primitives/counter?env.theme=light&Label=Taps");
+            host.Url.HandleExternal("#/enginetests/primitives/counter?env.theme=light&Label=Taps");
 
             Assert.That(SusThemeService.Current.Value, Is.EqualTo(SusTheme.Light));
-            Assert.That(host.CurrentStory.Id, Is.EqualTo("core/primitives/counter"));
+            Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/primitives/counter"));
         }
     }
 }

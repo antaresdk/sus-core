@@ -35,9 +35,16 @@ namespace Sharq.Core.Storybook
         static readonly Dictionary<string, SusStoryPackageStamp> Declared =
             new(StringComparer.OrdinalIgnoreCase);
 
+        static List<SusStoryEntry> _all;
+        static List<SusStoryPackage> _allPackages;
+        static List<string> _allIds;
+
         static List<SusStoryEntry> _stories;
         static List<SusStoryPackage> _packages;
         static List<string> _ids;
+
+        static Func<string, bool> _fixtureVisibility;
+        static bool _fixturesByAddress;
 
         /// <summary>
         /// Resolves package id + version for an assembly. A host that can see the package manager
@@ -48,49 +55,158 @@ namespace Sharq.Core.Storybook
         /// </summary>
         public static Func<Assembly, SusStoryPackageStamp> PackageStampResolver { get; set; }
 
-        /// <summary>Raised after the catalogue was rebuilt.</summary>
-        public static event Action Changed;
-
-        /// <summary>Every story found, ordered package, group, order, name.</summary>
-        public static IReadOnlyList<SusStoryEntry> Stories
+        /// <summary>
+        /// Whether an engine FIXTURE package is listed - asked per package key, injected exactly
+        /// like <see cref="PackageStampResolver"/> above (plan §4.1b, decision D22, card T-3410).
+        /// Null (the default) means "no fixture is listed".
+        ///
+        /// Why an injection and not a bool read from EditorPrefs here: this assembly is Runtime, it
+        /// ships in the player, and it cannot reference UnityEditor. The switch itself is an editor
+        /// concern; the registry only needs the ANSWER, so the answer arrives as a function the
+        /// editor entry point installs. The shell also accepts the answer from the address, so a
+        /// link can open the bench on a machine where the toggle is off.
+        ///
+        /// "Listed" means tabs, tree rows, search hits and sweep records. It does NOT mean
+        /// addressable: <see cref="Find"/> and <see cref="FindPackage"/> ignore this switch
+        /// entirely, because the EditMode suite of the engine cites fixture addresses 86 times and
+        /// a direct link must never depend on a preference.
+        /// </summary>
+        public static Func<string, bool> FixtureVisibility
         {
-            get { EnsureBuilt(); return _stories; }
-        }
-
-        /// <summary>Package tabs in display order, including packages that declared no stories.</summary>
-        public static IReadOnlyList<SusStoryPackage> Packages
-        {
-            get { EnsureBuilt(); return _packages; }
+            get => _fixtureVisibility;
+            set
+            {
+                _fixtureVisibility = value;
+                InvalidateVisibility();
+            }
         }
 
         /// <summary>
-        /// Ids of every registered story, in display order. Name kept from the pre-engine shell
-        /// (plan D11): 85 driver call sites in <c>sus-dev</c> read this list.
+        /// Drops the cached PRODUCT selection without rescanning assemblies. Call it when the
+        /// answer <see cref="FixtureVisibility"/> gives has changed but the function object has
+        /// not (an editor toggle that reads a preference inside its own lambda).
+        /// </summary>
+        public static void InvalidateVisibility()
+        {
+            _stories = null;
+            _packages = null;
+            _ids = null;
+        }
+
+        /// <summary>
+        /// The address asked for the benches (card T-3410): the shell sets this when the route
+        /// carries <c>?fixtures=1</c>, so a link shared with a colleague opens the bench on a
+        /// machine whose editor toggle is off.
+        ///
+        /// It only ever goes UP from the address - a later click that drops the key from the
+        /// query does not silently switch the listing back, because "the tabs vanished halfway
+        /// through" is a worse surprise than "they stayed". The editor toggle owns the way back.
+        /// </summary>
+        public static bool FixturesRequestedByAddress
+        {
+            get => _fixturesByAddress;
+            set
+            {
+                if (_fixturesByAddress == value) return;
+                _fixturesByAddress = value;
+                InvalidateVisibility();
+            }
+        }
+
+        /// <summary>True when a package of this key and kind is shown in the listings.</summary>
+        public static bool IsListed(SusStoryPackageKind kind, string packageKey)
+        {
+            if (kind != SusStoryPackageKind.Fixture) return true;
+            if (_fixturesByAddress) return true;
+            var ask = _fixtureVisibility;
+            if (ask == null) return false;
+            try
+            {
+                return ask(packageKey);
+            }
+            catch (Exception e)
+            {
+                SusLog.Warn("[storybook] fixture visibility resolver threw for '" +
+                            (packageKey ?? "?") + "': " + e.Message);
+                return false;
+            }
+        }
+
+        /// <summary>Raised after the catalogue was rebuilt.</summary>
+        public static event Action Changed;
+
+        /// <summary>
+        /// Every PRODUCT story, ordered package, group, order, name (plan §4.1b, decision D23,
+        /// card T-3409). This is the default selection on purpose: zone A, the sweep, the frame
+        /// conveyor and the catalogue all mean "what the buyer gets", and the one consumer that
+        /// meant "everything loaded" wrote an engine fixture into the sweep report for a month.
+        /// Everything, fixtures included, is <see cref="AllStories"/>.
+        /// </summary>
+        public static IReadOnlyList<SusStoryEntry> Stories
+        {
+            get { EnsureVisible(); return _stories; }
+        }
+
+        /// <summary>
+        /// PRODUCT package tabs in display order, including packages that declared no stories.
+        /// A fixture package is absent unless <see cref="FixtureVisibility"/> lists it - absent
+        /// without an empty plate, too (D25): a bench that is not shown must not leave a hole
+        /// shaped like itself.
+        /// </summary>
+        public static IReadOnlyList<SusStoryPackage> Packages
+        {
+            get { EnsureVisible(); return _packages; }
+        }
+
+        /// <summary>
+        /// Ids of every registered PRODUCT story, in display order. Name kept from the pre-engine
+        /// shell (plan D11): 85 driver call sites in <c>sus-dev</c> read this list.
         /// </summary>
         public static IReadOnlyList<string> LastRegisteredStoryIds
         {
-            get { EnsureBuilt(); return _ids; }
+            get { EnsureVisible(); return _ids; }
         }
 
-        /// <summary>Story by exact id, or null.</summary>
+        /// <summary>Every story the scan found, fixtures included (D23).</summary>
+        public static IReadOnlyList<SusStoryEntry> AllStories
+        {
+            get { EnsureBuilt(); return _all; }
+        }
+
+        /// <summary>Every package the scan found, fixtures included (D23).</summary>
+        public static IReadOnlyList<SusStoryPackage> AllPackages
+        {
+            get { EnsureBuilt(); return _allPackages; }
+        }
+
+        /// <summary>Ids of every story the scan found, fixtures included (D23).</summary>
+        public static IReadOnlyList<string> AllIds
+        {
+            get { EnsureBuilt(); return _allIds; }
+        }
+
+        /// <summary>
+        /// Story by exact id, or null. Searches EVERYTHING, fixtures included (D22): the direct
+        /// address is the half of the contract that must never depend on a toggle.
+        /// </summary>
         public static SusStoryEntry Find(string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
             EnsureBuilt();
-            for (int i = 0; i < _stories.Count; i++)
-                if (string.Equals(_stories[i].Id, id, StringComparison.OrdinalIgnoreCase))
-                    return _stories[i];
+            for (int i = 0; i < _all.Count; i++)
+                if (string.Equals(_all[i].Id, id, StringComparison.OrdinalIgnoreCase))
+                    return _all[i];
             return null;
         }
 
-        /// <summary>Package tab by key, or null.</summary>
+        /// <summary>Package by key, or null. Searches everything, fixtures included (D22).</summary>
         public static SusStoryPackage FindPackage(string key)
         {
             if (string.IsNullOrEmpty(key)) return null;
             EnsureBuilt();
-            for (int i = 0; i < _packages.Count; i++)
-                if (string.Equals(_packages[i].Key, key, StringComparison.OrdinalIgnoreCase))
-                    return _packages[i];
+            for (int i = 0; i < _allPackages.Count; i++)
+                if (string.Equals(_allPackages[i].Key, key, StringComparison.OrdinalIgnoreCase))
+                    return _allPackages[i];
             return null;
         }
 
@@ -116,9 +232,10 @@ namespace Sharq.Core.Storybook
         /// <summary>Throws the cache away; the next read rescans.</summary>
         public static void Invalidate()
         {
-            _stories = null;
-            _packages = null;
-            _ids = null;
+            _all = null;
+            _allPackages = null;
+            _allIds = null;
+            InvalidateVisibility();
         }
 
         /// <summary>Rescans loaded assemblies now and raises <see cref="Changed"/>.</summary>
@@ -133,8 +250,27 @@ namespace Sharq.Core.Storybook
 
         static void EnsureBuilt()
         {
-            if (_stories != null) return;
+            if (_all != null) return;
             Build(AppDomain.CurrentDomain.GetAssemblies());
+        }
+
+        /// <summary>Builds if needed, then makes sure the PRODUCT selection is up to date.</summary>
+        static void EnsureVisible()
+        {
+            EnsureBuilt();
+            if (_stories != null) return;
+
+            var stories = new List<SusStoryEntry>(_all.Count);
+            for (int i = 0; i < _all.Count; i++)
+                if (IsListed(_all[i].Kind, _all[i].Package)) stories.Add(_all[i]);
+
+            var packages = new List<SusStoryPackage>(_allPackages.Count);
+            for (int i = 0; i < _allPackages.Count; i++)
+                if (IsListed(_allPackages[i].Kind, _allPackages[i].Key)) packages.Add(_allPackages[i]);
+
+            _stories = stories;
+            _packages = packages;
+            _ids = stories.Select(s => s.Id).ToList();
         }
 
         /// <summary>
@@ -152,12 +288,14 @@ namespace Sharq.Core.Storybook
         {
             var stories = new List<SusStoryEntry>();
             var stamps = new Dictionary<string, SusStoryPackageStamp>(StringComparer.OrdinalIgnoreCase);
+            var kinds = new Dictionary<string, SusStoryPackageKind>(StringComparer.OrdinalIgnoreCase);
             var known = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var kv in Declared)
             {
                 known.Add(kv.Key);
                 stamps[kv.Key] = kv.Value;
+                NoteKind(kv.Key, SusStoryPackageKind.Product, kinds);
             }
 
             foreach (var asm in assemblies)
@@ -177,6 +315,7 @@ namespace Sharq.Core.Storybook
                 if (marks == null || marks.Length == 0) continue;
 
                 var stamp = ResolveStamp(asm, marks);
+                var kind = AssemblyKind(marks);
 
                 foreach (var m in marks)
                 {
@@ -184,15 +323,42 @@ namespace Sharq.Core.Storybook
                     known.Add(m.Package);
                     if (!stamps.TryGetValue(m.Package, out var have) || have.IsEmpty)
                         stamps[m.Package] = stamp;
+                    NoteKind(m.Package, m.Kind, kinds);
                 }
 
                 foreach (var type in SafeGetTypes(asm))
-                    CollectFromType(type, asm, stories, stamps, known, stamp);
+                    CollectFromType(type, asm, stories, stamps, kinds, known, stamp, kind);
             }
 
-            _stories = Order(stories);
-            _ids = _stories.Select(s => s.Id).ToList();
-            _packages = GroupIntoPackages(_stories, stamps, known);
+            _all = Order(stories);
+            _allIds = _all.Select(s => s.Id).ToList();
+            _allPackages = GroupIntoPackages(_all, stamps, kinds, known);
+            InvalidateVisibility();
+        }
+
+        /// <summary>
+        /// The kind one assembly speaks with (card T-3409). An assembly that carries several marks
+        /// and says <c>Product</c> in any of them is a product assembly: a bench must be able to
+        /// declare itself, and must not be able to un-declare somebody else.
+        /// </summary>
+        static SusStoryPackageKind AssemblyKind(SusStoryAssemblyAttribute[] marks)
+        {
+            if (marks == null || marks.Length == 0) return SusStoryPackageKind.Product;
+            foreach (var m in marks)
+                if (m.Kind != SusStoryPackageKind.Fixture) return SusStoryPackageKind.Product;
+            return SusStoryPackageKind.Fixture;
+        }
+
+        /// <summary>
+        /// Records what a package KEY is, with product winning over fixture for the same reason:
+        /// two assemblies can contribute to one key, and the shipping half decides the tab.
+        /// </summary>
+        static void NoteKind(
+            string key, SusStoryPackageKind kind, Dictionary<string, SusStoryPackageKind> kinds)
+        {
+            if (string.IsNullOrWhiteSpace(key)) return;
+            if (kinds.TryGetValue(key, out var have) && have == SusStoryPackageKind.Product) return;
+            kinds[key] = kind;
         }
 
         static void CollectFromType(
@@ -200,8 +366,10 @@ namespace Sharq.Core.Storybook
             Assembly asm,
             List<SusStoryEntry> stories,
             Dictionary<string, SusStoryPackageStamp> stamps,
+            Dictionary<string, SusStoryPackageKind> kinds,
             HashSet<string> known,
-            SusStoryPackageStamp stamp)
+            SusStoryPackageStamp stamp,
+            SusStoryPackageKind kind)
         {
             if (type == null || type.IsAbstract || type.IsGenericTypeDefinition) return;
 
@@ -231,8 +399,9 @@ namespace Sharq.Core.Storybook
                         NoComponentReason = Trim(attr.NoComponent),
                         AxisProp = AxisName(attr.Axis),                             // card T-3379
                         AxisValues = AxisSet(attr.Axis, attr.AxisValues, id),
+                        Kind = kind,                                                // card T-3409
                     });
-                    Remember(pkg, stamp, stamps, known);
+                    Remember(pkg, stamp, kind, stamps, kinds, known);
                 }
                 else
                 {
@@ -276,8 +445,9 @@ namespace Sharq.Core.Storybook
                     NoComponentReason = Trim(def.NoComponent),
                     AxisProp = AxisName(def.Axis),                              // card T-3379
                     AxisValues = AxisSet(def.Axis, def.AxisValues, defId),
+                    Kind = kind,                                                // card T-3409
                 });
-                Remember(p, stamp, stamps, known);
+                Remember(p, stamp, kind, stamps, kinds, known);
             }
         }
 
@@ -337,12 +507,14 @@ namespace Sharq.Core.Storybook
         }
 
         static void Remember(
-            string pkg, SusStoryPackageStamp stamp,
-            Dictionary<string, SusStoryPackageStamp> stamps, HashSet<string> known)
+            string pkg, SusStoryPackageStamp stamp, SusStoryPackageKind kind,
+            Dictionary<string, SusStoryPackageStamp> stamps,
+            Dictionary<string, SusStoryPackageKind> kinds, HashSet<string> known)
         {
             known.Add(pkg);
             if (!stamps.TryGetValue(pkg, out var have) || have.IsEmpty)
                 stamps[pkg] = stamp;
+            NoteKind(pkg, kind, kinds);
         }
 
         static SusStoryPackageStamp ResolveStamp(Assembly asm, SusStoryAssemblyAttribute[] marks)
@@ -446,6 +618,7 @@ namespace Sharq.Core.Storybook
         static List<SusStoryPackage> GroupIntoPackages(
             List<SusStoryEntry> stories,
             Dictionary<string, SusStoryPackageStamp> stamps,
+            Dictionary<string, SusStoryPackageKind> kinds,
             HashSet<string> known)
         {
             var byPackage = stories
@@ -472,11 +645,13 @@ namespace Sharq.Core.Storybook
                 }
 
                 stamps.TryGetValue(key, out var stamp);
+                if (!kinds.TryGetValue(key, out var kind)) kind = SusStoryPackageKind.Product;
                 result.Add(new SusStoryPackage(
                     key,
                     string.IsNullOrEmpty(stamp.PackageId) ? "com.sharq-it.sus." + key : stamp.PackageId,
                     stamp.Version ?? string.Empty,
-                    groups));
+                    groups,
+                    kind));
             }
             return result;
         }

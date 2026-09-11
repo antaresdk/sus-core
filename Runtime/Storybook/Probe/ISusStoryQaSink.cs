@@ -23,9 +23,11 @@ namespace Sharq.Core.Storybook.Probe
             IReadOnlyList<string> controls = null,
             IReadOnlyList<string> uncovered = null,
             IReadOnlyList<string> excluded = null,
-            IReadOnlyList<string> manualControls = null)
+            IReadOnlyList<string> manualControls = null,
+            SusStoryPackageKind kind = SusStoryPackageKind.Product)
         {
             StoryId = storyId;
+            Kind = kind;
             DeclaredEvents = declaredEvents ?? Array.Empty<string>();
             FiredCalls = firedCalls ?? Array.Empty<string>();
             UnfiredEvents = unfiredEvents ?? Array.Empty<string>();
@@ -40,6 +42,15 @@ namespace Sharq.Core.Storybook.Probe
 
         /// <summary>Story address the report is about.</summary>
         public string StoryId { get; }
+
+        /// <summary>
+        /// Product or engine fixture (card T-3411, plan §4.1b, D24). The session report carries
+        /// this per story so a rule can cut by the FIELD instead of by the first segment of an
+        /// address: the leak that started this campaign was <c>core/primitives/counter</c> in the
+        /// sweep dump, and any prefix-based filter would have gone quiet the moment the bench was
+        /// renamed - which is exactly what card T-3409 then did to it.
+        /// </summary>
+        public SusStoryPackageKind Kind { get; }
 
         /// <summary>Every <c>On*</c> the instance declared (DescribeEvents).</summary>
         public IReadOnlyList<string> DeclaredEvents { get; }

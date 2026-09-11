@@ -176,10 +176,10 @@ namespace Sharq.Core.Editor.Tests
         {
             var panel = Panel(new SusIntrospectionFixture());
 
-            var route = panel.BuildRoute("core/fixtures/introspection");
+            var route = panel.BuildRoute("enginetests/fixtures/introspection");
 
             Assert.AreEqual(0, route.Query.Count, "only differences travel");
-            Assert.AreEqual("#/core/fixtures/introspection", route.ToHash());
+            Assert.AreEqual("#/enginetests/fixtures/introspection", route.ToHash());
         }
 
         [Test]
@@ -193,7 +193,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.IsTrue(panel.Find("Size").SetFromString("lg"));
 
             Assert.AreSame(panel.Find("Size"), raised, "the panel reports which control wrote");
-            var route = panel.BuildRoute("core/fixtures/introspection");
+            var route = panel.BuildRoute("enginetests/fixtures/introspection");
             Assert.AreEqual(1, route.Query.Count);
             Assert.AreEqual("lg", route.Query["Size"]);
             StringAssert.Contains("?Size=lg", route.ToHash());
@@ -204,7 +204,7 @@ namespace Sharq.Core.Editor.Tests
         {
             var component = new SusIntrospectionFixture();
             var route = new SusStoryRoute(
-                "core/fixtures/introspection",
+                "enginetests/fixtures/introspection",
                 new Dictionary<string, string> { ["Size"] = "lg", ["Disabled"] = "true" });
 
             var panel = Panel(component, Story(component, route), route);

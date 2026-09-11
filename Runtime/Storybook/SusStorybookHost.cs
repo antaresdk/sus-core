@@ -390,9 +390,30 @@ namespace Sharq.Core.Storybook
             ApplyRoute(null);
         }
 
+        /// <summary>
+        /// Query key that turns the engine BENCHES on from the address (card T-3410):
+        /// <c>#/enginetests/showcase/bogus?fixtures=1</c>. The stage opens a fixture by direct
+        /// address with or without it; this key is about the LISTING - tabs, tree and search.
+        /// </summary>
+        public const string FixtureQueryKey = "fixtures";
+
+        static bool AsksForFixtures(SusStoryRoute route)
+        {
+            if (route == null) return false;
+            if (!route.Query.TryGetValue(FixtureQueryKey, out var v)) return false;
+            return string.Equals(v, "1", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(v, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(v, "yes", StringComparison.OrdinalIgnoreCase);
+        }
+
         void ApplyRoute(SusStoryRoute route)
         {
             if (_disposed) return;
+
+            // The address is the second way into the benches (card T-3410, D22). Only ever ON:
+            // see SusStoryRegistry.FixturesRequestedByAddress for why the way back belongs to the
+            // editor toggle and not to the next click.
+            if (AsksForFixtures(route)) SusStoryRegistry.FixturesRequestedByAddress = true;
 
             // env.* entries apply to their axis and leave the route BEFORE anything renders, so a
             // story mounted from a shared link comes up already in the environment it was shared

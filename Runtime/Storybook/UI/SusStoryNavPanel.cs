@@ -346,6 +346,12 @@ namespace Sharq.Core.Storybook.UI
             var pkg = SusStoryRegistry.FindPackage(_activePackage);
             if (pkg == null) return;
 
+            // A fixture package that is not listed draws NOTHING here - no rows, no search hits
+            // and no empty plate (plan §4.1b, D22/D25, card T-3410). The stage still shows the
+            // story a direct address or a deep link asked for: hiding the bench from the listing
+            // is not the same as refusing to open it.
+            if (!SusStoryRegistry.IsListed(pkg.Kind, pkg.Key)) return;
+
             var filter = Filter.Trim();
             bool anyRow = false;
 

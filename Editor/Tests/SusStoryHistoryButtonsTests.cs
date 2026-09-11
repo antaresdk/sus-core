@@ -26,9 +26,9 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStoryHistoryButtonsTests
     {
-        const string First = "core/primitives/counter";
-        const string Second = "core/primitives/swatch";
-        const string Third = "core/overlay/floating";
+        const string First = "enginetests/primitives/counter";
+        const string Second = "enginetests/primitives/swatch";
+        const string Third = "enginetests/overlay/floating";
 
         [SetUp]
         public void SetUp()

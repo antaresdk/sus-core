@@ -43,12 +43,18 @@ namespace Sharq.Core.Storybook
     /// </summary>
     public sealed class SusStoryPackage
     {
-        internal SusStoryPackage(string key, string packageId, string version, IReadOnlyList<SusStoryGroup> groups)
+        internal SusStoryPackage(
+            string key,
+            string packageId,
+            string version,
+            IReadOnlyList<SusStoryGroup> groups,
+            SusStoryPackageKind kind = SusStoryPackageKind.Product)
         {
             Key = key;
             PackageId = packageId;
             Version = version;
             Groups = groups;
+            Kind = kind;
         }
 
         /// <summary>Short key = first id segment and the tab label (<c>kit</c>).</summary>
@@ -62,6 +68,16 @@ namespace Sharq.Core.Storybook
 
         /// <summary>Groups in display order; empty for a package that declared no stories.</summary>
         public IReadOnlyList<SusStoryGroup> Groups { get; }
+
+        /// <summary>
+        /// Product or engine fixture (plan §4.1b, D21, card T-3409). A package is a fixture only
+        /// when EVERY assembly that contributed to it said so: one product mark on the key is
+        /// enough to make the tab real, because a bench cannot quietly hide a shipping package.
+        /// </summary>
+        public SusStoryPackageKind Kind { get; }
+
+        /// <summary>True when this package is a test bench and is therefore not listed.</summary>
+        public bool IsFixture => Kind == SusStoryPackageKind.Fixture;
 
         /// <summary>True when this package contributes no stories at all.</summary>
         public bool IsEmpty

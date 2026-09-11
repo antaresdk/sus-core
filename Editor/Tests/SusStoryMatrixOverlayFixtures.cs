@@ -58,7 +58,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/overlay/matrix-modal",
+    [SusStory("enginetests/overlay/matrix-modal",
         Name = "Matrix modal",
         Component = typeof(CoreMatrixModalDemo),
         Purpose = "T-3160 regression: a story that is open at t=0 and has an axis, so zone C's " +

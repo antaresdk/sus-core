@@ -142,5 +142,18 @@ namespace Sharq.Core.Storybook
         /// the moment release bumps the package (facts are derived, not declared).
         /// </summary>
         public string Version { get; set; }
+
+        /// <summary>
+        /// What this package is FOR (plan §4.1b, decision D21, card T-3409). Defaults to
+        /// <see cref="SusStoryPackageKind.Product"/>; a test bench declares
+        /// <c>Kind = SusStoryPackageKind.Fixture</c> and stops being listed.
+        ///
+        /// Why a field and not a naming convention: the fixture tab of the engine was called
+        /// <c>core</c>, and every layer that wanted to skip it would have had to hard-code that
+        /// word — the moment the bench is renamed, the filter goes quiet and the fixtures come
+        /// back (this is exactly how <c>core/primitives/counter</c> reached the sweep report and
+        /// became a rule finding). A declared field is renamed by the compiler, not by memory.
+        /// </summary>
+        public SusStoryPackageKind Kind { get; set; } = SusStoryPackageKind.Product;
     }
 }

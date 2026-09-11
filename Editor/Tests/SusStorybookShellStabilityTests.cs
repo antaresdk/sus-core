@@ -30,8 +30,8 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStorybookShellStabilityTests
     {
-        const string Counter = "core/primitives/counter";
-        const string Floating = "core/overlay/floating";
+        const string Counter = "enginetests/primitives/counter";
+        const string Floating = "enginetests/overlay/floating";
 
         [SetUp]
         public void SetUp()

@@ -37,9 +37,9 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Nav_lists_one_row_per_story_of_the_active_package()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
 
-            Assert.That(RowCount(nav), Is.EqualTo(SusStoryRegistry.FindPackage("core").StoryCount));
+            Assert.That(RowCount(nav), Is.EqualTo(SusStoryRegistry.FindPackage("enginetests").StoryCount));
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace Sharq.Core.Editor.Tests
             var nav = new SusStoryNavPanel { ActivePackage = "router" };
             var tabs = nav.Query<Button>(className: "sus-sb-nav__tab").ToList();
 
-            Assert.That(tabs.Select(t => t.text).ToList(), Is.EqualTo(new[] { "core", "router" }));
+            Assert.That(tabs.Select(t => t.text).ToList(), Is.EqualTo(new[] { "router", "enginetests" }));
             var active = tabs.Where(t => t.ClassListContains("sus-sb-nav__tab--active")).ToList();
             Assert.That(active.Count, Is.EqualTo(1));
             Assert.That(active[0].text, Is.EqualTo("router"));
@@ -60,7 +60,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Group_headers_are_upper_case()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
             var headers = nav.Query<Label>(className: "sus-sb-nav__group").ToList().Select(l => l.text).ToList();
 
             Assert.That(headers, Is.EqualTo(new[] { "PRIMITIVES", "OVERLAY", "SHOWCASE" }));
@@ -69,7 +69,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Row_shows_the_prop_count_next_to_the_name()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
             var counts = nav.Query<Label>(className: "sus-sb-nav__row-count").ToList().Select(l => l.text).ToList();
 
             Assert.That(counts, Has.Count.EqualTo(RowCount(nav)));
@@ -79,14 +79,14 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Highlight_follows_the_active_story_id()
         {
-            var nav = new SusStoryNavPanel { ActiveStoryId = "core/overlay/floating" };
+            var nav = new SusStoryNavPanel { ActiveStoryId = "enginetests/overlay/floating" };
 
             var row = ActiveRow(nav);
             Assert.That(row, Is.Not.Null);
             Assert.That(row.Q<Label>(className: "sus-sb-nav__row-name").text, Is.EqualTo("Floating"));
             // Setting the story also switched the package tab: entering by deep link must not
             // leave the list showing a different package than the highlighted row.
-            Assert.That(nav.ActivePackage, Is.EqualTo("core"));
+            Assert.That(nav.ActivePackage, Is.EqualTo("enginetests"));
         }
 
         [Test]
@@ -109,7 +109,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Footer_shows_the_anomaly_count_and_the_package_version()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
 
             Assert.That(nav.Q<Label>(className: "sus-sb-nav__health-text").text, Is.EqualTo("0 anomalies"));
             Assert.That(nav.Q<VisualElement>(className: "sus-sb-nav__dot")
@@ -125,7 +125,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Search_filters_rows_by_name()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
             Assert.That(nav.Q<TextField>(className: "sus-sb-nav__search-input"), Is.Not.Null,
                 "the search field the Ctrl+K shortcut focuses");
 
@@ -139,13 +139,13 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(nav.Q<Label>(className: "sus-sb-nav__empty-text").text, Does.Contain("zzz"));
 
             nav.Filter = "";
-            Assert.That(RowCount(nav), Is.EqualTo(SusStoryRegistry.FindPackage("core").StoryCount));
+            Assert.That(RowCount(nav), Is.EqualTo(SusStoryRegistry.FindPackage("enginetests").StoryCount));
         }
 
         [Test]
         public void Selecting_a_row_reports_the_entry_but_does_not_set_the_highlight_itself()
         {
-            var nav = new SusStoryNavPanel { ActivePackage = "core" };
+            var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
             SusStoryEntry picked = null;
             nav.StorySelected += e => picked = e;
 
@@ -155,10 +155,10 @@ namespace Sharq.Core.Editor.Tests
             var row = nav.Query<Button>(className: "sus-sb-nav__row").ToList()
                 .First(b => b.Q<Label>(className: "sus-sb-nav__row-name").text == "Counter");
             Assert.That(row, Is.Not.Null);
-            nav.Select(SusStoryRegistry.Find("core/primitives/counter"));
+            nav.Select(SusStoryRegistry.Find("enginetests/primitives/counter"));
 
             Assert.That(picked, Is.Not.Null);
-            Assert.That(picked.Id, Is.EqualTo("core/primitives/counter"));
+            Assert.That(picked.Id, Is.EqualTo("enginetests/primitives/counter"));
             // The click reports; the HOST turns it into a route and the route sets the highlight
             // (plan §4.6). If the panel highlighted itself, a deep link would fight the click.
             Assert.That(ActiveRow(nav), Is.Null);
@@ -194,12 +194,12 @@ namespace Sharq.Core.Editor.Tests
         {
             using var host = new SusStorybookHost();
 
-            Assert.That(host.ShowStoryById("core/overlay/floating"), Is.True);
+            Assert.That(host.ShowStoryById("enginetests/overlay/floating"), Is.True);
 
-            Assert.That(host.CurrentStory.Id, Is.EqualTo("core/overlay/floating"));
-            Assert.That(host.History.Current.StoryId, Is.EqualTo("core/overlay/floating"));
-            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("core/overlay/floating"));
-            Assert.That(host.Url.Address, Is.EqualTo("#/core/overlay/floating"));
+            Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/overlay/floating"));
+            Assert.That(host.History.Current.StoryId, Is.EqualTo("enginetests/overlay/floating"));
+            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("enginetests/overlay/floating"));
+            Assert.That(host.Url.Address, Is.EqualTo("#/enginetests/overlay/floating"));
         }
 
         [Test]
@@ -216,13 +216,13 @@ namespace Sharq.Core.Editor.Tests
         public void Back_returns_to_the_previous_story_and_remounts_it()
         {
             using var host = new SusStorybookHost();
-            host.ShowStoryById("core/primitives/swatch");
-            host.ShowStoryById("core/overlay/floating");
+            host.ShowStoryById("enginetests/primitives/swatch");
+            host.ShowStoryById("enginetests/overlay/floating");
 
             Assert.That(host.Back(), Is.True);
 
-            Assert.That(host.CurrentStory.Id, Is.EqualTo("core/primitives/swatch"));
-            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("core/primitives/swatch"));
+            Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/primitives/swatch"));
+            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("enginetests/primitives/swatch"));
             Assert.That(host.QaCanvas.childCount, Is.GreaterThan(0));
         }
 
@@ -230,28 +230,28 @@ namespace Sharq.Core.Editor.Tests
         public void An_address_bar_change_switches_the_story_without_a_reload_and_is_not_echoed()
         {
             using var host = new SusStorybookHost();
-            host.ShowStoryById("core/primitives/counter");
+            host.ShowStoryById("enginetests/primitives/counter");
             int entriesBefore = host.History.Entries.Count;
 
-            host.Url.HandleExternal("#/core/overlay/floating");
+            host.Url.HandleExternal("#/enginetests/overlay/floating");
 
-            Assert.That(host.CurrentStory.Id, Is.EqualTo("core/overlay/floating"));
-            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("core/overlay/floating"),
+            Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/overlay/floating"));
+            Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("enginetests/overlay/floating"),
                 "the highlight follows the address, not the click (T-2677 p. 2)");
             Assert.That(host.History.Entries.Count, Is.EqualTo(entriesBefore + 1));
-            Assert.That(host.Url.Address, Is.EqualTo("#/core/overlay/floating"));
+            Assert.That(host.Url.Address, Is.EqualTo("#/enginetests/overlay/floating"));
         }
 
         [Test]
         public void The_deep_link_of_the_shown_route_is_the_text_the_share_button_copies()
         {
             using var host = new SusStorybookHost();
-            host.Navigate(new SusStoryRoute("core/primitives/counter",
+            host.Navigate(new SusStoryRoute("enginetests/primitives/counter",
                 new System.Collections.Generic.Dictionary<string, string> { ["Label"] = "Taps" }));
 
-            Assert.That(host.Url.Address, Is.EqualTo("#/core/primitives/counter?Label=Taps"));
+            Assert.That(host.Url.Address, Is.EqualTo("#/enginetests/primitives/counter?Label=Taps"));
             Assert.That(host.Q<Label>(className: "sus-sb__link").text,
-                Is.EqualTo("#/core/primitives/counter?Label=Taps"));
+                Is.EqualTo("#/enginetests/primitives/counter?Label=Taps"));
         }
     }
 }

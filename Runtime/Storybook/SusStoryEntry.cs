@@ -63,6 +63,16 @@ namespace Sharq.Core.Storybook
         public int Order { get; }
 
         /// <summary>
+        /// Product or engine fixture, taken from the <see cref="SusStoryAssemblyAttribute"/> of the
+        /// assembly this story was found in (plan §4.1b, D21, card T-3409). A fixture story is not
+        /// listed, is not swept and is not judged as catalogue material - and it stays addressable.
+        /// </summary>
+        public SusStoryPackageKind Kind { get; internal set; } = SusStoryPackageKind.Product;
+
+        /// <summary>True when this story belongs to a test bench (see <see cref="Kind"/>).</summary>
+        public bool IsFixture => Kind == SusStoryPackageKind.Fixture;
+
+        /// <summary>
         /// The catalogue component this story is the story OF, or null when the story declared it
         /// has no single one (plan §4.1a, D19). Set by the registry from
         /// <see cref="SusStoryAttribute.Component"/> after it checked the type really is a

@@ -18,7 +18,7 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusZoneDMountTimingTests
     {
-        const string Counter = "core/primitives/counter";
+        const string Counter = "enginetests/primitives/counter";
 
         [SetUp]
         public void SetUp()

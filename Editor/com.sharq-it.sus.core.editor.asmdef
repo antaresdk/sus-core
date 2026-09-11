@@ -2,7 +2,8 @@
     "name": "com.sharq-it.sus.core.editor",
     "rootNamespace": "Sharq.Core.Editor",
     "references": [
-        "com.sharq-it.sus.core"
+        "com.sharq-it.sus.core",
+        "com.sharq-it.sus.core.storybook"
     ],
     "includePlatforms": [
         "Editor"

@@ -26,8 +26,8 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStoryProbeTests
     {
-        const string Counter = "core/primitives/counter";
-        const string Swatch = "core/primitives/swatch";
+        const string Counter = "enginetests/primitives/counter";
+        const string Swatch = "enginetests/primitives/swatch";
 
         [SetUp]
         public void SetUp()

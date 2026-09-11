@@ -18,9 +18,9 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStoryMatrixTests
     {
-        const string Swatch = "core/primitives/swatch";
-        const string Counter = "core/primitives/counter";
-        const string Floating = "core/overlay/floating";
+        const string Swatch = "enginetests/primitives/swatch";
+        const string Counter = "enginetests/primitives/counter";
+        const string Floating = "enginetests/overlay/floating";
 
         string _axisBefore;
 
@@ -270,7 +270,7 @@ namespace Sharq.Core.Editor.Tests
         {
             Assert.That(Entry(Counter).Weight, Is.EqualTo(SusStoryWeight.Normal),
                 "a story that declares nothing is normal");
-            Assert.That(new SusStoryAttribute("core/x/y").Weight, Is.EqualTo(SusStoryWeight.Normal));
+            Assert.That(new SusStoryAttribute("enginetests/x/y").Weight, Is.EqualTo(SusStoryWeight.Normal));
             Assert.That(new SusStoryDefinition().Weight, Is.EqualTo(SusStoryWeight.Normal));
         }
 
@@ -383,7 +383,7 @@ namespace Sharq.Core.Editor.Tests
             host.ShowStoryById(Swatch);
             Assert.That(host.Matrix.Rows, Is.Not.Empty);
 
-            host.Url.HandleExternal("#/core/primitives/gone");
+            host.Url.HandleExternal("#/enginetests/primitives/gone");
 
             Assert.That(host.Matrix.Rows, Is.Empty);
             Assert.That(CellsInTree(host), Is.Zero);

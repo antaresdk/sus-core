@@ -9,7 +9,16 @@ using Sharq.Core.Storybook;
 // is Editor-only), yet it proves the whole discovery path — attribute on the assembly, attribute
 // on the class, provider interface, grouping and the package stamp — with the real registry rather
 // than with a mock of it.
-[assembly: SusStoryAssembly(Package = "core", PackageId = "com.sharq-it.sus.core")]
+//
+// The key is "enginetests" and the kind is Fixture (card T-3409, plan §4.1b, D21). Until 2026-09-11
+// this bench called itself "core", and that single word was the whole reason the storybook showed
+// a fourth tab of fourteen fixtures — four of them deliberately broken — next to kit and game: a
+// tab exists because an assembly named a package, and core ships no components at all. The kind is
+// the half that does not depend on the name: rename the bench again and the fixtures stay hidden.
+[assembly: SusStoryAssembly(
+    Package = "enginetests",
+    PackageId = "com.sharq-it.sus.core",
+    Kind = SusStoryPackageKind.Fixture)]
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -114,7 +123,7 @@ namespace Sharq.Core.Editor.Tests
 
     // ── the three stories ───────────────────────────────────────────────────
 
-    [SusStory("core/primitives/counter",
+    [SusStory("enginetests/primitives/counter",
         Name = "Counter",
         Component = typeof(CoreCounterDemo),
         Purpose = "reactive props end to end: Prop<T>, a derived label and one event")]
@@ -131,7 +140,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/primitives/swatch",
+    [SusStory("enginetests/primitives/swatch",
         Name = "Swatch",
         Component = typeof(CoreSwatchDemo),
         Purpose = "closed axes: props clamped by UseAllowed, rendered as segmented controls")]
@@ -147,7 +156,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/overlay/floating",
+    [SusStory("enginetests/overlay/floating",
         Name = "Floating",
         Component = typeof(CoreOverlayDemo),
         Purpose = "overlay resolution: the popup must land in the stage canvas, not at the panel root")]
@@ -197,7 +206,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/overlay/root-leak",
+    [SusStory("enginetests/overlay/root-leak",
         Name = "RootLeak",
         NoComponent = "regression fixture: the story is about overlay teardown, not about a component",
         Purpose = "T-3131 regression: proves SusStorybookHost.Unmount also clears an overlay " +
@@ -235,7 +244,7 @@ namespace Sharq.Core.Editor.Tests
     /// the canvas, no matter how many times the component re-attaches on its way into the
     /// overlay host.
     /// </summary>
-    [SusStory("core/overlay/scenery",
+    [SusStory("enginetests/overlay/scenery",
         Name = "Scenery",
         Component = typeof(CoreMatrixModalDemo),
         Purpose = "T-3168: scenery declared through ctx.AddSibling is placed once and removed on demount")]
@@ -259,7 +268,7 @@ namespace Sharq.Core.Editor.Tests
     /// Kept as a fixture on purpose: the engine's safety net has to hold for stories nobody has
     /// migrated, including stories in projects that are not ours.
     /// </summary>
-    [SusStory("core/overlay/scenery-diy",
+    [SusStory("enginetests/overlay/scenery-diy",
         Name = "Scenery (DIY)",
         Component = typeof(CoreMatrixModalDemo),
         Purpose = "T-3168: scenery a story parents itself still has to be gone after a demount")]
@@ -293,7 +302,7 @@ namespace Sharq.Core.Editor.Tests
         {
             yield return new SusStoryDefinition
             {
-                Id = "core/primitives/swatch-error",
+                Id = "enginetests/primitives/swatch-error",
                 Name = "Swatch (error)",
                 Purpose = "data-born story: the same component pinned to one tone",
                 Component = typeof(CoreSwatchDemo),
@@ -328,7 +337,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/showcase/set",
+    [SusStory("enginetests/showcase/set",
         Name = "Showcase set",
         Purpose = "counter and swatch in one frame",
         NoComponent = "showcase set: two components in one frame, the story of neither")]
@@ -341,7 +350,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/showcase/silent",
+    [SusStory("enginetests/showcase/silent",
         Name = "Silent",
         Purpose = "declares neither a component nor a reason there is none")]
     public sealed class CoreSilentLinkStory : ISusStory
@@ -353,7 +362,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/showcase/bogus",
+    [SusStory("enginetests/showcase/bogus",
         Name = "Bogus",
         Component = typeof(CoreNotAComponent),
         Purpose = "names a type that is not a SusComponent")]
@@ -402,7 +411,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/showcase/variant",
+    [SusStory("enginetests/showcase/variant",
         Name = "Variant axis",
         Component = typeof(CoreVariantDemo),
         Purpose = "closed axis declared by the STORY, not by the component",
@@ -416,7 +425,7 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/showcase/variant-clash",
+    [SusStory("enginetests/showcase/variant-clash",
         Name = "Variant clash",
         Component = typeof(CoreClampedVariantDemo),
         Purpose = "story lists values the component does not allow",
@@ -435,10 +444,10 @@ namespace Sharq.Core.Editor.Tests
     // one of them disappears without a word (that is exactly what happened to menu-button, menu,
     // unit-card and shop in the live corpus); keyed by the full address both are registered.
 
-    [SusStory("core/primitives/twin",
+    [SusStory("enginetests/primitives/twin",
         Name = "Twin (primitives)",
         Component = typeof(CoreCounterDemo),
-        Purpose = "same last segment as core/overlay/twin, different address")]
+        Purpose = "same last segment as enginetests/overlay/twin, different address")]
     public sealed class CorePrimitivesTwinStory : ISusStory
     {
         public SusComponent Create() => new CoreCounterDemo();
@@ -448,10 +457,10 @@ namespace Sharq.Core.Editor.Tests
         }
     }
 
-    [SusStory("core/overlay/twin",
+    [SusStory("enginetests/overlay/twin",
         Name = "Twin (overlay)",
         Component = typeof(CoreOverlayDemo),
-        Purpose = "same last segment as core/primitives/twin, different address")]
+        Purpose = "same last segment as enginetests/primitives/twin, different address")]
     public sealed class CoreOverlayTwinStory : ISusStory
     {
         public SusComponent Create() => new CoreOverlayDemo();
