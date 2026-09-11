@@ -49,6 +49,10 @@
     --sb-accent: #86cfa4;
     --sb-accent-ink: #0e1a13;
     --sb-accent-soft: rgba(134, 207, 164, 0.14);
+    /* The accent has TWO jobs and one of them is text (T-3418). On the dark set one value does
+       both: #86cfa4 as ink on --sb-panel measures 4.58, over the 4.5 floor, so the text accent
+       here is the fill accent and the name exists only so the light set can part them. */
+    --sb-accent-text: #86cfa4;
     --sb-ok: #7fcf9a;
     --sb-warn: #d9a84e;
     --sb-bad: #e6705f;
@@ -158,6 +162,15 @@
     --sb-accent: #1f7a52;
     --sb-accent-ink: #ffffff;
     --sb-accent-soft: rgba(31, 122, 82, 0.12);
+    /* The light set's SECOND accent (T-3418), and the reason it exists is a number: #1f7a52 was
+       picked to be read ON a dark ground, and as ink on --sb-panel (#fbfaf7) it measures 2.34 --
+       the selected row of zone A was the one name in the shell below the 4.5 floor. Darkening
+       --sb-accent itself was the wrong lever: that value is also a FILL (a button ground under
+       --sb-accent-ink), and a fill and an ink want opposite ends of the ramp on a light ground.
+       #0c3121 is the same hue four fifths of the way down it, and it clears the floor against
+       BOTH grounds the selected row actually sits on: 4.98 on the panel, and 4.64 on the panel
+       seen through the row's own --sb-accent-soft tint. */
+    --sb-accent-text: #0c3121;
     --sb-ok: #1f8f5f;
     --sb-warn: #a8741c;
     --sb-bad: #c2422f;
@@ -454,7 +467,7 @@
 
 .sus-sb-nav__row--active {
     background-color: var(--sb-accent-soft);
-    color: var(--sb-accent);
+    color: var(--sb-accent-text);
     -unity-font-definition: var(--sb-fw-600);
 }
 
@@ -1865,7 +1878,7 @@
 }
 
 .sus-sb-nav__row--active > .sus-sb-nav__row-name {
-    color: var(--sb-accent);
+    color: var(--sb-accent-text);
 }
 
 .sus-sb-env__share > .sus-sb-env__share-label {
