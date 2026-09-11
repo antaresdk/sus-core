@@ -5,28 +5,35 @@
 ## [1.1.0] - 2026-09-11
 
 ### Added
-- Storybook shell: its own token set and class prefix (`sb-*`), independent of the product stylesheets — switching skin, theme or density no longer repaints the instrument around the subject (T-3371, T-3387, T-3400).
-- `SusThemeService.MarkScopedCascadeRoot` and `ScopedRootClass` — a subtree can declare itself the cascade root, so a panel can show a component under a theme of its own while the application keeps another.
-- `SusStoryAxis` and `Axis`/`AxisValues` on `[SusStory]`: a story can declare a closed set of variant values, so the state matrix has real rows instead of a single "no axis" line.
-- `SusStoryPackageKind` on `[assembly: SusStoryAssembly]`: engine test fixtures declare themselves as fixtures and stay out of the browsing UI and out of the rules, while their addresses keep working for the suites.
-- `SusStateRoles` — the component role registry (which states a role owes, where the focus ring lives), mirrored from the canonical data.
-- Anomaly vocabulary in `SusUiProbe`: `out-of-bounds`, `clipped`, `overlap`, `off-canvas` next to the former `zero-size`, each with thresholds in data and legal exemptions measured rather than silent.
-- Zone A history buttons and a zone D "reset to story" control; the panel restores the author's seed, not the type defaults.
-- Story stage scrolls on both axes, and zone C says in words when its content is wider than the window.
+- Storybook shell: its own token set and class prefix (`sb-*`), independent of the product stylesheets, so switching skin, theme or density no longer repaints the instrument around the subject.
+- `SusThemeService.MarkScopedCascadeRoot` / `ScopedRootClass`: a subtree declares itself the cascade root, so a panel can show a component under a theme of its own while the application keeps another.
+- `SusComponent.SurfaceClass` (`sus-component`): every SUS surface carries an anchor class, so package stylesheets stop reaching host UI that is not ours.
+- `SusStoryAxis` plus `Axis` / `AxisValues` on `[SusStory]`: a story declares a closed set of variant values, so the state matrix has real rows instead of one "no axis" line.
+- `SusStoryPackageKind` on `[assembly: SusStoryAssembly]`: engine fixtures declare themselves and stay out of the browsing UI and the rules, while their addresses keep working for the suites. `Stories` / `Packages` are the product selection; `AllStories` / `AllPackages` include fixtures.
+- `SusStateRoles`: the component role registry — which states a role owes and where its focus ring lives.
+- Anomaly vocabulary in `SusUiProbe`: `out-of-bounds`, `clipped`, `overlap`, `off-canvas` beside the former `zero-size`, each with thresholds in data; legal exemptions are measured and printed, not silent.
+- Cell geometry in the storybook probe report: every matrix cell reports its own box, the instance box and the text box against the needed one.
+- Zone A history buttons and a zone D reset that restores the author's seed rather than the type defaults.
+- Mockup typefaces for the shell (Instrument Sans, Geist Mono), declared by class through the font service.
 
 ### Changed
-- Storybook shell fonts come from the mockup family through the font service, by class only.
-- Zone E refreshes on change at 500 ms instead of rebuilding its children 8 times a second.
-- The stage canvas keeps one height for every story and popover; a subject larger than the canvas is clipped and scrolled to instead of pushing the canvas open.
-- The state matrix shows a column only when the component's role owes that state.
-- Overlay components install a focus trap, move focus inside on open and return it on close, from the base class.
-- `SusStoryRegistry.Stories` / `Packages` return product stories; `AllStories` / `AllPackages` return everything including fixtures.
+- Matrix cells grow to the natural size of the instance; components too large for a cell get a state switcher on a single natural-size instance instead of a grid of clipped thumbnails.
+- The state matrix shows a column only when the component's role owes that state, and the role is read from the story subject.
+- Zone E refreshes on change at 500 ms instead of rebuilding its children eight times a second; the measuring passes converge on layout instead of counting frames.
+- The stage canvas keeps one height for every story and popover, scrolls on both axes and says in words when its content is wider than the window.
+- Overlay components install a focus trap, move focus inside on open and return it on close, from `SusModalBase`.
+- The value clamp is silent on a declared alias and complains only about an unknown value.
+- Public package hygiene: font faces trimmed from 42 to 10 with licences alongside; every human-readable string, comment and diagnostic is English.
 
 ### Fixed
-- Focus ring is visible on a primary fill: the ring ink is its own token, no longer an alias of the brand colour (contrast 1.00 to 3.97 at worst).
+- The focus ring is visible on a primary fill: the ring ink has its own token instead of aliasing the brand colour (worst-case contrast 1.00 to 3.97).
+- The focus ring survives a re-render and waits for a late child; its target is declared rather than guessed.
 - `SusStateTwins` reads Unity 6.3 stylesheet tables, so a declared twin class is found again.
-- Popup placement is computed in overlay-host coordinates; a stage with its own host no longer throws the card off-canvas.
-- Blank-frame and no-layout refusals in panel capture: an empty frame is no longer reported as taken.
+- The safe-area fan-out is coalesced instead of recursive, which removed a stack overflow when its matrix expanded.
+- The canvas tile is drawn at its own size instead of being stretched across the canvas.
+- The shell no longer wears product classes, and the matrix shell class sits on a wrapper so the instance stays clean.
+- The vertical scrollbar is dressed like the horizontal one; a dead canvas rule is gone and the live metrics line reserves its width.
+- The light shell set has a text accent of its own, so a selected story name is readable.
 
 ## [1.0.31] - 2026-09-11
 
