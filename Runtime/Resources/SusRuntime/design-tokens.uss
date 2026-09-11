@@ -28,6 +28,8 @@
     --sus-border:             var(--thm-border);
     --sus-border-hover:       var(--thm-border-hover);
     --sus-border-focus:       var(--thm-border-focus);
+    /* Keyboard focus ring — deliberately NOT an alias of --sus-border-focus (T-3452). */
+    --sus-focus-ring:         var(--thm-focus-ring);
     --sus-divider:            var(--thm-border);
 
     /* ── Scrim ── */

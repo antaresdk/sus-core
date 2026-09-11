@@ -46,6 +46,16 @@
     --thm-border-hover:       var(--base-color-Grey40);
     --thm-border-focus:       var(--base-color-Primary50);
 
+    /* Keyboard focus ring (T-3452) — NOT --thm-border-focus, and that is the point.
+       --thm-border-focus is the border of a FOCUSED INPUT and is legitimately brand
+       blue. The keyboard ring has to stay visible on top of a PRIMARY FILL too (a
+       selected segment, an active tab, a selected row), and blue on blue is a
+       contrast of 1.00 — the ring existed formally and was absent in practice.
+       A neutral ink that flips with the theme is the only single-colour answer that
+       clears all three grounds: page, surface and primary fill. Dark theme -> near
+       white (18.97 on the dark page, 4.63 on the primary fill). */
+    --thm-focus-ring:         var(--base-color-Grey98);
+
     /* Primary */
     --thm-primary:            var(--base-color-Primary50);
     --thm-primary-hover:      var(--base-color-Primary70);
@@ -146,6 +156,10 @@
 
     /* Focus ring */
     --thm-border-focus:       var(--base-color-Primary50);
+    /* Ring ink mirrors the theme (T-3452): near black here — 17.59 on the light
+       page, 3.97 on the primary fill. See the dark block for why it is a separate
+       token from --thm-border-focus. */
+    --thm-focus-ring:         var(--base-color-Grey06);
 
     /* Game rarity / utility */
     --thm-rare:               var(--base-color-Rare);
