@@ -9,8 +9,8 @@ namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
     /// The two arrows of zone A — card T-3406, contract of zone A (R142 <c>history-buttons</c>,
-    /// plan ARCH-20260911-STORYBOOK-SHELL §4.1; engine plan §4.6: "кнопки назад/вперёд — в зоне A,
-    /// плюс Alt+←/Alt+→").
+    /// plan ARCH-20260911-STORYBOOK-SHELL §4.1; engine plan §4.6: "back/forward buttons live in
+    /// zone A, plus Alt+←/Alt+→").
     ///
     /// What was measured on 2026-09-11: <see cref="SusStoryHistory"/> had a cursor, the host had
     /// <c>Back()</c>/<c>Forward()</c> and <c>Alt+←</c>/<c>Alt+→</c> moved it — and zone A had no

@@ -9,7 +9,7 @@ namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
     /// Safety net under the Sharq compiler (T-3289, step 1 of
-    /// ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 п.1).
+    /// ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 1).
     ///
     /// Every <c>.sharq</c> belonging to a downstream mutable package — any package this
     /// project has installed as a local/file: reference that declares its own generation
@@ -155,11 +155,11 @@ namespace Sharq.Core.Editor.Tests
 
             var identical = compared - missingTemplate.Count - componentsWithMismatch.Count;
             var summary =
-                $"[T-3289][SharqCorpusIdempotencyTests] сверено компонентов: {compared} " +
+                $"[T-3289][SharqCorpusIdempotencyTests] components compared: {compared} " +
                 $"({string.Join(" + ", perPackageCount.Select(kv => $"{kv.Key}={kv.Value}"))})" +
-                $"; байт-в-байт идентичны: {identical}" +
-                $"; разошлись: {componentsWithMismatch.Count} ({mismatches.Count} артефакт(ов))" +
-                $"; без <template>: {missingTemplate.Count}";
+                $"; byte-for-byte identical: {identical}" +
+                $"; diverged: {componentsWithMismatch.Count} ({mismatches.Count} artefact(s))" +
+                $"; without <template>: {missingTemplate.Count}";
             Debug.Log(summary);
             TestContext.WriteLine(summary);
 

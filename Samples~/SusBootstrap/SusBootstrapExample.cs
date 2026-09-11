@@ -169,7 +169,7 @@ namespace Sharq.Core.Examples
             {
                 var section = Section("Typography — var(--sus-font-*)");
 
-                // Подписи = фактические значения --sus-font-size-* (_font.uss → base-font-size).
+                // The labels spell out the actual --sus-font-size-* values (_font.uss -> base-font-size).
                 AddType(section, "Hero 48", "type-hero");
                 AddType(section, "Heading1 32", "type-heading1");
                 AddType(section, "Heading2 24", "type-heading2");

@@ -138,7 +138,7 @@ namespace Sharq.Core.Runtime.Tests
             // T-2209: `resolvedStyle`/`worldBound` are NaN before the first layout pass. JSON has
             // no NaN/Infinity literal — writing v.ToString("F0") for such a value produces the
             // bare token `NaN`, which breaks JSON.parse for the WHOLE geometry sidecar (R36 G0
-            // "не парсится"), not just the one field. Reflection: F() is a private static
+            // "does not parse"), not just the one field. Reflection: F() is a private static
             // formatter with no VisualElement dependency, so the synthetic NaN is probed directly
             // rather than fighting Unity's layout timing to reproduce it end-to-end.
             var f = typeof(SusUiProbe).GetMethod("F", BindingFlags.NonPublic | BindingFlags.Static);

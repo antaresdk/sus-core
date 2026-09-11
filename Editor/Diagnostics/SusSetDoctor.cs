@@ -25,7 +25,7 @@ namespace Sharq.Core.Editor.Diagnostics
     ///  3. <b>Mixed module versions</b> (<see cref="DetectVersionMismatches"/>) — one module was
     ///     updated (or manually replaced) while others were not.
     ///  4. <b>Unattributed files</b>, <b>missing module manifests</b>, <b>incomplete sets</b> and
-    ///     <b>relocated folders</b> — see the "правило атрибуции" below.
+    ///     <b>relocated folders</b> — see the "attribution rule" below.
     /// 5. <b>Root file provenance</b> (<see cref="DetectRootFileProvenance"/>) — the
     ///     generated <c>README.txt</c>/<c>LICENSE.txt</c>/<c>Third-Party Notices.txt</c> share ONE
     ///     path per set root; re-importing a smaller set on top of an already-installed larger one
@@ -36,7 +36,7 @@ namespace Sharq.Core.Editor.Diagnostics
     ///     paths, so the combined notice loses the other set's attributions —
     ///     <c>SetDoctor.RootFileProvenanceDisjoint</c> (R33/I15(5)).
     ///
-    /// <b>Правило атрибуции (§2.3 D7).</b> Before a single shared
+    /// <b>Attribution rule (§2.3 D7).</b> Before, a single shared
     /// <c>Assets/&lt;root&gt;/sus-set.json</c> was overwritten by WHICHEVER set was imported
     /// last, so its "everything under the root" semantics made the sibling set's own modules
     /// look like residue of an old version — Set Doctor would tell a Complete owner who
@@ -93,7 +93,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
         /// <summary>True for a per-SET descriptor filename, i.e. <c>sus-set.&lt;set&gt;.json</c>
         /// (the old single <c>sus-set.json</c> does NOT match — that name is never written
-        /// again, §2.3 D7 п.3 / инвариант I15(4), and there are zero live purchasers on the old
+        /// again, §2.3 D7 item 3 / invariant I15(4), and there are zero live purchasers on the old
         /// format to stay compatible with, R12).</summary>
         internal static bool IsSetDescriptorFileName(string fileName)
         {
@@ -192,7 +192,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// folder, which a sibling set's packer never touches), so this no longer needs a
         /// separate "present module folders" disk scan the way the old single-manifest
         /// version did (that scan existed only to work around a manifest that could forget a
-        /// module entirely — see the class doc's правило атрибуции).</summary>
+        /// module entirely — see the attribution rule in the class doc).</summary>
         internal static List<SusValidationIssue> DetectUpmCollisions(
             IReadOnlyList<SusModuleManifest> presentModules,
             ISet<string> installedUpmPackageNames)
@@ -299,7 +299,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// <c>&lt;root&gt;/&lt;dir&gt;/Runtime/Generated</c>): those aren't in <c>paths</c>
         /// either when the packer's exclude cuts the whole subtree, so without this they'd
         /// collapse to their own stray "shallowest ancestor" and get flagged instead of the
-        /// leaf, per §5.5 algorithm step 3 "вместе с промежуточными каталогами до
+        /// leaf, per §5.5 algorithm step 3, "together with the intermediate directories up to
         /// &lt;root&gt;/&lt;dir&gt;").</summary>
         private static bool IsUnderAnyZone(string path, IReadOnlyList<string> zones)
         {
@@ -790,7 +790,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
             var fix = $"Delete the listed path(s), or reinstall the set that ships module '{owner.id}' " +
                       $"(folder 'Assets/{root}/{owner.dir}').";
-            // §5.5 point 4: "удалить всю папку набора" is only safe to say when exactly one
+            // §5.5 point 4: "delete the whole set folder" is only safe to say when exactly one
             // descriptor is present — with two (e.g. Kit + Complete side by side) it would be
             // telling the purchaser to delete a sibling set they paid for and still want.
             if (presentDescriptorCount == 1)
@@ -868,7 +868,7 @@ namespace Sharq.Core.Editor.Diagnostics
         private static readonly string[] GeneratedZoneSuffixes = { ".g.cs", ".g.uss" };
 
         /// <summary>Suffixes judged in a module's <c>resources</c> zone: only the runtime
-        /// <c>Resources.Load</c> copy of the compiled stylesheet — DoD п.3: a hand-authored
+        /// <c>Resources.Load</c> copy of the compiled stylesheet — DoD item 3: a hand-authored
         /// PLAIN <c>.uss</c> living alongside it (e.g. shared tokens/breakpoints files that were
         /// never generated from any <c>.sharq</c>) does not end in <c>.g.uss</c>, so it never
         /// matches this suffix and can never be flagged — no stem comparison needed to exclude
@@ -892,7 +892,7 @@ namespace Sharq.Core.Editor.Diagnostics
                     matchedSuffix = suf;
                     break;
                 }
-                if (matchedSuffix == null) continue; // not a generat file this zone is judged by (DoD п.3)
+                if (matchedSuffix == null) continue; // not a generated file this zone is judged by (DoD item 3)
 
                 var stem = fileName.Substring(0, fileName.Length - matchedSuffix.Length);
                 if (knownStems.Contains(stem)) continue; // has a live .sharq source — not stale

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
-    /// T-3293 (step 5 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 п.3) —
+    /// T-3293 (step 5 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 3) —
     /// <see cref="RungResolver"/>'s compile-time arithmetic: <c>rung(family, rung)</c> resolves
     /// to <c>var(&lt;token&gt;, &lt;value at lg×default&gt;px)</c>, a family outside the ladder
     /// and a rung outside the family are both compile errors naming file + line.
@@ -168,7 +168,7 @@ namespace Sharq.Core.Editor.Tests
             var ok = RungResolver.TryResolve(Scale(), "does-not-exist", "xs", out _, out var error);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("вне лестницы размеров", error);
+            StringAssert.Contains("is not in the dimension ladder", error);
             StringAssert.Contains("does-not-exist", error);
         }
 
@@ -181,7 +181,7 @@ namespace Sharq.Core.Editor.Tests
             var ok = RungResolver.TryResolve(Scale(), "test-invariant", "thin", out _, out var error);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("вне лестницы размеров", error);
+            StringAssert.Contains("is not in the dimension ladder", error);
         }
 
         [Test]
@@ -190,7 +190,7 @@ namespace Sharq.Core.Editor.Tests
             var ok = RungResolver.TryResolve(Scale(), "test-tier", "3xl", out _, out var error);
 
             Assert.IsFalse(ok);
-            StringAssert.Contains("вне семейства", error);
+            StringAssert.Contains("is not in family", error);
             StringAssert.Contains("3xl", error);
         }
 
@@ -269,7 +269,7 @@ namespace Sharq.Core.Editor.Tests
             // icon family, lg×default step: bp.lg=1 + dens.default=0 = step 1 -> steps[1] =
             // [12,16,20,24,28] (docs-canon/data/dimension-scale.json, rungs xs/sm/md/lg/xl) ->
             // "md" is rung index 2 -> 20 — cross-checked against the family's own note
-            // ("Лестница 1 == :root (--sk-icon-size 20)").
+            // ("ladder step 1 == :root (--sk-icon-size 20)").
             StringAssert.Contains("var(--sk-icon-md, 20px)", model.StyleBody);
             StringAssert.DoesNotContain("rung(", model.StyleBody);
         }
@@ -287,7 +287,7 @@ namespace Sharq.Core.Editor.Tests
 
             StringAssert.Contains("RungIntegrationProbe.sharq:4:", ex.Message);
             StringAssert.Contains("not-a-real-family", ex.Message);
-            StringAssert.Contains("вне лестницы размеров", ex.Message);
+            StringAssert.Contains("is not in the dimension ladder", ex.Message);
         }
     }
 }

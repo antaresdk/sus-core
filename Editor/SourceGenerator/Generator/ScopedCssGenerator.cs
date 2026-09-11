@@ -59,7 +59,7 @@ namespace Sharq.Core.Editor
 
         /// <summary>
         /// Same tree walk as <see cref="GenerateFromNodes(List{CssNode}, string)"/> but for
-        /// UNSCOPED (<c>&lt;style&gt;</c> without <c>scoped</c>) output — no <c>.s-хеш</c> is
+        /// UNSCOPED (<c>&lt;style&gt;</c> without <c>scoped</c>) output — no <c>.s-&lt;hash&gt;</c> is
         /// appended to any selector. Used only when the style body contains <c>@variants</c>
         /// (T-3292): a plain global style with none keeps the old byte-for-byte raw-text path
         /// in <c>StyleParser</c>, this method is never on that path.
@@ -88,7 +88,7 @@ namespace Sharq.Core.Editor
         /// when a rule has no nested children.
         /// </summary>
         /// <summary><paramref name="hash"/> null ⇒ unscoped (T-3292 global-with-@variants path);
-        /// non-null ⇒ appends <c>.s-хеш</c> to every rule, same as before this parameter existed.
+        /// non-null ⇒ appends <c>.s-&lt;hash&gt;</c> to every rule, same as before this parameter existed.
         /// (T-3295) <paramref name="map"/>/<paramref name="ussLine"/> track the source map
         /// alongside the SAME emission — one entry per PHYSICAL line of a rule's own
         /// declarations (declarations may embed <c>\n</c> verbatim from the source, so one

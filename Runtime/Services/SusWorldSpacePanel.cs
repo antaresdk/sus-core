@@ -51,14 +51,14 @@ namespace Sharq.Core
         public bool VerboseLogging;
 
         /// <summary>
-        /// USS class of the WORLD dimension root (D-19, план ARCH-20260907-DIMENSION-TOKENS §4.1).
-        /// Мировая панель — отдельный UIDocument: классы <c>.breakpoint-*</c> и <c>.density-*</c>
-        /// экранного корня до неё НЕ доходят, поэтому каждое переменное семейство лестницы
-        /// резолвилось из <c>:root</c> ПО СЛУЧАЙНОСТИ, а не по объявлению. Класс прибивает
-        /// мировой домен к базовой ступени (lg x default) одноимённым блоком в генерате
-        /// лестницы размеров пакета оформления: размер нейм-плейта на sm и на 2xl
-        /// одинаков ПО ОБЪЯВЛЕНИЮ. Блок стоит в генерате ПОСЛЕДНИМ, поэтому при равной
-        /// специфичности (один класс) он выигрывает у <c>.breakpoint-*</c>.
+        /// USS class of the WORLD dimension root (D-19, plan ARCH-20260907-DIMENSION-TOKENS §4.1).
+        /// A world panel is its OWN UIDocument: the screen root's <c>.breakpoint-*</c> and
+        /// <c>.density-*</c> classes never reach it, so every variable family of the dimension
+        /// ladder used to resolve from <c>:root</c> BY ACCIDENT rather than by declaration. This
+        /// class nails the world domain to the base step (lg x default) through the same-named
+        /// block in the skin package's generated ladder sheet: a nameplate is the SAME size at
+        /// sm and at 2xl BY DECLARATION. That block is emitted LAST in the generated sheet, so at
+        /// equal specificity (one class) it wins over <c>.breakpoint-*</c>.
         /// </summary>
         public const string WorldSpaceUssClass = "sus-world-space";
 
@@ -101,9 +101,10 @@ namespace Sharq.Core
         }
 
         /// <summary>
-        /// Ставит <see cref="WorldSpaceUssClass"/> на корень мировой панели. Идемпотентно;
-        /// зовётся и из <c>Awake</c>, и из <c>SusBootstrap.EnsureWorldSpacePanel</c>
-        /// (панель может быть собрана руками по сценарию из шапки класса, минуя bootstrap).
+        /// Puts <see cref="WorldSpaceUssClass"/> on the root of a world panel. Idempotent; called
+        /// both from <c>Awake</c> and from <c>SusBootstrap.EnsureWorldSpacePanel</c> (a panel can
+        /// also be wired up by hand, following the recipe in this class's header, and never go
+        /// through bootstrap at all).
         /// </summary>
         public static void MarkWorldSpaceRoot(VisualElement root)
         {
@@ -117,9 +118,9 @@ namespace Sharq.Core
             if (TargetCamera == null)
                 TargetCamera = Camera.main;
 
-            // Идемпотентная страховка: UIDocument может пересобрать rootVisualElement
-            // между Awake и Start (перезагрузка домена в редакторе) — класс мирового
-            // домена обязан пережить пересборку (D-19, T-3071).
+            // Idempotent safety net: UIDocument may rebuild rootVisualElement between Awake and
+            // Start (a domain reload in the editor) — the world-domain class has to survive that
+            // rebuild (D-19, T-3071).
             MarkWorldSpaceRoot(_document != null ? _document.rootVisualElement : _root);
 
             if (_root != null && TargetCamera != null)

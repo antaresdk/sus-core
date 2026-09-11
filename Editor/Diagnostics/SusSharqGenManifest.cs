@@ -120,7 +120,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// stem set its <see cref="sources"/> dirs actually contain on disk RIGHT NOW. A module
         /// contributes no entry — the check silently skips it — when its descriptor is absent,
         /// unparsable, or has no non-blank <c>sources</c> entries: without a real
-        /// <c>.sharq</c> to compare against there is no ground truth, only a guess (DoD п.4).</summary>
+        /// <c>.sharq</c> to compare against there is no ground truth, only a guess (DoD item 4).</summary>
         internal readonly struct SusGenModuleInfo
         {
             internal readonly string GeneratedZone;
@@ -154,7 +154,7 @@ namespace Sharq.Core.Editor.Diagnostics
 
                 var gen = Parse(json);
                 if (gen == null) continue;
-                if (gen.sources == null || gen.sources.Length == 0) continue; // DoD п.4: no sources -> silent
+                if (gen.sources == null || gen.sources.Length == 0) continue; // DoD item 4: no sources -> silent
 
                 var genRel = gen.generated.Replace('\\', '/').Trim('/');
                 var genZone = string.IsNullOrEmpty(genRel) ? null : $"{root}/{m.dir}/{genRel}";

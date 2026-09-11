@@ -8,7 +8,7 @@ using UnityEngine;
 namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
-    /// T-3295 (step 6 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 п.3, decision d:927b8e) —
+    /// T-3295 (step 6 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 3, decision d:927b8e) —
     /// the generat↔source correspondence map (plan §4.4): <c>&lt;Class&gt;.g.uss.map.json</c> /
     /// <c>&lt;Class&gt;_scoped.g.uss.map.json</c>, next to whichever USS it describes.
     ///

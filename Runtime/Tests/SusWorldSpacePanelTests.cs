@@ -37,19 +37,19 @@ namespace Sharq.Core.Runtime.Tests
             if (_camGo != null) Object.DestroyImmediate(_camGo);
         }
 
-        // ─── D-19 (T-3071): класс мирового домена на корне панели ───────────
+        // ─── D-19 (T-3071): the world-domain class on the panel root ────────
 
         /// <summary>
-        /// Мировая панель — отдельный UIDocument, и классы `.breakpoint-*` / `.density-*`
-        /// экранного корня до неё не доходят: без класса `.sus-world-space` каждое переменное
-        /// семейство лестницы размеров резолвилось на ней из `:root` ПО СЛУЧАЙНОСТИ. Тест
-        /// меряет объявление, а не намерение: имя класса, идемпотентность и живой корень.
+        /// A world panel is its OWN UIDocument, and the screen root's `.breakpoint-*` /
+        /// `.density-*` classes never reach it: without `.sus-world-space` every variable family
+        /// of the dimension ladder resolved there from `:root` BY ACCIDENT. This test measures the
+        /// declaration, not the intent: the class name, idempotency, and a live panel root.
         /// </summary>
         [Test]
         public void MarkWorldSpaceRoot_Declares_World_Dimension_Class()
         {
             Assert.AreEqual("sus-world-space", SusWorldSpacePanel.WorldSpaceUssClass,
-                "имя класса — контракт с одноимённым блоком генерата лестницы размеров");
+                "the class name is a contract with the same-named block of the generated ladder sheet");
 
             var root = new VisualElement();
             SusWorldSpacePanel.MarkWorldSpaceRoot(root);
@@ -58,14 +58,14 @@ namespace Sharq.Core.Runtime.Tests
             int occurrences = 0;
             foreach (var cls in root.GetClasses())
                 if (cls == SusWorldSpacePanel.WorldSpaceUssClass) occurrences++;
-            Assert.AreEqual(1, occurrences, "повторный вызов обязан быть идемпотентным");
+            Assert.AreEqual(1, occurrences, "a repeated call has to be idempotent");
 
             Assert.DoesNotThrow(() => SusWorldSpacePanel.MarkWorldSpaceRoot(null),
-                "null-корень (панель без PanelSettings) не роняет вызов");
+                "a null root (a panel with no PanelSettings) must not throw");
 
             if (_panel != null && _panel.Root != null)
                 Assert.IsTrue(_panel.Root.ClassListContains(SusWorldSpacePanel.WorldSpaceUssClass),
-                    "живой корень мировой панели обязан нести класс уже после Awake");
+                    "a live world-panel root has to carry the class already after Awake");
         }
 
         // ─── W7.2: Attach / Detach / Re-attach ───────────────────────────────

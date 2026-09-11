@@ -1,7 +1,7 @@
 namespace Sharq.Core.Editor
 {
     /// <summary>
-    /// Shared newline-counting helper (T-3295, plan §4.4 карта соответствия): turns a
+    /// Shared newline-counting helper (T-3295, plan §4.4, the source map): turns a
     /// character range inside a string into a 1-based line delta. New code (<see
     /// cref="CssScanner"/>'s per-node <c>DeclLine</c>, <see cref="StyleParser"/>'s
     /// identity-map path, <see cref="SharqSourceMapWriter"/>) shares this instead of

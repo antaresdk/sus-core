@@ -97,8 +97,8 @@
 .swatch__label {
     font-size: var(--sus-font-size-caption);
     color: var(--sus-text-on-primary);
-    /* Во всю ширину свотча + центрирование: без stretch лейбл получает ширину по
-       измеренному тексту, и самые широкие подписи переносятся по букве. */
+    /* Full swatch width plus centring: without stretch the label is only as wide as its
+       measured text, and the widest captions wrap letter by letter. */
     align-self: stretch;
     -unity-text-align: middle-center;
 }
@@ -115,8 +115,8 @@
     margin-bottom: var(--sus-space-4);
 }
 
-/* Размеры живут в _font.uss как --sus-font-size-*; токены --sus-font-body/heading
-   из design-tokens.uss — это шрифты (font-definition), в font-size их подставлять нельзя. */
+/* Sizes live in _font.uss as --sus-font-size-*; the --sus-font-body/heading tokens from
+   design-tokens.uss are font faces (font-definition) and must never be fed to font-size. */
 .type-caption { font-size: var(--sus-font-size-caption); }
 .type-small { font-size: var(--sus-font-size-small); }
 .type-body { font-size: var(--sus-font-size-body); }
@@ -138,8 +138,8 @@
     height: 28px;
     margin-right: var(--sus-space-12);
     margin-bottom: var(--sus-space-8);
-    /* Тинт — на самом элементе SusIcon: фон-картинка лежит на нём,
-       дочернего элемента у иконки нет. */
+    /* The tint goes on the SusIcon element itself: the background image sits on it,
+       and the icon has no child element to tint instead. */
     -unity-background-image-tint-color: var(--sus-text-primary);
 }
 

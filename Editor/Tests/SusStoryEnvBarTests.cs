@@ -280,7 +280,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(bar.Query<VisualElement>(className: "sb-env__chip").ToList().Count, Is.EqualTo(6));
         }
 
-        // ── deep-link round trip (plan §4.4: "оси среды пишутся в query отдельным префиксом") ──
+        // ── deep-link round trip (plan §4.4: "env axes go into the query under their own prefix") ──
 
         [Test]
         public void CurrentDeltas_is_empty_at_defaults_and_carries_only_non_default_axes()

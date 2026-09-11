@@ -75,9 +75,9 @@
     --sus-font-heading:      var(--base-font-heading);
     --sus-font-italic:       var(--base-font-italic);
 
-    /* ── Spacing (L3 над --base-space-* из _palette.uss) ──
-       Не зависят от темы, но живут здесь, потому что DESIGN_TOKENS.md
-       объявляет space- и radius-шкалу публичным API этого файла. */
+    /* ── Spacing (L3 on top of --base-space-* from _palette.uss) ──
+       These do not depend on the theme, but they live here because DESIGN_TOKENS.md
+       declares the space and radius scales to be this file's public API. */
     --sus-space-0:  0px;
     --sus-space-4:  var(--base-space-4);
     --sus-space-8:  var(--base-space-8);

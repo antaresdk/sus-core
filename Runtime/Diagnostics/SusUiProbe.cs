@@ -74,7 +74,7 @@ namespace Sharq.Core.Diagnostics
             sb.Append($"\"children\":{kidCount}");
             // T-2209: before the first layout pass, worldBound is NaN — JSON has no NaN literal,
             // so writing it via F() below would emit a bare `NaN` token and break JSON.parse for
-            // the WHOLE sidecar (R36 G0 "не парсится"). Omit w/h/x/y entirely instead of coercing
+            // the WHOLE sidecar (R36 G0, "does not parse"). Omit w/h/x/y entirely instead of coercing
             // to 0/null: the frame-geometry.mjs reader (`rectOf` + `Number.isFinite` gate) already
             // treats a MISSING key as "unresolved, skip" — the same outcome as `null`+`+null`=0
             // would instead read as a real zero-size element (false G2). `resolved:false` names

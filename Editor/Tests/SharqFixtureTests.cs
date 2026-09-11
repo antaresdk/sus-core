@@ -10,7 +10,7 @@ namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
     /// Exact golden-file harness for the Sharq compiler (T-3290, step 2 of
-    /// ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 п.3).
+    /// ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 3).
     ///
     /// <see cref="SharqCompilerGoldenTests"/> is deliberately assertion-based ("survive
     /// cosmetic formatting changes", see its header) and <see cref="SharqCorpusIdempotencyTests"/>
@@ -40,7 +40,7 @@ namespace Sharq.Core.Editor.Tests
     /// Re-baselining (<see cref="WriteAllBaselines"/>) is reachable ONLY via the guarded editor
     /// menu item below — never automatically, and never from this test class's own [Test]
     /// methods. A fixture harness that can silently repair its own expectations on a red run is
-    /// not a safety net; DoD §7 п.3 requires it be an explicit, reviewed action.
+    /// not a safety net; DoD §7 item 3 requires it be an explicit, reviewed action.
     /// </summary>
     public class SharqFixtureTests
     {
@@ -144,7 +144,7 @@ namespace Sharq.Core.Editor.Tests
             }
 
             var summary =
-                $"[T-3290][SharqFixtureTests] фикстур: {checkedFixtures}; артефактов сверено: {checkedArtifacts}; расхождений: {failures.Count}";
+                $"[T-3290][SharqFixtureTests] fixtures: {checkedFixtures}; artefacts compared: {checkedArtifacts}; mismatches: {failures.Count}";
             Debug.Log(summary);
             TestContext.WriteLine(summary);
 
@@ -172,7 +172,7 @@ namespace Sharq.Core.Editor.Tests
         private static string Escape(string s) => s.Replace("\n", "\\n").Replace("\r", "\\r");
 
         // ─────────────────────────────────────────────────────────────
-        //  Re-baselining — explicit human action ONLY (DoD §7 п.3: "никогда автоматически").
+        //  Re-baselining — explicit human action ONLY (DoD §7 item 3: "never automatically").
         //  Not a [Test]. Reachable from Unity's Tools menu; never invoked by this file's own
         //  tests or by any automatic pipeline.
         // ─────────────────────────────────────────────────────────────

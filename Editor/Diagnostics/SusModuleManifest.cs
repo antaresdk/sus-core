@@ -36,7 +36,7 @@ namespace Sharq.Core.Editor.Diagnostics
         /// Assets/) this module owns — its own subtree (<c>&lt;root&gt;/&lt;dir&gt;/**</c>) AND
         /// its samples subtree (<c>&lt;root&gt;/Samples/&lt;dir&gt;/**</c>) — plus this
         /// manifest file's own path. The source of truth for residual-file attribution
-        /// (§5.5 "правило атрибуции").</summary>
+        /// (§5.5, the "attribution rule").</summary>
         public string[] paths;
 
         /// <summary>

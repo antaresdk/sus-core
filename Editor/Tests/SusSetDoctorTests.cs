@@ -8,7 +8,7 @@ namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
     /// Tests for the pure classification logic behind SUS Set Doctor v2 (ARCH-PACK-CLASSIC.md
-    /// §2.3 D7 / §5.5, T-556/T-557) — the "правило атрибуции" that replaced "everything not in
+    /// §2.3 D7 / §5.5, T-556/T-557) — the "attribution rule" that replaced "everything not in
     /// the one shared sus-set.json is a residual". A neutral fixture module name
     /// ("widgets"/"Widgets") is used alongside "core"/"kit"/"game" where a DoD scenario names
     /// them explicitly, since this file lives in the free/MIT sus-core repo. Everything here is
@@ -124,7 +124,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void DetectUpmCollisions_ModuleNotPresent_NoFinding_EvenIfUpmInstalled()
         {
-            // T-557 DoD (д)-adjacent: since D7, a module's own manifest surviving on disk is what
+            // T-557 DoD (e)-adjacent: since D7, a module's own manifest surviving on disk is what
             // makes it "present" — an empty presentModules list (module truly absent) must never
             // false-positive just because the UPM package happens to be registered.
             var upm = new HashSet<string> { "com.sharq-it.sus.core" };
@@ -164,7 +164,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void DetectUpmCollisions_GameSurvivesKitOnTopOfGameImport()
         {
-            // T-550/T-557 DoD (д): the exact repro that motivated D7 — kit-set imported on top of
+            // T-550/T-557 DoD (e): the exact repro that motivated D7 — kit-set imported on top of
             // game-set must NOT make the "game" UPM collision undetectable. Since Game/sus-module.json
             // is never touched by kit-set's packer, Game stays in presentModules regardless of which
             // set descriptor(s) are also present — DetectUpmCollisions doesn't even need to know
@@ -182,7 +182,7 @@ namespace Sharq.Core.Editor.Tests
             StringAssert.Contains(gameModule.package, issues[0].Message);
         }
 
-        // ─── ClassifyStrayPaths: Residual (т.т.4 §5.5) — T-557 DoD (б) ─────────
+        // ─── ClassifyStrayPaths: Residual (§5.5 item 4) — T-557 DoD (b) ───────
 
         [Test]
         public void ClassifyStrayPaths_NoExtra_Empty()
@@ -196,7 +196,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void ClassifyStrayPaths_FileUnderPresentModuleNotInItsManifest_ResidualWithDeleteHint()
         {
-            // T-557 DoD (б): "файл под Kit/, которого нет в Kit/sus-module.json -> Residual с хинтом".
+            // T-557 DoD (b): "a file under Kit/ that Kit/sus-module.json does not list -> Residual, with a fix hint".
             var kit = MakeModule("kit", "Kit", "1.0.16");
             var actual = kit.paths.Append($"{Root}/Kit/OldFile.cs").ToArray();
 
@@ -244,7 +244,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void ClassifyStrayPaths_FileUnderModuleSamplesSubtreeNotListed_Residual()
         {
-            // §5.5 "владение": a module owns TWO subtrees — <root>/<dir>/** AND
+            // §5.5, "ownership": a module owns TWO subtrees — <root>/<dir>/** AND
             // <root>/Samples/<dir>/** (T-534) — a stray file in the samples subtree is residual too.
             var kit = MakeModule("kit", "Kit", "1.0.16", $"{Root}/Samples/Kit", $"{Root}/Samples/Kit/Storybook.uss");
             var actual = kit.paths.Append($"{Root}/Samples/Kit/Old.uss").ToArray();
@@ -271,12 +271,12 @@ namespace Sharq.Core.Editor.Tests
             StringAssert.DoesNotContain("delete the whole", withTwo.Single(i => i.Category == "SetDoctor.Residual").FixHint);
         }
 
-        // ─── ClassifyStrayPaths: Unattributed (т.5 §5.5) — T-557 DoD (в) ───────
+        // ─── ClassifyStrayPaths: Unattributed (§5.5 item 5) — T-557 DoD (c) ───
 
         [Test]
         public void ClassifyStrayPaths_FolderNotOwnedByAnyPresentModule_UnattributedWithoutDeleteHint()
         {
-            // T-557 DoD (в): "папка Sharq/MyOwnStuff -> Unattributed без 'delete'".
+            // T-557 DoD (c): "a Sharq/MyOwnStuff folder -> Unattributed, with no 'delete' hint".
             var kit = MakeModule("kit", "Kit", "1.0.16");
             var actual = kit.paths.Append($"{Root}/MyOwnStuff").ToArray();
 
@@ -305,12 +305,12 @@ namespace Sharq.Core.Editor.Tests
             StringAssert.Contains("Sharq/Game", issues[0].Message);
         }
 
-        // ─── DetectModuleManifestMissing — T-557 DoD (г) ───────────────────────
+        // ─── DetectModuleManifestMissing — T-557 DoD (d) ───────────────────────
 
         [Test]
         public void DetectModuleManifestMissing_FolderPresentManifestGone_Reported()
         {
-            // T-557 DoD (г): "Sharq/Game без sus-module.json при дескрипторе game-set -> ModuleManifestMissing".
+            // T-557 DoD (d): "Sharq/Game with no sus-module.json while the game-set descriptor is present -> ModuleManifestMissing".
             var kit = MakeModule("kit", "Kit", "1.0.16");
             var gameSet = MakeDescriptor("game-set", "game", "core", "kit", "game");
             var actual = kit.paths.Concat(new[] { $"{Root}/Game", $"{Root}/Game/Runtime" }).ToArray();
@@ -695,7 +695,7 @@ namespace Sharq.Core.Editor.Tests
             StringAssert.DoesNotContain("delete", issues[0].Message.ToLowerInvariant());
         }
 
-        // ─── T-557 DoD (а): kit + game manifests together -> 0 findings ───────
+        // ─── T-557 DoD (a): kit + game manifests together -> 0 findings ───────
 
         [Test]
         public void FullPipeline_KitAndGameManifestsPresent_ZeroFindings()
@@ -769,7 +769,7 @@ namespace Sharq.Core.Editor.Tests
         [TestCase("sus-set.kit-set.json", true)]
         [TestCase("sus-set.game-set.json", true)]
         [TestCase("SUS-SET.KIT-SET.JSON", true)]
-        [TestCase("sus-set.json", false)] // pre-T-556 legacy name — never matches again (§2.3 D7 п.3)
+        [TestCase("sus-set.json", false)] // pre-T-556 legacy name — never matches again (§2.3 D7 item 3)
         [TestCase("sus-module.json", false)]
         [TestCase("sus-set..json", false)]
         [TestCase("", false)]

@@ -70,10 +70,10 @@
     -unity-background-image-tint-color: var(--sus-color-warning, var(--thm-warning));
 }
 
-/* sus:uss-hide (T-2643) — состояние «скрыт» переключается КЛАССОМ, а не инлайном.
-   Лист сам объявляет display, поэтому страж живёт ЗДЕСЬ, а не в _global.uss: UI Toolkit
-   отдаёт приоритет ближнему листу, и глобальный .sus-hidden проигрывает (замер T-2653).
-   Селекторы = display-правила листа + .sus-hidden: специфичность строго выше. */
+/* sus:uss-hide (T-2643) — the "hidden" state is switched by a CLASS, never by an inline style.
+   This sheet declares display itself, so the guard block lives HERE rather than in _global.uss:
+   UI Toolkit gives the nearer sheet priority, and a global .sus-hidden loses (measured, T-2653).
+   Selectors = this sheet's own display rules + .sus-hidden: strictly higher specificity. */
 .sus-icon-bg.sus-hidden {
     display: none;
 }

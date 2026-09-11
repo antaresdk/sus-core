@@ -40,7 +40,7 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void IsManifestPath_LegacyBareSetJson_False()
         {
-            // Pre-T-556 name — never written again (§2.3 D7 п.3 / инвариант I15(4)); a stray file
+            // Pre-T-556 name — never written again (§2.3 D7 item 3 / invariant I15(4)); a stray file
             // with this exact name is not a manifest this trigger needs to react to.
             Assert.IsFalse(SusSetDoctorAutoRun.IsManifestPath("Assets/Sharq/sus-set.json"));
         }

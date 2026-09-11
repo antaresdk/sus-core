@@ -559,9 +559,9 @@ namespace Sharq.Core
             if (root != null)
             {
                 EnsureTokenCascade(root);
-                // D-19: мировой домен объявляется КЛАССОМ, иначе лестница размеров на этой
-                // панели резолвится из :root по случайности — классы .breakpoint-* и
-                // .density-* экранного корня в отдельный UIDocument не приходят (T-3071).
+                // D-19: the world domain is declared by a CLASS, otherwise the dimension ladder
+                // on this panel resolves from :root by accident — the screen root's .breakpoint-*
+                // and .density-* classes never reach a separate UIDocument (T-3071).
                 SusWorldSpacePanel.MarkWorldSpaceRoot(root);
             }
 

@@ -61,7 +61,7 @@ namespace Sharq.Core
     /// Declares that a prop only matters while another prop of the SAME component holds a given
     /// value. A consumer (control panel) disables the dependent control and shows the reason
     /// instead of rendering a control that silently does nothing — today an unexplained control
-    /// reads as a defect (ARCH-20260907-STORYBOOK-ENGINE §4.3.1, T-3026 п. 3).
+    /// reads as a defect (ARCH-20260907-STORYBOOK-ENGINE §4.3.1, T-3026 item 3).
     /// <code>
     /// [SusDependsOn(nameof(ContentMode), "icon")] public Prop&lt;string&gt; Icon = new("");
     /// [SusDependsOn(nameof(Clearable))]           public Prop&lt;string&gt; ClearIcon = new("x");

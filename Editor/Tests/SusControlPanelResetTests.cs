@@ -12,7 +12,7 @@ namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
     /// Reset to the story's seed — card T-3406, contract of zone D (R142 <c>reset</c>, plan
-    /// ARCH-20260911-STORYBOOK-SHELL §4.1: "возвращает засев, а не дефолты типа"; owner's
+    /// ARCH-20260911-STORYBOOK-SHELL §4.1: "restores the seed, not the type defaults"; owner's
     /// question 1.3).
     ///
     /// What was measured on 2026-09-11: zone D could take a story apart and had no way of putting

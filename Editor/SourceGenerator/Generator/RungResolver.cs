@@ -11,8 +11,9 @@ namespace Sharq.Core.Editor
     /// <c>min-height: rung(control-height, xs);</c> becomes
     /// <c>min-height: var(--sk-control-h-xs, 28px);</c>: the token NAME comes from the family's
     /// own <c>token</c>/<c>tokens</c> field in <c>docs-canon/data/dimension-scale.json</c> (never
-    /// invented from the call site — "имя токена берётся из поля token семейства, фолбэк — из
-    /// лестницы, а не из головы автора"), and the fallback NUMBER is the family's value at the
+    /// invented from the call site — the plan's rule is "the token NAME comes from the family's
+    /// own token field and the fallback comes from the ladder, never from the author's head"),
+    /// and the fallback NUMBER is the family's value at the
     /// <c>lg</c>×<c>default</c> step (T-3011's "base row" — the same step the sheet's un-suffixed
     /// <c>.breakpoint-lg</c>/no-density block resolves to).
     ///
@@ -28,10 +29,10 @@ namespace Sharq.Core.Editor
     /// them (single substring check before the regex even runs), which is what keeps D-13's
     /// zero-diff guarantee true here BY CONSTRUCTION, exactly like T-3291/T-3292's own gates.
     ///
-    /// "Семейство вне лестницы" / "рунг вне семейства" (card T-3293) are BOTH compile errors, not
+    /// "family outside the ladder" / "rung outside the family" (card T-3293) are BOTH compile errors, not
     /// silent passthrough: a `rung()` call that fails to resolve throws, naming the `.sharq` file
     /// and the 1-based line the call sits on (computed by <see cref="SharqFileParser"/> from the
-    /// real file, not just "somewhere in <style>" — plan says "с именем файла и строкой").
+    /// real file, not just "somewhere in <style>" — the plan asks for "the file name and the line").
     /// </summary>
     internal static class RungResolver
     {
@@ -107,23 +108,23 @@ namespace Sharq.Core.Editor
 
             if (!scale.Families.TryGetValue(familyName, out var fam) || !fam.HasLadder)
             {
-                error = $"rung(): семейство «{familyName}» вне лестницы размеров ({DataFileRel}) — "
-                    + $"доступны: {string.Join(", ", scale.LadderFamilyNames())}";
+                error = $"rung(): family '{familyName}' is not in the dimension ladder ({DataFileRel}) — "
+                    + $"available: {string.Join(", ", scale.LadderFamilyNames())}";
                 return false;
             }
 
             if (!fam.Rungs.Contains(rung))
             {
-                error = $"rung(): рунг «{rung}» вне семейства «{familyName}» — "
-                    + $"доступны рунги: {string.Join(", ", fam.Rungs)}";
+                error = $"rung(): rung '{rung}' is not in family '{familyName}' — "
+                    + $"available rungs: {string.Join(", ", fam.Rungs)}";
                 return false;
             }
 
             var tokenName = fam.TokenNameFor(rung);
             if (string.IsNullOrEmpty(tokenName))
             {
-                error = $"rung(): у семейства «{familyName}» нет имени токена для рунга «{rung}» "
-                    + "— дефект данных лестницы, не вызова";
+                error = $"rung(): family '{familyName}' declares no token name for rung '{rung}' "
+                    + "— that is a defect in the ladder data, not in the call";
                 return false;
             }
 
@@ -134,8 +135,8 @@ namespace Sharq.Core.Editor
             return true;
         }
 
-        /// <summary>Value at the `lg`×`default` step — T-3011's base row (D-7's "значение на
-        /// ступени lg × default"). `derived` families (pill, space-neg) have no ladder of their
+        /// <summary>Value at the `lg`×`default` step — T-3011's base row (D-7 pins it to "the
+        /// value at the lg × default step"). `derived` families (pill, space-neg) have no ladder of their
         /// own: the step and the raw number both come from the donor, then <c>DeriveOp</c>
         /// (half/neg) is applied — the SAME arithmetic <c>dim-scale.mjs</c>'s `valuesOf` uses to
         /// build the shipped `.g.uss` sheet, read here rather than re-derived by a second formula.</summary>
@@ -150,16 +151,16 @@ namespace Sharq.Core.Editor
                 if (fam.DeriveFrom == null || !scale.Families.TryGetValue(fam.DeriveFrom, out var donor)
                     || donor.Steps == null)
                 {
-                    error = $"rung(): семейство «{fam.Name}» ссылается на донора «{fam.DeriveFrom}», "
-                        + $"которого в {DataFileRel} нет как лестницы — дефект данных, не вызова";
+                    error = $"rung(): family '{fam.Name}' derives from donor '{fam.DeriveFrom}', "
+                        + $"which {DataFileRel} does not declare as a ladder — a data defect, not a call defect";
                     return false;
                 }
 
                 var donorRungIndex = donor.Rungs.IndexOf(rung);
                 if (donorRungIndex < 0)
                 {
-                    error = $"rung(): донор «{fam.DeriveFrom}» семейства «{fam.Name}» не несёт рунг "
-                        + $"«{rung}» — дефект данных, не вызова";
+                    error = $"rung(): donor '{fam.DeriveFrom}' of family '{fam.Name}' does not carry rung "
+                        + $"'{rung}' — a data defect, not a call defect";
                     return false;
                 }
 
@@ -175,8 +176,8 @@ namespace Sharq.Core.Editor
             var step = ClampStep(fam);
             if (fam.Steps == null || step >= fam.Steps.Count || rungIndex >= fam.Steps[step].Count)
             {
-                error = $"rung(): семейство «{fam.Name}» не несёт значение на ступени lg×default для "
-                    + $"рунга «{rung}» — дефект данных лестницы, не вызова";
+                error = $"rung(): family '{fam.Name}' carries no value at the lg×default step for "
+                    + $"rung '{rung}' — a defect in the ladder data, not in the call";
                 return false;
             }
 
@@ -206,9 +207,10 @@ namespace Sharq.Core.Editor
             var found = FindUpwards(dir, DataFileRel);
             if (found == null)
             {
-                error = $"`{DataFileRel}` не найден ни в одном родительском каталоге `{sourcePath}` "
-                    + "— rung() резолвится только внутри дерева, где рядом лежит лестница размеров "
-                    + "(докос-канон монорепо); отдельно распространяемый .sharq без неё скомпилировать нельзя";
+                error = $"`{DataFileRel}` was not found in any parent directory of `{sourcePath}` "
+                    + "— rung() only resolves inside a tree that ships the dimension ladder next to "
+                    + "the sources (the docs-canon monorepo); a .sharq distributed on its own, "
+                    + "without the ladder, cannot be compiled";
                 return null;
             }
 
@@ -222,7 +224,7 @@ namespace Sharq.Core.Editor
             }
             catch (Exception ex)
             {
-                error = $"`{found}` не читается как JSON: {ex.Message}";
+                error = $"`{found}` does not read as JSON: {ex.Message}";
                 return null;
             }
         }

@@ -34,7 +34,7 @@ namespace Sharq.Core
         /// <c>OverlayHost.AddToOverlay</c>. Such a mounter must put the wrapper in the SAME
         /// category the component itself is pinned to, so it reads this instead of
         /// duplicating the category as its own literal (the two could otherwise drift apart —
-        /// see ARCH-20260903-OVERLAY-MOUNT §5 Д4). Internal: not part of the public buyer API.
+        /// see ARCH-20260903-OVERLAY-MOUNT §5 decision 4). Internal: not part of the public buyer API.
         /// </summary>
         internal OverlayCategory ResolvedLayer => Layer;
 
