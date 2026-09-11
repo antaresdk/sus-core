@@ -331,12 +331,20 @@ namespace Sharq.Core.Storybook.UI
             // components) leaves nothing but `rest`, and a one-column matrix of rest cells is
             // not a smaller matrix, it is a caption over the variant axis that is already drawn
             // below. So the whole widget stands down and says why.
-            _role = SusStateRoles.RoleOf(probe);
+            //
+            // The role comes from the probe when there is one and from the story's declared
+            // component type when the probe failed to build. Reading only the probe would hand a
+            // broken story the "no opinion" answer and draw four columns over a component the
+            // story itself named — kit/world/floating-damage did exactly that in the first Play
+            // measurement of T-3431.
+            var roleType = probe != null ? probe.GetType()
+                : _entry != null ? _entry.ComponentType : null;
+            _role = SusStateRoles.RoleOf(roleType);
             var all = SusStoryStates.All;
             for (int i = 0; i < all.Count; i++)
             {
                 var state = all[i];
-                if (!SusStoryStates.Declares(probe, state)) continue;
+                if (!SusStoryStates.Declares(roleType, state)) continue;
                 if (state == SusStoryStates.Rest) { _columns.Add(state); continue; }
                 if (SusStoryStates.CanForce(probe, state)) _columns.Add(state);
                 else _skipped.Add(state);

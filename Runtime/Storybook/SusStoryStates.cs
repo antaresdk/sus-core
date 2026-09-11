@@ -95,12 +95,23 @@ namespace Sharq.Core.Storybook
         /// Asked BEFORE <see cref="CanForce"/> and independently of it: this answers whether the
         /// column is meaningful, that one whether it is achievable.
         /// </summary>
-        public static bool Declares(SusComponent component, string state)
+        public static bool Declares(Type componentType, string state)
         {
-            if (component == null) return true;
             if (state == Rest) return true;
-            return SusStateRoles.Declares(component.GetType(), state);
+            if (componentType == null) return true;
+            return SusStateRoles.Declares(componentType, state);
         }
+
+        /// <summary>
+        /// Same question asked of a live instance. The caller that has BOTH an instance and the
+        /// story's declared component type should ask about the type it trusts: a probe that
+        /// failed to build is null, and null must not be read as "every column" when the story
+        /// said which component it is about (witness: <c>kit/world/floating-damage</c>, whose
+        /// probe threw and whose matrix therefore came back with four columns over a display
+        /// component — card T-3431).
+        /// </summary>
+        public static bool Declares(SusComponent component, string state) =>
+            Declares(component == null ? null : component.GetType(), state);
 
         /// <summary>
         /// True when this state can be shown on this instance at all. Answered WITHOUT mutating

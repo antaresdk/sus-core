@@ -322,6 +322,25 @@ namespace Sharq.Core.Editor.Tests
                 Is.EqualTo(SusStateDuty.No));
         }
 
+        /// <summary>
+        /// Witness from the first Play measurement of T-3431: a story whose <c>Instantiate</c>
+        /// threw gave the matrix a null probe, the null was read as "no opinion", and four
+        /// columns of state appeared over a <c>display</c> component. The story NAMES its
+        /// component type, so the role was knowable the whole time — the matrix now asks the
+        /// type, and the probe is only about what can be forced.
+        /// </summary>
+        [Test]
+        public void The_role_survives_a_probe_that_could_not_be_built()
+        {
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Display);
+
+            Assert.That(SusStoryStates.Declares(typeof(CoreSwatchDemo), SusStoryStates.Error), Is.False);
+            Assert.That(SusStoryStates.Declares(typeof(CoreSwatchDemo), SusStoryStates.Rest), Is.True,
+                "rest is the absence of a state, not one a role can refuse");
+            Assert.That(SusStoryStates.Declares((System.Type)null, SusStoryStates.Error), Is.True,
+                "an unnamed component is still no opinion");
+        }
+
         [Test]
         public void A_component_outside_the_registry_keeps_every_column_it_had()
         {
