@@ -60,16 +60,29 @@
     --sb-scrim: rgba(0, 0, 0, 0.52);
     --sb-ink-disabled: #6a6a64;
 
-    /* Typography (D5, D6, D7). The url is the DECLARED FALLBACK: the mock-up asks for Instrument
-       Sans and Geist Mono, neither ships in the package, and buying/importing two families is the
-       owner's call — so until that answer arrives the shell is honestly NOT "per the mock-up" on
-       type, and says so here instead of silently substituting. Montserrat is the one family the
-       package carries; the path is relative to THIS sheet. */
-    --sb-font-ui: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
-    --sb-font-mono: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
-    --sb-fw-400: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Regular.ttf");
-    --sb-fw-500: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Medium.ttf");
-    --sb-fw-600: url("../Resources/SusRuntime/Fonts/Montserrat/Montserrat-Bold.ttf");
+    /* Typography (D5, D7). The two families of the mock-up, and no fallback caveat any more —
+       the assets arrived (card T-3357): Instrument Sans carries the interface, Geist Mono every
+       place that has to line up in a column or be copied by hand — story addresses, the live
+       h / fs / pad / radius line, hotkey hints, the deep-link.
+
+       This chain is the shell's OWN (D5): not one declaration below reads var(--font-family-*) or
+       var(--sus-font-family-*), so a project or a skin that re-types the product cannot re-type
+       the instrument. Montserrat stays exactly where it was — the product chain, which kit and
+       game components resolve through _font.uss; it is simply no longer what the shell asks for.
+
+       Weight is a FACE, not a number: UI Toolkit has no synthetic weights, so each rung names its
+       own file. 400/500/600 are Instrument Sans Regular / Medium / SemiBold — SemiBold and not
+       Bold, because the rung is called 600 and the family has that face (Montserrat, which was
+       here before, does not ship one in this package, and Bold stood in for it).
+
+       The path is relative to THIS sheet, and that is load-bearing: the sheet lives in a package
+       mounted through file:, so an absolute Packages/ path would break for a git consumer while a
+       relative one keeps the package root. */
+    --sb-font-ui: url("../Resources/SusRuntime/Fonts/Instrument_Sans/InstrumentSans-Regular.ttf");
+    --sb-font-mono: url("../Resources/SusRuntime/Fonts/Geist_Mono/GeistMono-Regular.ttf");
+    --sb-fw-400: url("../Resources/SusRuntime/Fonts/Instrument_Sans/InstrumentSans-Regular.ttf");
+    --sb-fw-500: url("../Resources/SusRuntime/Fonts/Instrument_Sans/InstrumentSans-Medium.ttf");
+    --sb-fw-600: url("../Resources/SusRuntime/Fonts/Instrument_Sans/InstrumentSans-SemiBold.ttf");
 
     /* 8 size rungs (D7). The mock-up's two half-pixel sizes are collapsed into the ladder: in
        Unity's SDF text the difference is under a pixel of cap height, and a whole extra quarter
@@ -825,9 +838,8 @@
    (SusStorySizes stopped subscribing to the geometry of the element it measures, and writes only
    on a real text change) — but the WIDTH of the label was still a function of its text, so a
    story going from "h 8" to "h 1080" still moved zone C sideways. One declared number ends that:
-   the box is the same whatever it prints. The face is still --sb-font-mono, which today resolves
-   to Montserrat; swapping the family to the mock-up Geist Mono is card T-3357, and this reserve
-   is sized so that swap cannot overflow it either. */
+   the box is the same whatever it prints. The face is --sb-font-mono, Geist Mono since card
+   T-3357, and 340px was sized with that swap already in mind. */
 .sus-sb-sizes__metrics {
     min-width: var(--sb-sizes-w);
     flex-shrink: 0;
