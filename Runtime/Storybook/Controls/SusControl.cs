@@ -172,6 +172,17 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>Applies a value that arrived as text (deep link, test, probe).</summary>
         public virtual bool SetFromString(string text) => Write(text);
 
+        /// <summary>
+        /// Whether this control is ABLE to hold the given text — asked before a value is put back
+        /// from somewhere else (the story seed of <c>SusControlPanel.ResetToStory</c>, card T-3406).
+        ///
+        /// The base control says yes and lets the prop refuse: an unclamped prop legitimately takes
+        /// any string of its type. A CLOSED SET answers from its own options, because a picker has
+        /// no place to show — let alone type — a value outside them (plan D26), so writing one
+        /// would leave zone D showing a set of buttons with none of them active.
+        /// </summary>
+        public virtual bool Accepts(string text) => true;
+
         /// <summary>Pulls the current prop value back into the widget.</summary>
         public void Refresh()
         {
@@ -287,6 +298,22 @@ namespace Sharq.Core.Storybook.Controls
 
     // -- closed sets: segment and dropdown -----------------------------------
 
+    /// <summary>
+    /// The one membership test of a closed set. Case-insensitive, because that is how the two
+    /// closed-set controls already decide which option is the active one (<c>OnRefresh</c>) — a
+    /// second spelling rule here would eventually disagree with the highlight.
+    /// </summary>
+    internal static class SusControlValues
+    {
+        internal static bool IsOption(IReadOnlyList<string> options, string text)
+        {
+            if (options == null || text == null) return false;
+            for (int i = 0; i < options.Count; i++)
+                if (string.Equals(options[i], text, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+    }
+
     /// <summary>Closed set of values shown as a row of buttons (five or fewer).</summary>
     public sealed class SusSegmentControl : SusControl
     {
@@ -317,6 +344,9 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>The buttons, in the order of <see cref="Options"/>.</summary>
         public IReadOnlyList<Button> Buttons => _buttons;
+
+        /// <inheritdoc/>
+        public override bool Accepts(string text) => SusControlValues.IsOption(_options, text);
 
         protected override void OnRefresh()
         {
@@ -352,6 +382,9 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>The dropdown itself.</summary>
         public DropdownField Field => _field;
+
+        /// <inheritdoc/>
+        public override bool Accepts(string text) => SusControlValues.IsOption(_options, text);
 
         protected override void OnRefresh()
         {

@@ -10,7 +10,9 @@ namespace Sharq.Core.Storybook.Controls
     /// the table of §4.3 gives it, and - at the bottom - the number that makes the panel
     /// falsifiable: "props N · controls M". When M plus the story's declared exclusions does not
     /// reach N, the panel says "story defect" instead of quietly showing fewer controls than the
-    /// component has props (gate §5 of the plan, card T-3034).
+    /// component has props (gate §5 of the plan, card T-3034). Beside those numbers sits the way
+    /// back: <see cref="ResetToStory"/> returns every control to the value the story's author
+    /// seeded it with (card T-3406).
     ///
     /// The panel builds itself from <c>DescribeProps()</c> and from nothing else. It never knows
     /// which component it is looking at, so the paid packages need no per-component control code.
@@ -31,6 +33,13 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>Footer badge when at least one prop has neither a control nor an exclusion.</summary>
         public const string CoverageDefectBadge = "story defect";
 
+        /// <summary>Caption of the reset button (card T-3406, contract of zone D "reset").</summary>
+        public const string ResetLabel = "reset to story";
+
+        /// <summary>What the reset button explains on hover — the difference that matters.</summary>
+        public const string ResetTooltip =
+            "puts every control back to the value the STORY set, not to the default of the type";
+
         static readonly SusPropGroup[] GroupOrder =
         {
             SusPropGroup.Axis,
@@ -47,6 +56,7 @@ namespace Sharq.Core.Storybook.Controls
         readonly List<string> _uncovered = new();
         readonly List<string> _dead = new();
         readonly List<string> _excluded = new();
+        readonly List<string> _resetRefused = new();
 
         readonly Label _title = new();
         readonly ScrollView _groups = new();
@@ -54,6 +64,7 @@ namespace Sharq.Core.Storybook.Controls
         readonly VisualElement _foot = new();
         readonly Label _count = new();
         readonly Label _badge = new();
+        readonly Button _reset;
         readonly Label _uncoveredLine = new();
         readonly Label _deadLine = new();
         readonly Label _excludedLine = new();
@@ -99,10 +110,25 @@ namespace Sharq.Core.Storybook.Controls
             _excludedLine.AddToClassList("sus-sb-ctlpanel__hole");
             _excludedLine.AddToClassList("sus-sb-ctlpanel__hole--excluded");
 
+            // Reset (card T-3406, contract of zone D): the panel could take a story apart and had
+            // no way of putting it back together. Turning three controls and reloading the story
+            // was the only route back to the state its author considered worth showing — and D21
+            // p. 1 makes that state the point of a story, not a nicety.
+            //
+            // It sits in the footer beside the numbers rather than at the top: the reader reaches
+            // for it after having changed something, and that is where his eye already is when the
+            // counters told him what he is looking at. Appearance comes from the SECONDARY role of
+            // the sheet (`sb-btn--secondary`) — a framed button that is not the main action, with
+            // a `:disabled` already declared, which is what shows "nothing to put back".
+            _reset = new Button(() => ResetToStory()) { text = ResetLabel, tooltip = ResetTooltip };
+            _reset.AddToClassList("sus-sb-ctlpanel__reset");
+            _reset.AddToClassList("sb-btn--secondary");
+
             var counters = new VisualElement();
             counters.AddToClassList("sus-sb-ctlpanel__counters");
             counters.Add(_count);
             counters.Add(_badge);
+            counters.Add(_reset);
 
             _foot.Add(counters);
             _foot.Add(_uncoveredLine);
@@ -175,8 +201,40 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>True when the component has no props and the empty state is showing.</summary>
         public bool IsEmpty => PropCount == 0;
 
-        /// <summary>Values at the moment the panel was built, before any deep link was applied.</summary>
+        /// <summary>
+        /// Values at the moment the panel was built, before any deep link was applied — which is
+        /// AFTER the story ran its <c>Configure(ctx)</c>, so this dictionary is the author's seed
+        /// and not the default of the type. That is the whole reason
+        /// <see cref="ResetToStory"/> can promise what its caption says.
+        /// </summary>
         public IReadOnlyDictionary<string, string> Defaults => _defaults;
+
+        /// <summary>The reset button, exposed so a test clicks what the buyer clicks.</summary>
+        public Button ResetButton => _reset;
+
+        /// <summary>
+        /// True when at least one control holds something other than the seed AND can be put back.
+        /// False is the disabled state of <see cref="ResetButton"/>: nothing to undo, or the only
+        /// differences are ones <see cref="ResetToStory"/> would refuse — a button that promises a
+        /// change and produces none is worse than a dimmed one.
+        /// </summary>
+        public bool CanResetToStory
+        {
+            get
+            {
+                for (int i = 0; i < _controls.Count; i++)
+                    if (Restorable(_controls[i], out var seed) && !AtSeed(_controls[i], seed) &&
+                        _controls[i].Accepts(seed))
+                        return true;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Props the last <see cref="ResetToStory"/> could NOT put back, with the reason in the
+        /// log: the seed is outside the closed set zone D offers for them. Empty on a clean reset.
+        /// </summary>
+        public IReadOnlyList<string> ResetRefused => _resetRefused;
 
         /// <summary>Current values of every control that can be restored from a link.</summary>
         public IReadOnlyDictionary<string, string> Values
@@ -212,6 +270,64 @@ namespace Sharq.Core.Storybook.Controls
                     return _controls[i];
             return null;
         }
+
+        /// <summary>
+        /// Puts every control back to the value the STORY seeded it with (card T-3406, contract of
+        /// zone D: "возвращает засев, а не дефолты типа"). Returns how many props actually moved.
+        ///
+        /// Three things it deliberately does NOT do:
+        /// <list type="bullet">
+        /// <item>it does not write the default of the type — the seed of
+        /// <see cref="Defaults"/> is read after the story's <c>Configure</c>, so a story pinned to
+        /// <c>Tone = "error"</c> comes back to "error" and not to the component's "primary";</item>
+        /// <item>it does not write a value outside a closed set (<see cref="SusControl.Accepts"/>):
+        /// a story that seeded a variant its own axis does not list would otherwise leave the
+        /// picker with no active button at all. Such a prop is left alone and named in
+        /// <see cref="ResetRefused"/> and in the log — a refusal that says which prop;</item>
+        /// <item>it does not touch an environment axis. Density, theme and breakpoint are zone B,
+        /// and "reset" here means the props of the component on display (plan §4.4).</item>
+        /// </list>
+        /// Every write goes through the same <c>SetFromString</c> a deep link uses, so the shell's
+        /// address bar follows a reset exactly as it follows a dragged slider.
+        /// </summary>
+        public int ResetToStory()
+        {
+            _resetRefused.Clear();
+            int moved = 0;
+
+            for (int i = 0; i < _controls.Count; i++)
+            {
+                var control = _controls[i];
+                if (!Restorable(control, out var seed)) continue;
+                if (AtSeed(control, seed)) continue;
+
+                if (!control.Accepts(seed))
+                {
+                    _resetRefused.Add(control.Prop.Name);
+                    SusLog.Warn("[storybook] the story seeded '" + control.Prop.Name + "' with '" +
+                                seed + "', which is outside the closed set zone D offers for it; " +
+                                "the control keeps what it has.");
+                    continue;
+                }
+
+                if (control.SetFromString(seed)) moved++;
+                else _resetRefused.Add(control.Prop.Name);
+            }
+
+            Refresh();
+            return moved;
+        }
+
+        /// <summary>A control that can be put back at all, plus the seed to put back.</summary>
+        bool Restorable(SusControl control, out string seed)
+        {
+            seed = null;
+            if (!control.Restorable) return false;
+            return _defaults.TryGetValue(control.Prop.Name, out seed);
+        }
+
+        static bool AtSeed(SusControl control, string seed) =>
+            string.Equals(control.StringValue, seed, StringComparison.Ordinal);
 
         /// <summary>Pulls every control back from its prop and re-reads the footer numbers.</summary>
         public void Refresh()
@@ -355,6 +471,10 @@ namespace Sharq.Core.Storybook.Controls
             _badge.text = IsCovered ? CoverageOkBadge : CoverageDefectBadge;
             _badge.EnableInClassList("sus-sb-ctlpanel__badge--ok", IsCovered);
             _badge.EnableInClassList("sus-sb-ctlpanel__badge--defect", !IsCovered);
+
+            // One source for "the button looks dead" and "the button does nothing" (R120: state by
+            // enablement and the sheet's declared :disabled, not by a style written from here).
+            _reset.SetEnabled(CanResetToStory);
 
             SetLine(_uncoveredLine, "uncovered: ", _uncovered);
             SetLine(_deadLine, "dead props: ", _dead);

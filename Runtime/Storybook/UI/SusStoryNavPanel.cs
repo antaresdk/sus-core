@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine.UIElements;
+using Sharq.Core.Storybook.Nav;
 
 namespace Sharq.Core.Storybook.UI
 {
     /// <summary>
-    /// Zone A of the shell: search, package tabs, groups, story rows, health and version
-    /// (plan §6.1 step 3; layout from the Claude Design board "Storybook Shell", card T-3033).
+    /// Zone A of the shell: back/forward arrows, search, package tabs, groups, story rows, health
+    /// and version (plan §6.1 step 3; layout from the Claude Design board "Storybook Shell", cards
+    /// T-3033 and T-3406).
     ///
     /// It is drawn from <see cref="SusStoryRegistry"/> and from nothing else. The panel never
     /// decides WHAT is shown on the stage — it raises <see cref="StorySelected"/> and the host
@@ -21,6 +23,14 @@ namespace Sharq.Core.Storybook.UI
         const string SearchPlaceholder = "search stories";
         const string SearchShortcutHint = "Ctrl+K";
 
+        /// <summary>Caption of the back arrow — a glyph, because the row has no space for a word.</summary>
+        public const string BackGlyph = "←";
+
+        /// <summary>Caption of the forward arrow.</summary>
+        public const string ForwardGlyph = "→";
+
+        readonly Button _back;
+        readonly Button _forward;
         readonly TextField _search = new();
         readonly Label _searchPlaceholder = new(SearchPlaceholder);
         readonly VisualElement _tabs = new();
@@ -34,6 +44,7 @@ namespace Sharq.Core.Storybook.UI
         string _activePackage;
         string _activeStoryId;
         int _anomalies;
+        SusStoryHistory _history;
 
         public SusStoryNavPanel()
         {
@@ -41,6 +52,32 @@ namespace Sharq.Core.Storybook.UI
 
             var head = new VisualElement();
             head.AddToClassList("sus-sb-nav__head");
+
+            // ── the two arrows (plan §4.6: "кнопки назад/вперёд — в зоне A, плюс Alt+←/Alt+→") ──
+            // The cursor of SusStoryHistory existed from the first day of the engine and only the
+            // keyboard could move it, so the path a buyer had just walked was rewindable by
+            // whoever knew the shortcut (card T-3406, R142 zone A "history-buttons").
+            //
+            // Layout borrows the row of the package tabs next to it and the appearance borrows the
+            // GHOST role of the sheet (`sb-btn--ghost`) — the vocabulary the sheet declares for
+            // exactly this, chrome buttons that read as text until pointed at. That role already
+            // declares `:disabled`, which is what makes the edge state of the contract visible
+            // without a rule of its own: at the ends the arrow is dimmed, not merely inert.
+            var history = new VisualElement();
+            history.AddToClassList("sus-sb-nav__history");
+            history.AddToClassList("sus-sb-nav__tabs");
+
+            _back = new Button(() => GoBack()) { text = BackGlyph, tooltip = "back (Alt+←)" };
+            _back.AddToClassList("sus-sb-nav__back");
+            _back.AddToClassList("sb-btn--ghost");
+
+            _forward = new Button(() => GoForward()) { text = ForwardGlyph, tooltip = "forward (Alt+→)" };
+            _forward.AddToClassList("sus-sb-nav__forward");
+            _forward.AddToClassList("sb-btn--ghost");
+
+            history.Add(_back);
+            history.Add(_forward);
+            head.Add(history);
 
             var searchBox = new VisualElement();
             searchBox.AddToClassList("sus-sb-nav__search");
@@ -143,6 +180,59 @@ namespace Sharq.Core.Storybook.UI
         }
 
         /// <summary>
+        /// The history the two arrows drive. Assigning it re-reads both edge states at once.
+        ///
+        /// The panel BINDS ITSELF (see <see cref="Rebuild"/>): the shell it was mounted into owns
+        /// the history and exposes it, and the panel asks its host once instead of the host
+        /// remembering to wire two buttons. An arrow that works only when the shell remembered is
+        /// the dead-promise class R124 judges — and this is the setter a test uses to drive the
+        /// arrows without a shell around them.
+        /// </summary>
+        public SusStoryHistory History
+        {
+            get => _history;
+            set
+            {
+                if (ReferenceEquals(_history, value)) return;
+                if (_history != null) _history.Changed -= OnHistoryChanged;
+                _history = value;
+                if (_history != null) _history.Changed += OnHistoryChanged;
+                RefreshHistory();
+            }
+        }
+
+        /// <summary>The back arrow, exposed so a test clicks what the buyer clicks.</summary>
+        public Button BackButton => _back;
+
+        /// <summary>The forward arrow.</summary>
+        public Button ForwardButton => _forward;
+
+        /// <summary>True when there is an older route to return to (no history bound: false).</summary>
+        public bool CanGoBack => _history != null && _history.CanGoBack;
+
+        /// <summary>True when a forward route survived.</summary>
+        public bool CanGoForward => _history != null && _history.CanGoForward;
+
+        /// <summary>
+        /// Moves the history cursor one route back — what the back arrow calls. Returns false when
+        /// there is nowhere to go, which is also when the arrow is disabled: the two answers come
+        /// from the same <see cref="SusStoryHistory.CanGoBack"/>, so a dimmed arrow and a refused
+        /// click can never disagree.
+        /// </summary>
+        public bool GoBack()
+        {
+            BindHistory();
+            return _history != null && _history.Back();
+        }
+
+        /// <summary>Moves the history cursor one route forward.</summary>
+        public bool GoForward()
+        {
+            BindHistory();
+            return _history != null && _history.Forward();
+        }
+
+        /// <summary>
         /// Current search text. Settable so the shell can clear it (and so a test can filter
         /// without a live panel: outside a panel UI Toolkit drops the change event a typed
         /// character would raise, and a filter that only works when a window is open cannot be
@@ -180,10 +270,36 @@ namespace Sharq.Core.Storybook.UI
         /// <summary>Redraws tabs, list and footer from the registry.</summary>
         public void Rebuild()
         {
+            // The shell calls this on every applied route (SusStorybookHost.ApplyRoute), which is
+            // also every move of the history cursor — so the arrows are re-read from the same one
+            // occasion that moves the highlight, and the binding gets its first chance while the
+            // shell is still being built (the panel is already in the tree by then).
+            BindHistory();
+            RefreshHistory();
             RebuildTabs();
             RebuildList();
             RefreshHealth();
             RefreshVersion();
+        }
+
+        void BindHistory()
+        {
+            if (_history != null) return;
+            var host = GetFirstAncestorOfType<SusStorybookHost>();
+            if (host != null) History = host.History;
+        }
+
+        void OnHistoryChanged(SusStoryRoute route) => RefreshHistory();
+
+        /// <summary>
+        /// Edge states of the two arrows. Disabled through <c>SetEnabled</c>, so the dimming comes
+        /// from the sheet's declared <c>:disabled</c> of the ghost role and the click is refused by
+        /// the same fact — one source for "looks dead" and "is dead" (R120: no style written here).
+        /// </summary>
+        void RefreshHistory()
+        {
+            _back.SetEnabled(CanGoBack);
+            _forward.SetEnabled(CanGoForward);
         }
 
         void RebuildTabs()
