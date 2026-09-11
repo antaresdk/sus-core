@@ -736,6 +736,9 @@
        Measured in Play before the fix: backgroundSize 100%/100% on an 880x350 canvas carrying a
        16x16 texture. The container is not resized to the picture and the picture is not
        stretched to the container: it is drawn at its own size and repeated. */
+    /* sus:stretch the dot tile is drawn at its own 16x16 size, not stretched: UI Toolkit
+       defaults background-size to 100% 100%, so the natural size has to be stated on both
+       axes explicitly - that is what keeps the grid even instead of one blown-up dot (T-3444). */
     background-size: var(--sb-canvas-dot) var(--sb-canvas-dot);
 
     /* Card T-3378, decision D18. The canvas used to be min-height:120px and grew to 350px the
