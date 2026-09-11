@@ -85,30 +85,30 @@ namespace Sharq.Core.Storybook.Controls
             // in a bootstrap so a panel built by a test or a probe is the panel the buyer sees.
             SusControlFactory.RegisterDefaults();
 
-            AddToClassList("sus-sb-ctlpanel");
+            AddToClassList("sb-ctlpanel");
             name = "sus-storybook-controls";
 
-            _title.AddToClassList("sus-sb-ctlpanel__title");
+            _title.AddToClassList("sb-ctlpanel__title");
             _title.text = string.IsNullOrEmpty(title) ? "Props" : "Props · " + title;
 
-            _groups.AddToClassList("sus-sb-ctlpanel__groups");
+            _groups.AddToClassList("sb-ctlpanel__groups");
 
-            _empty.AddToClassList("sus-sb-ctlpanel__empty");
+            _empty.AddToClassList("sb-ctlpanel__empty");
             var emptyTitle = new Label(EmptyTitle);
-            emptyTitle.AddToClassList("sus-sb-ctlpanel__empty-title");
+            emptyTitle.AddToClassList("sb-ctlpanel__empty-title");
             var emptyText = new Label(EmptyText);
-            emptyText.AddToClassList("sus-sb-ctlpanel__empty-text");
+            emptyText.AddToClassList("sb-ctlpanel__empty-text");
             _empty.Add(emptyTitle);
             _empty.Add(emptyText);
 
-            _foot.AddToClassList("sus-sb-ctlpanel__foot");
-            _count.AddToClassList("sus-sb-ctlpanel__count");
-            _badge.AddToClassList("sus-sb-ctlpanel__badge");
-            _uncoveredLine.AddToClassList("sus-sb-ctlpanel__hole");
-            _deadLine.AddToClassList("sus-sb-ctlpanel__hole");
-            _deadLine.AddToClassList("sus-sb-ctlpanel__hole--dead");
-            _excludedLine.AddToClassList("sus-sb-ctlpanel__hole");
-            _excludedLine.AddToClassList("sus-sb-ctlpanel__hole--excluded");
+            _foot.AddToClassList("sb-ctlpanel__foot");
+            _count.AddToClassList("sb-ctlpanel__count");
+            _badge.AddToClassList("sb-ctlpanel__badge");
+            _uncoveredLine.AddToClassList("sb-ctlpanel__hole");
+            _deadLine.AddToClassList("sb-ctlpanel__hole");
+            _deadLine.AddToClassList("sb-ctlpanel__hole--dead");
+            _excludedLine.AddToClassList("sb-ctlpanel__hole");
+            _excludedLine.AddToClassList("sb-ctlpanel__hole--excluded");
 
             // Reset (card T-3406, contract of zone D): the panel could take a story apart and had
             // no way of putting it back together. Turning three controls and reloading the story
@@ -121,11 +121,11 @@ namespace Sharq.Core.Storybook.Controls
             // the sheet (`sb-btn--secondary`) — a framed button that is not the main action, with
             // a `:disabled` already declared, which is what shows "nothing to put back".
             _reset = new Button(() => ResetToStory()) { text = ResetLabel, tooltip = ResetTooltip };
-            _reset.AddToClassList("sus-sb-ctlpanel__reset");
+            _reset.AddToClassList("sb-ctlpanel__reset");
             _reset.AddToClassList("sb-btn--secondary");
 
             var counters = new VisualElement();
-            counters.AddToClassList("sus-sb-ctlpanel__counters");
+            counters.AddToClassList("sb-ctlpanel__counters");
             counters.Add(_count);
             counters.Add(_badge);
             counters.Add(_reset);
@@ -394,11 +394,11 @@ namespace Sharq.Core.Storybook.Controls
                 if (!buckets.TryGetValue(group, out var bucket) || bucket.Count == 0) continue;
 
                 var section = new VisualElement();
-                section.AddToClassList("sus-sb-ctlpanel__group");
+                section.AddToClassList("sb-ctlpanel__group");
                 section.name = "sus-storybook-group-" + group.ToString().ToLowerInvariant();
 
                 var head = new Label(GroupTitle(group));
-                head.AddToClassList("sus-sb-ctlpanel__group-title");
+                head.AddToClassList("sb-ctlpanel__group-title");
                 section.Add(head);
 
                 for (int j = 0; j < bucket.Count; j++) section.Add(bucket[j]);
@@ -469,8 +469,8 @@ namespace Sharq.Core.Storybook.Controls
 
             _count.text = "props " + PropCount + " · controls " + ControlCount;
             _badge.text = IsCovered ? CoverageOkBadge : CoverageDefectBadge;
-            _badge.EnableInClassList("sus-sb-ctlpanel__badge--ok", IsCovered);
-            _badge.EnableInClassList("sus-sb-ctlpanel__badge--defect", !IsCovered);
+            _badge.EnableInClassList("sb-ctlpanel__badge--ok", IsCovered);
+            _badge.EnableInClassList("sb-ctlpanel__badge--defect", !IsCovered);
 
             // One source for "the button looks dead" and "the button does nothing" (R120: state by
             // enablement and the sheet's declared :disabled, not by a style written from here).

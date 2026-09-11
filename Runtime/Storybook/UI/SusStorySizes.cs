@@ -33,11 +33,11 @@ namespace Sharq.Core.Storybook.UI
 
         public SusStorySizes()
         {
-            AddToClassList("sus-sb-sizes");
-            _sizes.AddToClassList("sus-sb-sizes__metrics");
-            _overlay.AddToClassList("sus-sb-sizes__overlay");
+            AddToClassList("sb-sizes");
+            _sizes.AddToClassList("sb-sizes__metrics");
+            _overlay.AddToClassList("sb-sizes__overlay");
             _overlay.text = OverlayNote;
-            _overlay.AddToClassList("sus-sb-hidden");
+            _overlay.AddToClassList("sb-hidden");
             Add(_sizes);
             Add(_overlay);
             Refresh();
@@ -47,7 +47,7 @@ namespace Sharq.Core.Storybook.UI
         public string SizesText => _sizes.text;
 
         /// <summary>True while the overlay note is visible.</summary>
-        public bool OverlayNoteVisible => !_overlay.ClassListContains("sus-sb-hidden");
+        public bool OverlayNoteVisible => !_overlay.ClassListContains("sb-hidden");
 
         /// <summary>The element being measured, or null.</summary>
         public VisualElement Tracked => _tracked;
@@ -92,7 +92,7 @@ namespace Sharq.Core.Storybook.UI
         }
 
         /// <summary>Shows or hides the "the popup is in the stage host" note.</summary>
-        public void SetOverlayOpen(bool open) => _overlay.EnableInClassList("sus-sb-hidden", !open);
+        public void SetOverlayOpen(bool open) => _overlay.EnableInClassList("sb-hidden", !open);
 
         /// <summary>
         /// Re-reads <c>resolvedStyle</c> — the seam a test drives instead of a frame. Writes the

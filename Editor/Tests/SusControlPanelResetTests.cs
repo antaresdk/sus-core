@@ -63,10 +63,10 @@ namespace Sharq.Core.Editor.Tests
             var component = new SusIntrospectionFixture();
             using var panel = new SusControlPanel(component, "Fixture");
 
-            var counters = panel.Q<VisualElement>(className: "sus-sb-ctlpanel__counters");
+            var counters = panel.Q<VisualElement>(className: "sb-ctlpanel__counters");
             Assert.That(counters, Is.Not.Null);
 
-            var reset = counters.Q<Button>(className: "sus-sb-ctlpanel__reset");
+            var reset = counters.Q<Button>(className: "sb-ctlpanel__reset");
             Assert.That(reset, Is.Not.Null, "no reset button: the seed is unreachable once changed");
             Assert.That(reset, Is.SameAs(panel.ResetButton));
             Assert.That(reset.text, Is.EqualTo(SusControlPanel.ResetLabel));
@@ -171,7 +171,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(control.StringValue, Is.EqualTo("tonal"), "the value the story was built with");
             Assert.That(control.Options, Contains.Item(control.StringValue),
                 "a reset that left the axis would leave the picker with no active button");
-            var active = control.Buttons.Where(b => b.ClassListContains("sus-sb-ctl__seg--active")).ToList();
+            var active = control.Buttons.Where(b => b.ClassListContains("sb-ctl__seg--active")).ToList();
             Assert.That(active.Count, Is.EqualTo(1), "exactly one button reads as chosen");
             Assert.That(active[0].text, Is.EqualTo("tonal"), "and it is the one holding the seed");
         }

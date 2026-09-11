@@ -29,10 +29,10 @@ namespace Sharq.Core.Editor.Tests
         }
 
         static int RowCount(VisualElement root) =>
-            root.Query<VisualElement>(className: "sus-sb-nav__row").ToList().Count;
+            root.Query<VisualElement>(className: "sb-nav__row").ToList().Count;
 
         static VisualElement ActiveRow(VisualElement root) =>
-            root.Query<VisualElement>(className: "sus-sb-nav__row--active").ToList().FirstOrDefault();
+            root.Query<VisualElement>(className: "sb-nav__row--active").ToList().FirstOrDefault();
 
         [Test]
         public void Nav_lists_one_row_per_story_of_the_active_package()
@@ -49,10 +49,10 @@ namespace Sharq.Core.Editor.Tests
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
             var nav = new SusStoryNavPanel { ActivePackage = "router" };
-            var tabs = nav.Query<Button>(className: "sus-sb-nav__tab").ToList();
+            var tabs = nav.Query<Button>(className: "sb-nav__tab").ToList();
 
             Assert.That(tabs.Select(t => t.text).ToList(), Is.EqualTo(new[] { "router", "enginetests" }));
-            var active = tabs.Where(t => t.ClassListContains("sus-sb-nav__tab--active")).ToList();
+            var active = tabs.Where(t => t.ClassListContains("sb-nav__tab--active")).ToList();
             Assert.That(active.Count, Is.EqualTo(1));
             Assert.That(active[0].text, Is.EqualTo("router"));
         }
@@ -61,7 +61,7 @@ namespace Sharq.Core.Editor.Tests
         public void Group_headers_are_upper_case()
         {
             var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
-            var headers = nav.Query<Label>(className: "sus-sb-nav__group").ToList().Select(l => l.text).ToList();
+            var headers = nav.Query<Label>(className: "sb-nav__group").ToList().Select(l => l.text).ToList();
 
             Assert.That(headers, Is.EqualTo(new[] { "PRIMITIVES", "OVERLAY", "SHOWCASE" }));
         }
@@ -70,7 +70,7 @@ namespace Sharq.Core.Editor.Tests
         public void Row_shows_the_prop_count_next_to_the_name()
         {
             var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
-            var counts = nav.Query<Label>(className: "sus-sb-nav__row-count").ToList().Select(l => l.text).ToList();
+            var counts = nav.Query<Label>(className: "sb-nav__row-count").ToList().Select(l => l.text).ToList();
 
             Assert.That(counts, Has.Count.EqualTo(RowCount(nav)));
             Assert.That(counts, Has.No.Member(""), "a row without a number would hide the coverage gap");
@@ -83,7 +83,7 @@ namespace Sharq.Core.Editor.Tests
 
             var row = ActiveRow(nav);
             Assert.That(row, Is.Not.Null);
-            Assert.That(row.Q<Label>(className: "sus-sb-nav__row-name").text, Is.EqualTo("Floating"));
+            Assert.That(row.Q<Label>(className: "sb-nav__row-name").text, Is.EqualTo("Floating"));
             // Setting the story also switched the package tab: entering by deep link must not
             // leave the list showing a different package than the highlighted row.
             Assert.That(nav.ActivePackage, Is.EqualTo("enginetests"));
@@ -98,12 +98,12 @@ namespace Sharq.Core.Editor.Tests
             var nav = new SusStoryNavPanel { ActivePackage = "router" };
 
             Assert.That(RowCount(nav), Is.Zero);
-            var plate = nav.Q<VisualElement>(className: "sus-sb-nav__empty");
+            var plate = nav.Q<VisualElement>(className: "sb-nav__empty");
             Assert.That(plate, Is.Not.Null);
-            Assert.That(plate.Q<Label>(className: "sus-sb-nav__empty-title").text,
+            Assert.That(plate.Q<Label>(className: "sb-nav__empty-title").text,
                 Does.Contain("com.sharq-it.sus.router"));
-            Assert.That(plate.Q<Label>(className: "sus-sb-nav__empty-text").text, Does.Contain("0.9.2"));
-            Assert.That(plate.Q<Label>(className: "sus-sb-nav__empty-code").text, Does.Contain("[SusStory("));
+            Assert.That(plate.Q<Label>(className: "sb-nav__empty-text").text, Does.Contain("0.9.2"));
+            Assert.That(plate.Q<Label>(className: "sb-nav__empty-code").text, Does.Contain("[SusStory("));
         }
 
         [Test]
@@ -111,32 +111,32 @@ namespace Sharq.Core.Editor.Tests
         {
             var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
 
-            Assert.That(nav.Q<Label>(className: "sus-sb-nav__health-text").text, Is.EqualTo("0 anomalies"));
-            Assert.That(nav.Q<VisualElement>(className: "sus-sb-nav__dot")
-                .ClassListContains("sus-sb-nav__dot--bad"), Is.False);
-            Assert.That(nav.Q<Label>(className: "sus-sb-nav__version").text, Is.Not.Empty);
+            Assert.That(nav.Q<Label>(className: "sb-nav__health-text").text, Is.EqualTo("0 anomalies"));
+            Assert.That(nav.Q<VisualElement>(className: "sb-nav__dot")
+                .ClassListContains("sb-nav__dot--bad"), Is.False);
+            Assert.That(nav.Q<Label>(className: "sb-nav__version").text, Is.Not.Empty);
 
             nav.AnomalyCount = 3;
-            Assert.That(nav.Q<Label>(className: "sus-sb-nav__health-text").text, Is.EqualTo("3 anomalies"));
-            Assert.That(nav.Q<VisualElement>(className: "sus-sb-nav__dot")
-                .ClassListContains("sus-sb-nav__dot--bad"), Is.True);
+            Assert.That(nav.Q<Label>(className: "sb-nav__health-text").text, Is.EqualTo("3 anomalies"));
+            Assert.That(nav.Q<VisualElement>(className: "sb-nav__dot")
+                .ClassListContains("sb-nav__dot--bad"), Is.True);
         }
 
         [Test]
         public void Search_filters_rows_by_name()
         {
             var nav = new SusStoryNavPanel { ActivePackage = "enginetests" };
-            Assert.That(nav.Q<TextField>(className: "sus-sb-nav__search-input"), Is.Not.Null,
+            Assert.That(nav.Q<TextField>(className: "sb-nav__search-input"), Is.Not.Null,
                 "the search field the Ctrl+K shortcut focuses");
 
             nav.Filter = "swatch";
 
-            var names = nav.Query<Label>(className: "sus-sb-nav__row-name").ToList().Select(l => l.text).ToList();
+            var names = nav.Query<Label>(className: "sb-nav__row-name").ToList().Select(l => l.text).ToList();
             Assert.That(names, Is.EqualTo(new[] { "Swatch", "Swatch (error)" }));
 
             nav.Filter = "zzz";
             Assert.That(RowCount(nav), Is.Zero);
-            Assert.That(nav.Q<Label>(className: "sus-sb-nav__empty-text").text, Does.Contain("zzz"));
+            Assert.That(nav.Q<Label>(className: "sb-nav__empty-text").text, Does.Contain("zzz"));
 
             nav.Filter = "";
             Assert.That(RowCount(nav), Is.EqualTo(SusStoryRegistry.FindPackage("enginetests").StoryCount));
@@ -152,8 +152,8 @@ namespace Sharq.Core.Editor.Tests
             // Select() is exactly what the row button's click action calls. A real ClickEvent is
             // not an option here: outside a live panel UI Toolkit has no dispatcher and silently
             // drops the event, which would make this test pass for the wrong reason.
-            var row = nav.Query<Button>(className: "sus-sb-nav__row").ToList()
-                .First(b => b.Q<Label>(className: "sus-sb-nav__row-name").text == "Counter");
+            var row = nav.Query<Button>(className: "sb-nav__row").ToList()
+                .First(b => b.Q<Label>(className: "sb-nav__row-name").text == "Counter");
             Assert.That(row, Is.Not.Null);
             nav.Select(SusStoryRegistry.Find("enginetests/primitives/counter"));
 
@@ -171,7 +171,7 @@ namespace Sharq.Core.Editor.Tests
         {
             using var host = new SusStorybookHost();
 
-            Assert.That(host.Q<VisualElement>(className: "sus-sb-nav"), Is.Not.Null, "zone A");
+            Assert.That(host.Q<VisualElement>(className: "sb-nav"), Is.Not.Null, "zone A");
             Assert.That(host.Q<VisualElement>("sus-storybook-zone-b"), Is.Not.Null);
             Assert.That(host.Q<VisualElement>("sus-storybook-zone-c"), Is.Not.Null);
             Assert.That(host.Q<VisualElement>("sus-storybook-zone-d"), Is.Not.Null);
@@ -250,7 +250,7 @@ namespace Sharq.Core.Editor.Tests
                 new System.Collections.Generic.Dictionary<string, string> { ["Label"] = "Taps" }));
 
             Assert.That(host.Url.Address, Is.EqualTo("#/enginetests/primitives/counter?Label=Taps"));
-            Assert.That(host.Q<Label>(className: "sus-sb__link").text,
+            Assert.That(host.Q<Label>(className: "sb-shell__link").text,
                 Is.EqualTo("#/enginetests/primitives/counter?Label=Taps"));
         }
     }

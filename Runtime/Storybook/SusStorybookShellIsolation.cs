@@ -28,17 +28,17 @@ namespace Sharq.Core.Storybook
     {
         /// <summary>
         /// Root class of the shell (<c>SusStorybookHost</c> constructor). Renaming the shell
-        /// prefix (card T-3387, <c>sus-sb-</c> to <c>sb-</c>) must rename this constant in the
+        /// prefix (card T-3387, <c>sb-</c> to <c>sb-</c>) must rename this constant in the
         /// same wave, or the boundary stops matching and the shell is painted again.
         /// </summary>
-        public const string ShellRootClass = "sus-sb";
+        public const string ShellRootClass = "sb-shell";
 
         /// <summary>
         /// Zone C stage canvas - the product island inside the shell. What a story mounts there
         /// IS the component on display and must look exactly as it looks in an application, down
         /// to the raw labels a story puts around the instance as decoration (card T-3168).
         /// </summary>
-        public const string StageCanvasClass = "sus-sb-stage__canvas";
+        public const string StageCanvasClass = "sb-stage__canvas";
 
         /// <summary>
         /// Declares the boundary. Idempotent; safe (and cheap) to call from a test that needs the

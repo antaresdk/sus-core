@@ -244,7 +244,7 @@ namespace Sharq.Core.Editor.Tests
 
             int marked = 0;
             for (int i = 0; i < picker.Cells.Count; i++)
-                if (picker.Cells[i].ClassListContains("sus-sb-iconpicker__cell--selected")) marked++;
+                if (picker.Cells[i].ClassListContains("sb-iconpicker__cell--selected")) marked++;
 
             Assert.AreEqual(1, marked, "exactly the current value is highlighted");
         }
@@ -323,13 +323,13 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.IsFalse(picker.IsActive, "ContentMode is 'text', so the icon does nothing");
             StringAssert.Contains("ContentMode", picker.DependencyNote);
-            Assert.IsTrue(picker.ClassListContains("sus-sb-ctl--inert"), "the row is dimmed by a class");
+            Assert.IsTrue(picker.ClassListContains("sb-ctl--inert"), "the row is dimmed by a class");
 
             _component.ContentMode.Value = "icon";
             picker.UpdateDependency();
 
             Assert.IsTrue(picker.IsActive);
-            Assert.IsFalse(picker.ClassListContains("sus-sb-ctl--inert"));
+            Assert.IsFalse(picker.ClassListContains("sb-ctl--inert"));
         }
 
         // -- deep link -------------------------------------------------------------

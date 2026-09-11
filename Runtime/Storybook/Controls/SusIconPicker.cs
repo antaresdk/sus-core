@@ -122,11 +122,11 @@ namespace Sharq.Core.Storybook.Controls
             : base(prop, SusControlKind.Icon, context)
         {
             // -- the field: glyph + name + chevron --------------------------------
-            _field.AddToClassList("sus-sb-ctl__iconfield");
-            _glyph.AddToClassList("sus-sb-ctl__glyph");
-            _value.AddToClassList("sus-sb-ctl__iconname");
+            _field.AddToClassList("sb-ctl__iconfield");
+            _glyph.AddToClassList("sb-ctl__glyph");
+            _value.AddToClassList("sb-ctl__iconname");
             var caret = new SusIconElement(CaretGlyph);
-            caret.AddToClassList("sus-sb-ctl__iconcaret");
+            caret.AddToClassList("sb-ctl__iconcaret");
             _field.Add(_glyph);
             _field.Add(_value);
             _field.Add(caret);
@@ -134,35 +134,35 @@ namespace Sharq.Core.Storybook.Controls
             Body.Add(_field);
 
             // -- the popup: search, "(none)", grid, empty state, footer ------------
-            _popup.AddToClassList("sus-sb-iconpicker");
+            _popup.AddToClassList("sb-iconpicker");
             _popup.name = "sus-storybook-iconpicker-" + prop.Name;
 
             var searchBox = new VisualElement();
-            searchBox.AddToClassList("sus-sb-iconpicker__search");
+            searchBox.AddToClassList("sb-iconpicker__search");
             var searchGlyph = new SusIconElement(SearchGlyph);
-            searchGlyph.AddToClassList("sus-sb-iconpicker__search-glyph");
-            _search.AddToClassList("sus-sb-iconpicker__search-input");
+            searchGlyph.AddToClassList("sb-iconpicker__search-glyph");
+            _search.AddToClassList("sb-iconpicker__search-input");
             _search.RegisterValueChangedCallback(e => Search(e.newValue));
-            _searchPlaceholder.AddToClassList("sus-sb-iconpicker__placeholder");
+            _searchPlaceholder.AddToClassList("sb-iconpicker__placeholder");
             _searchPlaceholder.pickingMode = PickingMode.Ignore;
             searchBox.Add(searchGlyph);
             searchBox.Add(_search);
             searchBox.Add(_searchPlaceholder);
 
-            _none.AddToClassList("sus-sb-iconpicker__none");
+            _none.AddToClassList("sb-iconpicker__none");
             _none.clicked += () => Select(NoneOption);
 
-            _scroll.AddToClassList("sus-sb-iconpicker__scroll");
-            _cellBox.AddToClassList("sus-sb-iconpicker__grid");
+            _scroll.AddToClassList("sb-iconpicker__scroll");
+            _cellBox.AddToClassList("sb-iconpicker__grid");
             _scroll.Add(_cellBox);
             _scroll.verticalScroller.valueChanged += OnScrolled;
 
-            _empty.AddToClassList("sus-sb-iconpicker__empty");
+            _empty.AddToClassList("sb-iconpicker__empty");
 
             var foot = new VisualElement();
-            foot.AddToClassList("sus-sb-iconpicker__foot");
-            _count.AddToClassList("sus-sb-iconpicker__count");
-            _hint.AddToClassList("sus-sb-iconpicker__hint");
+            foot.AddToClassList("sb-iconpicker__foot");
+            _count.AddToClassList("sb-iconpicker__count");
+            _hint.AddToClassList("sb-iconpicker__hint");
             foot.Add(_count);
             foot.Add(_hint);
 
@@ -307,7 +307,7 @@ namespace Sharq.Core.Storybook.Controls
             _glyph.Name.Value = value;
             _glyph.EnableInClassList(HiddenClass, value.Length == 0);
             _value.text = value.Length == 0 ? EmptyValueLabel : value;
-            _value.EnableInClassList("sus-sb-ctl__iconname--empty", value.Length == 0);
+            _value.EnableInClassList("sb-ctl__iconname--empty", value.Length == 0);
             SetNote(null);
             MarkSelected();
         }
@@ -428,9 +428,9 @@ namespace Sharq.Core.Storybook.Controls
         void AddCell(string name)
         {
             var cell = new Button { tooltip = name };
-            cell.AddToClassList("sus-sb-iconpicker__cell");
+            cell.AddToClassList("sb-iconpicker__cell");
             var glyph = new SusIconElement(name);
-            glyph.AddToClassList("sus-sb-iconpicker__cell-glyph");
+            glyph.AddToClassList("sb-iconpicker__cell-glyph");
             cell.Add(glyph);
             cell.clicked += () => Select(name);
             cell.userData = name;
@@ -444,7 +444,7 @@ namespace Sharq.Core.Storybook.Controls
             for (int i = 0; i < _cells.Count; i++)
             {
                 var name = _cells[i].userData as string;
-                _cells[i].EnableInClassList("sus-sb-iconpicker__cell--selected",
+                _cells[i].EnableInClassList("sb-iconpicker__cell--selected",
                     name != null && string.Equals(name, current, StringComparison.Ordinal));
             }
         }

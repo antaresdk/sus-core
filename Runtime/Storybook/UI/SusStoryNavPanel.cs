@@ -48,10 +48,10 @@ namespace Sharq.Core.Storybook.UI
 
         public SusStoryNavPanel()
         {
-            AddToClassList("sus-sb-nav");
+            AddToClassList("sb-nav");
 
             var head = new VisualElement();
-            head.AddToClassList("sus-sb-nav__head");
+            head.AddToClassList("sb-nav__head");
 
             // ── the two arrows (plan §4.6: "кнопки назад/вперёд — в зоне A, плюс Alt+←/Alt+→") ──
             // The cursor of SusStoryHistory existed from the first day of the engine and only the
@@ -59,21 +59,21 @@ namespace Sharq.Core.Storybook.UI
             // whoever knew the shortcut (card T-3406, R142 zone A "history-buttons").
             //
             // Layout is the row's OWN (rules of the sheet, T-3419): until those rules existed the row
-            // borrowed .sus-sb-nav__tabs standing next to it, and with the borrowed layout came the
+            // borrowed .sb-nav__tabs standing next to it, and with the borrowed layout came the
             // bottom border of a tab strip. The appearance borrows the GHOST role of the sheet
             // (`sb-btn--ghost`) — the vocabulary the sheet declares for exactly this, chrome buttons
             // that read as text until pointed at. That role already declares `:disabled`, which is
             // what makes the edge state of the contract visible without a rule of its own: at the
             // ends the arrow is dimmed, not merely inert.
             var history = new VisualElement();
-            history.AddToClassList("sus-sb-nav__history");
+            history.AddToClassList("sb-nav__history");
 
             _back = new Button(() => GoBack()) { text = BackGlyph, tooltip = "back (Alt+←)" };
-            _back.AddToClassList("sus-sb-nav__back");
+            _back.AddToClassList("sb-nav__back");
             _back.AddToClassList("sb-btn--ghost");
 
             _forward = new Button(() => GoForward()) { text = ForwardGlyph, tooltip = "forward (Alt+→)" };
-            _forward.AddToClassList("sus-sb-nav__forward");
+            _forward.AddToClassList("sb-nav__forward");
             _forward.AddToClassList("sb-btn--ghost");
 
             history.Add(_back);
@@ -81,42 +81,42 @@ namespace Sharq.Core.Storybook.UI
             head.Add(history);
 
             var searchBox = new VisualElement();
-            searchBox.AddToClassList("sus-sb-nav__search");
+            searchBox.AddToClassList("sb-nav__search");
 
-            _search.AddToClassList("sus-sb-nav__search-input");
+            _search.AddToClassList("sb-nav__search-input");
             _search.RegisterValueChangedCallback(_ => ApplyFilter());
             // UI Toolkit has no ":focus-within" pseudo-class (T-3077) — the focus ring on the
             // wrapping box is driven from here via FocusIn/FocusOut instead of USS alone.
-            _search.RegisterCallback<FocusInEvent>(_ => searchBox.AddToClassList("sus-sb-nav__search--focus"));
-            _search.RegisterCallback<FocusOutEvent>(_ => searchBox.RemoveFromClassList("sus-sb-nav__search--focus"));
+            _search.RegisterCallback<FocusInEvent>(_ => searchBox.AddToClassList("sb-nav__search--focus"));
+            _search.RegisterCallback<FocusOutEvent>(_ => searchBox.RemoveFromClassList("sb-nav__search--focus"));
 
-            _searchPlaceholder.AddToClassList("sus-sb-nav__search-placeholder");
+            _searchPlaceholder.AddToClassList("sb-nav__search-placeholder");
             _searchPlaceholder.pickingMode = PickingMode.Ignore;
 
             var hint = new Label(SearchShortcutHint);
-            hint.AddToClassList("sus-sb-nav__search-hint");
+            hint.AddToClassList("sb-nav__search-hint");
             hint.pickingMode = PickingMode.Ignore;
 
             searchBox.Add(_search);
             searchBox.Add(_searchPlaceholder);
             searchBox.Add(hint);
 
-            _tabs.AddToClassList("sus-sb-nav__tabs");
+            _tabs.AddToClassList("sb-nav__tabs");
 
             head.Add(searchBox);
             head.Add(_tabs);
 
-            _list.AddToClassList("sus-sb-nav__list");
+            _list.AddToClassList("sb-nav__list");
 
             var foot = new VisualElement();
-            foot.AddToClassList("sus-sb-nav__foot");
+            foot.AddToClassList("sb-nav__foot");
             var healthBox = new VisualElement();
-            healthBox.AddToClassList("sus-sb-nav__health");
-            _dot.AddToClassList("sus-sb-nav__dot");
-            _health.AddToClassList("sus-sb-nav__health-text");
+            healthBox.AddToClassList("sb-nav__health");
+            _dot.AddToClassList("sb-nav__dot");
+            _health.AddToClassList("sb-nav__health-text");
             healthBox.Add(_dot);
             healthBox.Add(_health);
-            _version.AddToClassList("sus-sb-nav__version");
+            _version.AddToClassList("sb-nav__version");
             foot.Add(healthBox);
             foot.Add(_version);
 
@@ -316,8 +316,8 @@ namespace Sharq.Core.Storybook.UI
             {
                 var key = pkg.Key;
                 var tab = new Button(() => SelectPackage(key)) { text = key };
-                tab.AddToClassList("sus-sb-nav__tab");
-                tab.EnableInClassList("sus-sb-nav__tab--active",
+                tab.AddToClassList("sb-nav__tab");
+                tab.EnableInClassList("sb-nav__tab--active",
                     string.Equals(key, _activePackage, StringComparison.OrdinalIgnoreCase));
                 _tabs.Add(tab);
                 _tabButtons.Add(tab);
@@ -335,7 +335,7 @@ namespace Sharq.Core.Storybook.UI
 
         void ApplyFilter()
         {
-            _searchPlaceholder.EnableInClassList("sus-sb-hidden", !string.IsNullOrEmpty(_search.value));
+            _searchPlaceholder.EnableInClassList("sb-hidden", !string.IsNullOrEmpty(_search.value));
             RebuildList();
         }
 
@@ -364,7 +364,7 @@ namespace Sharq.Core.Storybook.UI
                 if (matching.Count == 0) continue;
 
                 var label = new Label(group.Id.ToUpperInvariant());
-                label.AddToClassList("sus-sb-nav__group");
+                label.AddToClassList("sb-nav__group");
                 _list.Add(label);
 
                 foreach (var story in matching)
@@ -388,20 +388,20 @@ namespace Sharq.Core.Storybook.UI
         VisualElement BuildRow(SusStoryEntry story)
         {
             var row = new Button(() => Select(story));
-            row.AddToClassList("sus-sb-nav__row");
-            row.EnableInClassList("sus-sb-nav__row--active",
+            row.AddToClassList("sb-nav__row");
+            row.EnableInClassList("sb-nav__row--active",
                 string.Equals(story.Id, _activeStoryId, StringComparison.Ordinal));
             row.tooltip = string.IsNullOrEmpty(story.Purpose) ? story.Id : story.Id + " — " + story.Purpose;
 
             var name = new Label(story.Name);
-            name.AddToClassList("sus-sb-nav__row-name");
+            name.AddToClassList("sb-nav__row-name");
 
             // The number is the prop count of the component, not a badge: it is the figure the
             // control panel of step 4 must match, so a row reading 38 next to a panel showing 9
             // controls is a visible hole (DoD §7 p. 1).
             int n = story.PropCount;
             var count = new Label(n < 0 ? "—" : n.ToString());
-            count.AddToClassList("sus-sb-nav__row-count");
+            count.AddToClassList("sb-nav__row-count");
 
             row.Add(name);
             row.Add(count);
@@ -411,19 +411,19 @@ namespace Sharq.Core.Storybook.UI
         static VisualElement BuildEmptyPlate(SusStoryPackage pkg)
         {
             var plate = new VisualElement();
-            plate.AddToClassList("sus-sb-nav__empty");
+            plate.AddToClassList("sb-nav__empty");
 
             var title = new Label("No stories in " + pkg.PackageId);
-            title.AddToClassList("sus-sb-nav__empty-title");
+            title.AddToClassList("sb-nav__empty-title");
 
             var version = string.IsNullOrEmpty(pkg.Version) ? "version unknown" : pkg.Version;
             var text = new Label(
                 "The package is loaded (" + version + "), but no story provider was found. " +
                 "A package declares its own stories:");
-            text.AddToClassList("sus-sb-nav__empty-text");
+            text.AddToClassList("sb-nav__empty-text");
 
             var code = new Label("[SusStory(\"" + pkg.Key + "/<group>/<slug>\")]");
-            code.AddToClassList("sus-sb-nav__empty-code");
+            code.AddToClassList("sb-nav__empty-code");
 
             plate.Add(title);
             plate.Add(text);
@@ -434,9 +434,9 @@ namespace Sharq.Core.Storybook.UI
         static VisualElement BuildNoMatchPlate(string filter)
         {
             var plate = new VisualElement();
-            plate.AddToClassList("sus-sb-nav__empty");
+            plate.AddToClassList("sb-nav__empty");
             var text = new Label("Nothing matches \"" + filter + "\".");
-            text.AddToClassList("sus-sb-nav__empty-text");
+            text.AddToClassList("sb-nav__empty-text");
             plate.Add(text);
             return plate;
         }
@@ -444,7 +444,7 @@ namespace Sharq.Core.Storybook.UI
         void RefreshHealth()
         {
             _health.text = _anomalies == 1 ? "1 anomaly" : _anomalies + " anomalies";
-            _dot.EnableInClassList("sus-sb-nav__dot--bad", _anomalies > 0);
+            _dot.EnableInClassList("sb-nav__dot--bad", _anomalies > 0);
         }
 
         void RefreshVersion()

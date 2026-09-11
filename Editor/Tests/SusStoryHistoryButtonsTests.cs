@@ -51,11 +51,11 @@ namespace Sharq.Core.Editor.Tests
         {
             var nav = new SusStoryNavPanel();
 
-            var row = nav.Q<VisualElement>(className: "sus-sb-nav__history");
+            var row = nav.Q<VisualElement>(className: "sb-nav__history");
             Assert.That(row, Is.Not.Null, "the contract of zone A names a history row");
 
-            var back = row.Q<Button>(className: "sus-sb-nav__back");
-            var forward = row.Q<Button>(className: "sus-sb-nav__forward");
+            var back = row.Q<Button>(className: "sb-nav__back");
+            var forward = row.Q<Button>(className: "sb-nav__forward");
             Assert.That(back, Is.Not.Null, "no back button: the path walked cannot be rewound");
             Assert.That(forward, Is.Not.Null);
             Assert.That(back.text, Is.EqualTo(SusStoryNavPanel.BackGlyph));
@@ -179,7 +179,7 @@ namespace Sharq.Core.Editor.Tests
             // §4.6: the highlight is set FROM the route. A button that moved the stage and left the
             // list pointing at the story before it would be the T-2677 defect with a new carrier.
             Assert.That(host.Nav.ActiveStoryId, Is.EqualTo(First));
-            var active = host.Query<VisualElement>(className: "sus-sb-nav__row--active").ToList();
+            var active = host.Query<VisualElement>(className: "sb-nav__row--active").ToList();
             Assert.That(active.Count, Is.EqualTo(1));
         }
 

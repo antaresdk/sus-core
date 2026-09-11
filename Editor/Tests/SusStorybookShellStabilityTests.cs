@@ -226,7 +226,7 @@ namespace Sharq.Core.Editor.Tests
             host.CanvasOverlay.AddToOverlay(new Label("popup"), OverlayCategory.Dropdown);
             host.SyncOverlay();
 
-            Assert.That(host.QaCanvas.ClassListContains("sus-sb-stage__canvas--overlay"), Is.False,
+            Assert.That(host.QaCanvas.ClassListContains("sb-stage__canvas--overlay"), Is.False,
                 "the 230px jump of the verdict came from this class; D18 keeps one declared height");
             Assert.That(host.Sizes.OverlayNoteVisible, Is.True,
                 "the popup is still accounted for — in words, not in geometry");

@@ -19,7 +19,7 @@ namespace Sharq.Core.Editor.Tests
     /// overlays besides the one on the canvas, and those escape to the panel root exactly the way
     /// the single instance does.
     ///
-    /// The showcase sweep shot 4 ghost modals carrying <c>sus-sb-matrix__item</c> in the ROOT
+    /// The showcase sweep shot 4 ghost modals carrying <c>sb-matrix__item</c> in the ROOT
     /// overlay host, on frames of stories that came LATER (showcase-3, 2026-09-09) — after
     /// T-3131 had already made <c>Unmount</c> clear the root host. Everything here is therefore a
     /// <see cref="UnityTest"/>, not a <see cref="Test"/>: the leak is one FRAME wide.
@@ -116,7 +116,7 @@ namespace Sharq.Core.Editor.Tests
             yield return null;
             yield return null;
 
-            var cells = _host.Matrix.Query<VisualElement>(className: "sus-sb-matrix__cell").ToList();
+            var cells = _host.Matrix.Query<VisualElement>(className: "sb-matrix__cell").ToList();
             Assert.That(cells.Count, Is.EqualTo(_host.Matrix.BuiltCellCount),
                 "sanity: one box per built cell");
             Assert.That(_host.Matrix.HostedCellCount, Is.EqualTo(cells.Count),

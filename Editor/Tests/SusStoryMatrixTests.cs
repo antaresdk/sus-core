@@ -60,7 +60,7 @@ namespace Sharq.Core.Editor.Tests
         static SusStoryEntry Entry(string id) => SusStoryRegistry.Find(id);
 
         static int CellsInTree(VisualElement root) =>
-            root.Query<VisualElement>(className: "sus-sb-matrix__cell").ToList().Count;
+            root.Query<VisualElement>(className: "sb-matrix__cell").ToList().Count;
 
         /// <summary>No twins anywhere — the corpus state before the codemod of T-3039.</summary>
         static void NoTwins() => SusStateTwins.Resolver = (_, __) => false;
@@ -320,9 +320,9 @@ namespace Sharq.Core.Editor.Tests
             host.ShowStoryById(Swatch);
 
             var entry = Entry(Swatch);
-            var crumbs = host.Query<Label>(className: "sus-sb-stage__crumbs").ToList();
-            var titles = host.Query<Label>(className: "sus-sb-stage__title").ToList();
-            var purposes = host.Query<Label>(className: "sus-sb-stage__purpose").ToList();
+            var crumbs = host.Query<Label>(className: "sb-stage__crumbs").ToList();
+            var titles = host.Query<Label>(className: "sb-stage__title").ToList();
+            var purposes = host.Query<Label>(className: "sb-stage__purpose").ToList();
 
             Assert.That(crumbs.Single().text,
                 Is.EqualTo(entry.Package + " / " + entry.Group + " / " + entry.Name));
@@ -348,7 +348,7 @@ namespace Sharq.Core.Editor.Tests
 
         /// <summary>
         /// Card T-3362, plan ARCH-20260911-STORYBOOK-SHELL.md §4.7 and D18. Opening a popup used
-        /// to put <c>sus-sb-stage__canvas--overlay</c> on the canvas, and the shell sheet answers
+        /// to put <c>sb-stage__canvas--overlay</c> on the canvas, and the shell sheet answers
         /// that class with <c>min-height: 350px</c> against a base of 120 — so every popover,
         /// tooltip and menu moved the canvas and everything below it by 230 px, and closing moved
         /// it back. The fork was decided the other way: the canvas keeps ONE declared height and
@@ -364,14 +364,14 @@ namespace Sharq.Core.Editor.Tests
             host.CanvasOverlay.AddToOverlay(new Label("popup"), OverlayCategory.Dropdown);
             host.SyncOverlay();
 
-            Assert.That(host.QaCanvas.ClassListContains("sus-sb-stage__canvas--overlay"), Is.False,
+            Assert.That(host.QaCanvas.ClassListContains("sb-stage__canvas--overlay"), Is.False,
                 "the canvas has one declared height: opening a popup must not grow it by 230px");
             Assert.That(host.Sizes.OverlayNoteVisible, Is.True);
 
             host.CanvasOverlay.ClearAll();
             host.SyncOverlay();
 
-            Assert.That(host.QaCanvas.ClassListContains("sus-sb-stage__canvas--overlay"), Is.False);
+            Assert.That(host.QaCanvas.ClassListContains("sb-stage__canvas--overlay"), Is.False);
             Assert.That(host.Sizes.OverlayNoteVisible, Is.False);
         }
 

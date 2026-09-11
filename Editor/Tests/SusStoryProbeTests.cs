@@ -205,9 +205,9 @@ namespace Sharq.Core.Editor.Tests
                 "card T-3358: the number counts anomalies, so the word beside it says anomalies");
             Assert.That(probe.Anomalies.Single(), Does.Contain("visible but zero-size"));
 
-            var rows = probe.Query<VisualElement>(className: "sus-sb-probe__anomaly").ToList();
+            var rows = probe.Query<VisualElement>(className: "sb-probe__anomaly").ToList();
             Assert.That(rows.Count, Is.EqualTo(1), "every counted anomaly is also listed");
-            Assert.That(probe.Query<Label>(className: "sus-sb-probe__anomaly-text").First().text,
+            Assert.That(probe.Query<Label>(className: "sb-probe__anomaly-text").First().text,
                 Is.EqualTo(probe.Anomalies[0]));
         }
 
@@ -225,7 +225,7 @@ namespace Sharq.Core.Editor.Tests
             // meant "no anomalies found" — the caption promised the opposite of the colour.
             Assert.That(probe.HealthText, Is.EqualTo(SusStoryProbe.HealthOkText));
             Assert.That(SusStoryProbe.HealthOkText, Is.EqualTo("0 anomalies"));
-            Assert.That(probe.Query<VisualElement>(className: "sus-sb-probe__anomaly").ToList(), Is.Empty);
+            Assert.That(probe.Query<VisualElement>(className: "sb-probe__anomaly").ToList(), Is.Empty);
         }
 
         [Test]
@@ -251,8 +251,8 @@ namespace Sharq.Core.Editor.Tests
             // anything else, and a reader lost nothing when it was gone.
             Assert.That(SusStoryFrame.IsStub, Is.True);
             Assert.That(probe.FrameText, Is.Empty);
-            Assert.That(probe.Query<Label>(className: "sus-sb-probe__frame")
-                    .First().ClassListContains("sus-sb-hidden"), Is.True,
+            Assert.That(probe.Query<Label>(className: "sb-probe__frame")
+                    .First().ClassListContains("sb-hidden"), Is.True,
                 "a field nobody can answer is hidden, not filled with a dash");
             Assert.That(probe.Frame.IsAnomaly, Is.False, "'cannot tell' is not an anomaly");
         }
@@ -271,8 +271,8 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(probe.FrameText, Is.EqualTo("frame ≠ canon · 4.1 %"));
             Assert.That(probe.Frame.IsAnomaly, Is.True);
-            Assert.That(probe.Query<Label>(className: "sus-sb-probe__frame")
-                    .First().ClassListContains("sus-sb-probe__frame--bad"), Is.True);
+            Assert.That(probe.Query<Label>(className: "sb-probe__frame")
+                    .First().ClassListContains("sb-probe__frame--bad"), Is.True);
         }
 
         [Test]

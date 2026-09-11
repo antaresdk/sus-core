@@ -85,16 +85,16 @@ namespace Sharq.Core.Storybook.UI
 
         public SusStoryMatrix()
         {
-            AddToClassList("sus-sb-matrix");
+            AddToClassList("sb-matrix");
 
             _toggle.clicked += Toggle;
-            _toggle.AddToClassList("sus-sb-matrix__toggle");
+            _toggle.AddToClassList("sb-matrix__toggle");
 
-            _scroll.AddToClassList("sus-sb-matrix__scroll");
-            _grid.AddToClassList("sus-sb-matrix__grid");
+            _scroll.AddToClassList("sb-matrix__scroll");
+            _grid.AddToClassList("sb-matrix__grid");
             _scroll.Add(_grid);
 
-            _note.AddToClassList("sus-sb-matrix__note");
+            _note.AddToClassList("sb-matrix__note");
 
             Add(_toggle);
             Add(_scroll);
@@ -103,7 +103,7 @@ namespace Sharq.Core.Storybook.UI
             // so a story that is open at t=0 (every modal story: Model = true) makes every cell
             // open ITSELF at mount. Without a host of its own here, the nearest OverlayHost such a
             // cell can reach is the APPLICATION's root one — the showcase sweep shot four modals
-            // carrying sus-sb-matrix__item at 0;0;1280;720, over the frames of later stories
+            // carrying sb-matrix__item at 0;0;1280;720, over the frames of later stories
             // (showcase-3, 2026-09-09). With it, the cell's popup stays inside the matrix box and
             // dies with the grid: ClearCells() empties this host right after it empties the grid.
             Add(_overlay);
@@ -198,10 +198,10 @@ namespace Sharq.Core.Storybook.UI
             _entry = entry;
             if (entry == null)
             {
-                AddToClassList("sus-sb-hidden");
+                AddToClassList("sb-hidden");
                 return;
             }
-            RemoveFromClassList("sus-sb-hidden");
+            RemoveFromClassList("sb-hidden");
 
             SusComponent probe = null;
             try
@@ -223,7 +223,7 @@ namespace Sharq.Core.Storybook.UI
         public void Clear()
         {
             Reset();
-            AddToClassList("sus-sb-hidden");
+            AddToClassList("sb-hidden");
         }
 
         /// <summary>Flips the fold; builds the cells the first time it opens.</summary>
@@ -236,7 +236,7 @@ namespace Sharq.Core.Storybook.UI
             if (_open && !_built) BuildCells();
             if (!_open) ClearCells();
 
-            _scroll.EnableInClassList("sus-sb-hidden", !_open);
+            _scroll.EnableInClassList("sb-hidden", !_open);
             _toggle.text = (_open ? "▾" : "▸") + " matrix · " + MetaText +
                            (_open || CollapseReason == null ? string.Empty : " · " + CollapseReason);
         }
@@ -251,8 +251,8 @@ namespace Sharq.Core.Storybook.UI
             _axis = null;
             _axisSource = SusStoryAxisSource.None;
             _open = false;
-            _scroll.AddToClassList("sus-sb-hidden");
-            _note.AddToClassList("sus-sb-hidden");
+            _scroll.AddToClassList("sb-hidden");
+            _note.AddToClassList("sb-hidden");
             _note.text = string.Empty;
             _toggle.text = "▸ matrix · " + MetaText;
         }
@@ -294,7 +294,7 @@ namespace Sharq.Core.Storybook.UI
             if (_skipped.Count == 0)
             {
                 _note.text = string.Empty;
-                _note.AddToClassList("sus-sb-hidden");
+                _note.AddToClassList("sb-hidden");
                 return;
             }
 
@@ -302,7 +302,7 @@ namespace Sharq.Core.Storybook.UI
                          " — no state twins in this component's USS, so the column is not drawn: " +
                          "UI Toolkit cannot force a pseudo-class, and a column showing the rest " +
                          "state under another name would be wrong.";
-            _note.RemoveFromClassList("sus-sb-hidden");
+            _note.RemoveFromClassList("sb-hidden");
         }
 
         void BuildCells()
@@ -329,13 +329,13 @@ namespace Sharq.Core.Storybook.UI
         VisualElement HeaderRow()
         {
             var row = new VisualElement();
-            row.AddToClassList("sus-sb-matrix__row");
-            row.AddToClassList("sus-sb-matrix__row--head");
+            row.AddToClassList("sb-matrix__row");
+            row.AddToClassList("sb-matrix__row--head");
             row.Add(RowLabel(string.Empty));
             for (int c = 0; c < _columns.Count; c++)
             {
                 var head = new Label(_columns[c]);
-                head.AddToClassList("sus-sb-matrix__colhead");
+                head.AddToClassList("sb-matrix__colhead");
                 row.Add(head);
             }
             return row;
@@ -344,7 +344,7 @@ namespace Sharq.Core.Storybook.UI
         VisualElement BodyRow(string value)
         {
             var row = new VisualElement();
-            row.AddToClassList("sus-sb-matrix__row");
+            row.AddToClassList("sb-matrix__row");
             row.Add(RowLabel(value));
             for (int c = 0; c < _columns.Count; c++) row.Add(Cell(value, _columns[c]));
             return row;
@@ -353,7 +353,7 @@ namespace Sharq.Core.Storybook.UI
         VisualElement Cell(string rowValue, string state)
         {
             var cell = new VisualElement();
-            cell.AddToClassList("sus-sb-matrix__cell");
+            cell.AddToClassList("sb-matrix__cell");
             // A miniature is a picture, not a control: it must not eat the pointer aiming at the
             // live instance below, and it must never take focus away from zone D.
             cell.pickingMode = PickingMode.Ignore;
@@ -371,7 +371,7 @@ namespace Sharq.Core.Storybook.UI
             if (item == null)
             {
                 var dash = new Label("—");
-                dash.AddToClassList("sus-sb-matrix__cell-fail");
+                dash.AddToClassList("sb-matrix__cell-fail");
                 cell.Add(dash);
                 return cell;
             }
@@ -387,7 +387,7 @@ namespace Sharq.Core.Storybook.UI
             // sus-alert"). The box contract of D19 (card T-3355) is unchanged: the wrapper is
             // what the cell measures and what clips on both axes.
             var box = new VisualElement();
-            box.AddToClassList("sus-sb-matrix__item");
+            box.AddToClassList("sb-matrix__item");
             box.pickingMode = PickingMode.Ignore;
             item.pickingMode = PickingMode.Ignore;
             box.Add(item);
@@ -413,7 +413,7 @@ namespace Sharq.Core.Storybook.UI
         static Label RowLabel(string text)
         {
             var label = new Label(text);
-            label.AddToClassList("sus-sb-matrix__rowlabel");
+            label.AddToClassList("sb-matrix__rowlabel");
             return label;
         }
     }

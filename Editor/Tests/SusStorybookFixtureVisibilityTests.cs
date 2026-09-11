@@ -114,16 +114,16 @@ namespace Sharq.Core.Editor.Tests
         {
             var nav = new SusStoryNavPanel();
 
-            Assert.That(nav.Query<Button>(className: "sus-sb-nav__tab").ToList(), Is.Empty,
+            Assert.That(nav.Query<Button>(className: "sb-nav__tab").ToList(), Is.Empty,
                 "a hidden bench must not draw a tab");
 
             nav.ActivePackage = "enginetests";
-            Assert.That(nav.Query<VisualElement>(className: "sus-sb-nav__row").ToList(), Is.Empty,
+            Assert.That(nav.Query<VisualElement>(className: "sb-nav__row").ToList(), Is.Empty,
                 "a hidden bench must not draw tree rows even when it is the active package");
-            Assert.That(nav.Query<Label>(className: "sus-sb-nav__group").ToList(), Is.Empty);
+            Assert.That(nav.Query<Label>(className: "sb-nav__group").ToList(), Is.Empty);
 
             nav.Filter = "counter";
-            Assert.That(nav.Query<VisualElement>(className: "sus-sb-nav__row").ToList(), Is.Empty,
+            Assert.That(nav.Query<VisualElement>(className: "sb-nav__row").ToList(), Is.Empty,
                 "search must not be the back door into the bench");
         }
 

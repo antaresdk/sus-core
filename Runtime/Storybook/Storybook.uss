@@ -27,13 +27,13 @@
  * product, kit or skin chain.
  *
  * Dark is the shell's resting state (the mock-up's default artboard). The light set lives on
- * .sus-sb--theme-light, put on THIS element by the shell's own "shell theme" chip in zone B —
+ * .sb-shell--theme-light, put on THIS element by the shell's own "shell theme" chip in zone B —
  * a different chip from "theme", which keeps switching the SUBJECT (D4).
  *
  * Custom properties inherit, so the canvas subtree sees --sb-* too; nothing inside the canvas
  * reads them, and nothing outside the shell may (D20).
  */
-.sus-sb {
+.sb-shell {
     flex-grow: 1;
     flex-direction: column;
     min-height: 0;
@@ -151,7 +151,7 @@
 
 /* Light set: only the 13 names plus the two stated extras are redefined — geometry, type and
    radii are theme-independent by construction. */
-.sus-sb--theme-light {
+.sb-shell--theme-light {
     --sb-bg: #f3f2ee;
     --sb-panel: #fbfaf7;
     --sb-ink: #1c1c1a;
@@ -178,7 +178,7 @@
     --sb-ink-disabled: #9d9d95;
 }
 
-.sus-sb__topbar {
+.sb-shell__topbar {
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
@@ -190,7 +190,7 @@
     background-color: var(--sb-panel);
 }
 
-.sus-sb__burger {
+.sb-shell__burger {
     width: 30px;
     height: 30px;
     margin-right: 8px;
@@ -204,11 +204,11 @@
     color: var(--sb-ink);
 }
 
-.sus-sb--narrow .sus-sb__burger {
+.sb-shell--narrow .sb-shell__burger {
     display: flex;
 }
 
-.sus-sb__crumbs {
+.sb-shell__crumbs {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -218,11 +218,11 @@
     max-width: 260px;
 }
 
-.sus-sb__spacer {
+.sb-shell__spacer {
     flex-grow: 1;
 }
 
-.sus-sb__link {
+.sb-shell__link {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -233,11 +233,11 @@
     white-space: nowrap;
 }
 
-.sus-sb--narrow .sus-sb__link {
+.sb-shell--narrow .sb-shell__link {
     display: none;
 }
 
-.sus-sb__share {
+.sb-shell__share {
     height: 30px;
     padding-left: 10px;
     padding-right: 10px;
@@ -249,17 +249,17 @@
     font-size: var(--sb-fs-12);
 }
 
-.sus-sb__share:hover {
+.sb-shell__share:hover {
     border-color: var(--sb-muted);
 }
 
-.sus-sb__body {
+.sb-shell__body {
     flex-grow: 1;
     flex-direction: row;
     min-height: 0;
 }
 
-.sus-sb__scrim {
+.sb-shell__scrim {
     position: absolute;
     left: 0;
     top: 0;
@@ -269,13 +269,13 @@
     display: none;
 }
 
-.sus-sb--narrow.sus-sb--drawer-open .sus-sb__scrim {
+.sb-shell--narrow.sb-shell--drawer-open .sb-shell__scrim {
     display: flex;
 }
 
 /* ── zone A: navigation ────────────────────────────────────────────────── */
 
-.sus-sb-nav {
+.sb-nav {
     flex-shrink: 0;
     width: 220px;
     flex-direction: column;
@@ -285,7 +285,7 @@
     background-color: var(--sb-panel);
 }
 
-.sus-sb--narrow .sus-sb-nav {
+.sb-shell--narrow .sb-nav {
     position: absolute;
     left: 0;
     top: 0;
@@ -295,11 +295,11 @@
     display: none;
 }
 
-.sus-sb--narrow.sus-sb--drawer-open .sus-sb-nav {
+.sb-shell--narrow.sb-shell--drawer-open .sb-nav {
     display: flex;
 }
 
-.sus-sb-nav__head {
+.sb-nav__head {
     flex-shrink: 0;
     padding-top: 12px;
     padding-left: 12px;
@@ -307,7 +307,7 @@
     padding-bottom: 6px;
 }
 
-.sus-sb-nav__search {
+.sb-nav__search {
     flex-direction: row;
     align-items: center;
     height: 30px;
@@ -319,11 +319,11 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-nav__search--focus {
+.sb-nav__search--focus {
     border-color: var(--sb-accent);
 }
 
-.sus-sb-nav__search-input {
+.sb-nav__search-input {
     flex-grow: 1;
     font-size: var(--sb-fs-12);
     background-color: rgba(0, 0, 0, 0);
@@ -333,7 +333,7 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-nav__search-input > #unity-text-input {
+.sb-nav__search-input > #unity-text-input {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     padding-left: 0;
@@ -341,28 +341,28 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-nav__search-hint {
+.sb-nav__search-hint {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
     margin-left: 6px;
 }
 
-.sus-sb-nav__search-placeholder {
+.sb-nav__search-placeholder {
     position: absolute;
     left: 9px;
     font-size: var(--sb-fs-12);
     color: var(--sb-muted);
 }
 
-.sus-sb-nav__search-placeholder.sus-sb-hidden {
+.sb-nav__search-placeholder.sb-hidden {
     display: none;
 }
 
 /* Zone A -- the row of history arrows (T-3406, rules T-3419). Its own inline layout: until this
-   rule existed the row borrowed .sus-sb-nav__tabs standing next to it, and with the layout came
+   rule existed the row borrowed .sb-nav__tabs standing next to it, and with the layout came
    the bottom border that belongs to a tab strip and not to a pair of arrows. */
-.sus-sb-nav__history {
+.sb-nav__history {
     flex-direction: row;
     align-items: center;
     margin-bottom: 8px;
@@ -371,8 +371,8 @@
 /* Square by construction -- ONE rung of the ladder on both axes (R139 L2: half of it is 15, the
    radius is 4), so the glyph is centred in a box and not in a slab. Appearance comes from the
    GHOST role at the end of the sheet; declared here is only the box and the glyph inside it. */
-.sus-sb-nav__back,
-.sus-sb-nav__forward {
+.sb-nav__back,
+.sb-nav__forward {
     width: var(--sb-h-ctl);
     height: var(--sb-h-ctl);
     margin: 0;
@@ -382,18 +382,18 @@
     font-size: var(--sb-fs-14);
 }
 
-.sus-sb-nav__forward {
+.sb-nav__forward {
     margin-left: 4px;
 }
 
-.sus-sb-nav__tabs {
+.sb-nav__tabs {
     flex-direction: row;
     margin-top: 10px;
     border-bottom-width: 1px;
     border-bottom-color: var(--sb-line);
 }
 
-.sus-sb-nav__tab {
+.sb-nav__tab {
     flex-grow: 1;
     flex-shrink: 1;
     flex-basis: 0;
@@ -414,17 +414,17 @@
     margin-bottom: -1px;
 }
 
-.sus-sb-nav__tab:hover {
+.sb-nav__tab:hover {
     color: var(--sb-ink);
 }
 
-.sus-sb-nav__tab--active {
+.sb-nav__tab--active {
     color: var(--sb-ink);
     -unity-font-definition: var(--sb-fw-600);
     border-bottom-color: var(--sb-accent);
 }
 
-.sus-sb-nav__list {
+.sb-nav__list {
     flex-grow: 1;
     min-height: 0;
     padding-left: 6px;
@@ -432,7 +432,7 @@
     padding-bottom: 8px;
 }
 
-.sus-sb-nav__group {
+.sb-nav__group {
     -unity-font-definition: var(--sb-font-mono);
     -unity-font-definition: var(--sb-fw-600);
     font-size: var(--sb-fs-11);
@@ -444,7 +444,7 @@
     margin-right: 8px;
 }
 
-.sus-sb-nav__row {
+.sb-nav__row {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -461,24 +461,24 @@
     -unity-text-align: middle-left;
 }
 
-.sus-sb-nav__row:hover {
+.sb-nav__row:hover {
     background-color: var(--sb-line-soft);
 }
 
-.sus-sb-nav__row--active {
+.sb-nav__row--active {
     background-color: var(--sb-accent-soft);
     color: var(--sb-accent-text);
     -unity-font-definition: var(--sb-fw-600);
 }
 
-.sus-sb-nav__row-name {
+.sb-nav__row-name {
     flex-grow: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.sus-sb-nav__row-count {
+.sb-nav__row-count {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -486,7 +486,7 @@
     flex-shrink: 0;
 }
 
-.sus-sb-nav__empty {
+.sb-nav__empty {
     margin-top: 8px;
     margin-left: 2px;
     margin-right: 2px;
@@ -497,7 +497,7 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-nav__empty-title {
+.sb-nav__empty-title {
     color: var(--sb-ink);
     -unity-font-definition: var(--sb-fw-600);
     font-size: var(--sb-fs-12);
@@ -505,13 +505,13 @@
     white-space: normal;
 }
 
-.sus-sb-nav__empty-text {
+.sb-nav__empty-text {
     color: var(--sb-muted);
     font-size: var(--sb-fs-12);
     white-space: normal;
 }
 
-.sus-sb-nav__empty-code {
+.sb-nav__empty-code {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-ink);
@@ -522,7 +522,7 @@
     white-space: normal;
 }
 
-.sus-sb-nav__foot {
+.sb-nav__foot {
     flex-shrink: 0;
     flex-direction: row;
     align-items: center;
@@ -532,12 +532,12 @@
     padding: 9px 12px;
 }
 
-.sus-sb-nav__health {
+.sb-nav__health {
     flex-direction: row;
     align-items: center;
 }
 
-.sus-sb-nav__dot {
+.sb-nav__dot {
     width: var(--sb-dot);
     height: var(--sb-dot);
     border-radius: var(--sb-pill-dot);
@@ -546,12 +546,12 @@
     background-color: var(--sb-ok);
 }
 
-.sus-sb-nav__dot--bad {
+.sb-nav__dot--bad {
     background-color: var(--sb-bad);
 }
 
-.sus-sb-nav__health-text,
-.sus-sb-nav__version {
+.sb-nav__health-text,
+.sb-nav__version {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -559,26 +559,26 @@
 
 /* ── zones B..E ────────────────────────────────────────────────────────── */
 
-.sus-sb-main {
+.sb-main {
     flex-grow: 1;
     flex-direction: row;
     min-width: 0;
     min-height: 0;
 }
 
-.sus-sb-center {
+.sb-center {
     flex-grow: 1;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
 }
 
-.sus-sb-zone {
+.sb-zone {
     flex-shrink: 0;
 }
 
 /* Zone B — environment (card T-3036, plan §4.4): chip group left, deep-link + share right. */
-.sus-sb-env {
+.sb-env {
     flex-direction: row;
     align-items: center;
     height: 38px;
@@ -588,7 +588,7 @@
     border-bottom-color: var(--sb-line);
 }
 
-.sus-sb-env__bar {
+.sb-env__bar {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
@@ -603,17 +603,17 @@
 }
 
 /* Mock-up: narrow mode scrolls the whole chip group as one horizontal strip. */
-.sus-sb-env__chips {
+.sb-env__chips {
     flex-direction: row;
     flex-grow: 1;
 }
 
-.sus-sb-env__chips > #unity-content-container {
+.sb-env__chips > #unity-content-container {
     flex-direction: row;
     align-items: center;
 }
 
-.sus-sb-env__chip {
+.sb-env__chip {
     flex-direction: row;
     flex-shrink: 0;
     align-items: center;
@@ -624,20 +624,20 @@
     border-right-color: var(--sb-line);
 }
 
-.sus-sb-env__chip--last {
+.sb-env__chip--last {
     border-right-width: 0;
 }
 
 /* The instrument's own theme chip (card T-3371, D4). It sits behind a heavier divider and on the
  * shell's panel tone, so "this switch is about the viewer" is visible without reading the glyph:
  * two chips both able to say "dark" is exactly the ambiguity this rule removes. */
-.sus-sb-env__chip--shell {
+.sb-env__chip--shell {
     border-left-width: 1px;
     border-left-color: var(--sb-line);
     background-color: var(--sb-code);
 }
 
-.sus-sb-env__chip-icon {
+.sb-env__chip-icon {
     width: 14px;
     height: 14px;
     margin-right: 6px;
@@ -645,7 +645,7 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
-.sus-sb-env__chip-value {
+.sb-env__chip-value {
     font-size: var(--sb-fs-12);
     color: var(--sb-ink);
     white-space: nowrap;
@@ -653,54 +653,54 @@
 
 /* Deep-link — the SAME Label the top bar used before this card (T-3033); only ≥1200px wide
  * (WideWidth) so it does not crowd the chip group (card T-3036, mock-up). */
-.sus-sb-env__link {
+.sb-env__link {
     display: none;
     margin-left: 12px;
     margin-right: 10px;
 }
 
-.sus-sb--wide .sus-sb-env__link {
+.sb-shell--wide .sb-env__link {
     display: flex;
 }
 
 /* Share — the SAME Button the top bar used before this card; icon always shown, its text label
  * hidden in narrow mode so the button collapses to an icon (card T-3036, mock-up: "кнопка share —
  * иконкой"). */
-.sus-sb-env__share {
+.sb-env__share {
     flex-shrink: 0;
     flex-direction: row;
     align-items: center;
 }
 
-.sus-sb-env__share-icon {
+.sb-env__share-icon {
     width: 14px;
     height: 14px;
     -unity-background-scale-mode: scale-to-fit;
 }
 
-.sus-sb-env__share-label {
+.sb-env__share-label {
     margin-left: 6px;
 }
 
-.sus-sb--narrow .sus-sb-env__share-label {
+.sb-shell--narrow .sb-env__share-label {
     display: none;
 }
 
 /* Zone C — stage. */
-.sus-sb-stage {
+.sb-stage {
     flex-grow: 1;
     min-height: 0;
     padding: 16px 20px 22px 20px;
 }
 
-.sus-sb-stage__title {
+.sb-stage__title {
     font-size: var(--sb-fs-20);
     -unity-font-definition: var(--sb-fw-600);
     color: var(--sb-ink);
     margin-top: 8px;
 }
 
-.sus-sb-stage__purpose {
+.sb-stage__purpose {
     font-size: var(--sb-fs-13);
     color: var(--sb-muted);
     margin-top: 4px;
@@ -710,7 +710,7 @@
 /* The instance canvas. The dotted grid is a 16x16 tile REPEATED by USS, not a mesh painted from
  * C#: the shell must not write appearance through the style API (R53/R120), and a tiled asset is
  * the only way UI Toolkit draws a repeating pattern. */
-.sus-sb-stage__canvas {
+.sb-stage__canvas {
     margin-top: 10px;
     padding: 22px;
     border-width: 1px;
@@ -738,13 +738,13 @@
     overflow: hidden;
 }
 
-.sus-sb-stage__crumbs {
+.sb-stage__crumbs {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
 }
 
-.sus-sb-stage__live-hint {
+.sb-stage__live-hint {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -753,12 +753,12 @@
 
 /* ── zone C: the state matrix (card T-3038, plan §4.5 p. 2) ─────────────── */
 
-.sus-sb-matrix {
+.sb-matrix {
     margin-top: 18px;
     flex-shrink: 0;
 }
 
-.sus-sb-matrix__toggle {
+.sb-matrix__toggle {
     align-self: flex-start;
     height: 20px;
     padding-left: 0;
@@ -773,31 +773,31 @@
     color: var(--sb-muted);
 }
 
-.sus-sb-matrix__toggle:hover {
+.sb-matrix__toggle:hover {
     color: var(--sb-ink);
 }
 
-.sus-sb-matrix__scroll {
+.sb-matrix__scroll {
     margin-top: 8px;
     max-height: 280px;
 }
 
-.sus-sb-matrix__grid {
+.sb-matrix__grid {
     flex-direction: column;
 }
 
-.sus-sb-matrix__row {
+.sb-matrix__row {
     flex-direction: row;
     align-items: center;
     height: var(--sb-matrix-cell-h);
     overflow: hidden;
 }
 
-.sus-sb-matrix__row--head {
+.sb-matrix__row--head {
     height: 20px;
 }
 
-.sus-sb-matrix__rowlabel {
+.sb-matrix__rowlabel {
     width: var(--sb-matrix-label-w);
     flex-shrink: 0;
     -unity-font-definition: var(--sb-font-mono);
@@ -808,7 +808,7 @@
     white-space: nowrap;
 }
 
-.sus-sb-matrix__colhead {
+.sb-matrix__colhead {
     width: var(--sb-matrix-cell-w);
     flex-shrink: 0;
     -unity-text-align: middle-center;
@@ -817,7 +817,7 @@
     color: var(--sb-muted);
 }
 
-.sus-sb-matrix__cell {
+.sb-matrix__cell {
     width: var(--sb-matrix-cell-w);
     height: var(--sb-matrix-cell-h);
     flex-shrink: 0;
@@ -840,7 +840,7 @@
  * Card T-3421: this dresses the cell's WRAPPER, not the instance. The shell names its own boxes
  * and leaves the product's classes to the product (campaign T-3388); the instance is the single
  * child of this box and is sized by it. */
-.sus-sb-matrix__item {
+.sb-matrix__item {
     max-width: 64px;
     max-height: 28px;
     overflow: hidden;
@@ -848,12 +848,12 @@
     flex-shrink: 1;
 }
 
-.sus-sb-matrix__cell-fail {
+.sb-matrix__cell-fail {
     font-size: var(--sb-fs-11);
     color: var(--sb-ink-disabled);
 }
 
-.sus-sb-matrix__note {
+.sb-matrix__note {
     margin-top: 8px;
     font-size: var(--sb-fs-11);
     color: var(--sb-ink-disabled);
@@ -863,15 +863,15 @@
 
 /* ── zone C: live measurements (card T-3038, plan §4.5 p. 5) ────────────── */
 
-.sus-sb-sizes {
+.sb-sizes {
     flex-direction: row;
     flex-wrap: wrap;
     margin-top: 10px;
     flex-shrink: 0;
 }
 
-.sus-sb-sizes__metrics,
-.sus-sb-sizes__overlay {
+.sb-sizes__metrics,
+.sb-sizes__overlay {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -884,26 +884,26 @@
    story going from "h 8" to "h 1080" still moved zone C sideways. One declared number ends that:
    the box is the same whatever it prints. The face is --sb-font-mono, Geist Mono since card
    T-3357, and 340px was sized with that swap already in mind. */
-.sus-sb-sizes__metrics {
+.sb-sizes__metrics {
     min-width: var(--sb-sizes-w);
     flex-shrink: 0;
 }
 
-.sus-sb-stage__empty {
+.sb-stage__empty {
     flex-grow: 1;
     align-items: center;
     justify-content: center;
     padding: 32px;
 }
 
-.sus-sb-stage__empty-title {
+.sb-stage__empty-title {
     font-size: var(--sb-fs-15);
     -unity-font-definition: var(--sb-fw-600);
     color: var(--sb-ink);
     margin-bottom: 6px;
 }
 
-.sus-sb-stage__empty-text {
+.sb-stage__empty-text {
     font-size: var(--sb-fs-13);
     color: var(--sb-muted);
     white-space: normal;
@@ -912,7 +912,7 @@
 }
 
 /* Zone D — control panel. */
-.sus-sb-panel {
+.sb-panel {
     flex-shrink: 0;
     width: var(--sb-zone-d-w);
     min-height: 0;
@@ -928,7 +928,7 @@
  * zone D now reuses exactly that mechanism instead of being stacked under zone C, because
  * stacking pushes the stage off screen and kills the constant canvas size D18 depends on.
  * A zone is either present or has a NAMED entry; "gone" is not a third option. */
-.sus-sb--narrow .sus-sb-panel {
+.sb-shell--narrow .sb-panel {
     position: absolute;
     right: 0;
     top: 0;
@@ -938,11 +938,11 @@
     display: none;
 }
 
-.sus-sb--narrow.sus-sb--panel-open .sus-sb-panel {
+.sb-shell--narrow.sb-shell--panel-open .sb-panel {
     display: flex;
 }
 
-.sus-sb--narrow.sus-sb--panel-open .sus-sb__scrim {
+.sb-shell--narrow.sb-shell--panel-open .sb-shell__scrim {
     display: flex;
 }
 
@@ -952,7 +952,7 @@
  * healthy the canvas is and whether the live render still matches its canon. Everything the
  * C# side of Probe/ does to it is a class flip — not one .style write (R53/R120).
  */
-.sus-sb-probe {
+.sb-probe {
     flex-shrink: 0;
     border-top-width: 1px;
     border-top-color: var(--sb-line);
@@ -960,38 +960,38 @@
     padding: 9px 16px;
 }
 
-.sus-sb-probe__body {
+.sb-probe__body {
     flex-direction: column;
 }
 
-.sus-sb-probe__strip {
+.sb-probe__strip {
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
 }
 
-.sus-sb-probe__title,
-.sus-sb-probe__none,
-.sus-sb-probe__health,
-.sus-sb-probe__frame,
-.sus-sb-probe__unfired,
-.sus-sb-probe__chip {
+.sb-probe__title,
+.sb-probe__none,
+.sb-probe__health,
+.sb-probe__frame,
+.sb-probe__unfired,
+.sb-probe__chip {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
 }
 
-.sus-sb-probe__title {
+.sb-probe__title {
     margin-right: 8px;
 }
 
-.sus-sb-probe__chips {
+.sb-probe__chips {
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
 }
 
-.sus-sb-probe__chip {
+.sb-probe__chip {
     background-color: var(--sb-code);
     border-radius: var(--sb-r-sm);
     padding: 3px 7px;
@@ -999,25 +999,25 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-probe__none {
+.sb-probe__none {
     margin-right: 8px;
 }
 
 /* "Promise without a deed" is a warning, not a failure: the story may simply not have been
  * clicked yet — which is exactly what the reader has to notice. */
-.sus-sb-probe__unfired {
+.sb-probe__unfired {
     color: var(--sb-warn);
     margin-right: 8px;
 }
 
-.sus-sb-probe__status {
+.sb-probe__status {
     flex-direction: row;
     align-items: center;
     flex-grow: 1;
     justify-content: flex-end;
 }
 
-.sus-sb-probe__dot {
+.sb-probe__dot {
     width: var(--sb-dot);
     height: var(--sb-dot);
     border-radius: var(--sb-pill-dot);
@@ -1026,31 +1026,31 @@
     background-color: var(--sb-ok);
 }
 
-.sus-sb-probe__dot--bad {
+.sb-probe__dot--bad {
     background-color: var(--sb-bad);
 }
 
-.sus-sb-probe__health--bad,
-.sus-sb-probe__frame--bad {
+.sb-probe__health--bad,
+.sb-probe__frame--bad {
     color: var(--sb-bad);
 }
 
-.sus-sb-probe__frame {
+.sb-probe__frame {
     margin-left: 14px;
 }
 
-.sus-sb-probe__anomalies {
+.sb-probe__anomalies {
     flex-direction: column;
     margin-top: 6px;
 }
 
-.sus-sb-probe__anomaly {
+.sb-probe__anomaly {
     flex-direction: row;
     align-items: center;
     margin-bottom: 3px;
 }
 
-.sus-sb-probe__anomaly-icon {
+.sb-probe__anomaly-icon {
     width: 13px;
     height: 13px;
     flex-shrink: 0;
@@ -1059,7 +1059,7 @@
     -unity-background-image-tint-color: var(--sb-bad);
 }
 
-.sus-sb-probe__anomaly-text {
+.sb-probe__anomaly-text {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-ink);
@@ -1067,7 +1067,7 @@
     flex-shrink: 1;
 }
 
-.sus-sb-slot-hint {
+.sb-slot-hint {
     font-size: var(--sb-fs-11);
     color: var(--sb-ink-disabled);
     -unity-font-definition: var(--sb-font-mono);
@@ -1076,7 +1076,7 @@
 /* Visibility switch of the shell — state through classes, never through the C# style API
  * (R53/R120). Prefixed on purpose: the stylesheet is applied to the shell root, so an unprefixed
  * .is-hidden would also reach every story mounted inside the stage. */
-.sus-sb-hidden {
+.sb-hidden {
     display: none;
 }
 
@@ -1088,13 +1088,13 @@
  * below, which is why a control can offer the skin primary without naming a colour in code.
  * ==========================================================================*/
 
-.sus-sb-ctlpanel {
+.sb-ctlpanel {
     flex-grow: 1;
     flex-direction: column;
     min-height: 0;
 }
 
-.sus-sb-ctlpanel__title {
+.sb-ctlpanel__title {
     flex-shrink: 0;
     padding-top: 10px;
     padding-bottom: 10px;
@@ -1106,18 +1106,18 @@
     border-bottom-color: var(--sb-line);
 }
 
-.sus-sb-ctlpanel__groups {
+.sb-ctlpanel__groups {
     flex-grow: 1;
     min-height: 0;
 }
 
-.sus-sb-ctlpanel__group {
+.sb-ctlpanel__group {
     padding-left: 12px;
     padding-right: 12px;
     padding-bottom: 6px;
 }
 
-.sus-sb-ctlpanel__group-title {
+.sb-ctlpanel__group-title {
     margin-top: 12px;
     margin-bottom: 2px;
     font-size: var(--sb-fs-10);
@@ -1125,7 +1125,7 @@
     color: var(--sb-ink-disabled);
 }
 
-.sus-sb-ctlpanel__empty {
+.sb-ctlpanel__empty {
     flex-grow: 1;
     align-items: center;
     justify-content: center;
@@ -1133,20 +1133,20 @@
     padding-right: 18px;
 }
 
-.sus-sb-ctlpanel__empty-title {
+.sb-ctlpanel__empty-title {
     font-size: var(--sb-fs-12);
     color: var(--sb-muted);
     margin-bottom: 6px;
 }
 
-.sus-sb-ctlpanel__empty-text {
+.sb-ctlpanel__empty-text {
     font-size: var(--sb-fs-11);
     color: var(--sb-ink-disabled);
     white-space: normal;
     -unity-text-align: middle-center;
 }
 
-.sus-sb-ctlpanel__foot {
+.sb-ctlpanel__foot {
     flex-shrink: 0;
     padding-top: 8px;
     padding-bottom: 8px;
@@ -1157,7 +1157,7 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-ctlpanel__counters {
+.sb-ctlpanel__counters {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -1167,7 +1167,7 @@
    role at the end of the sheet; declared here is only the box: the control-height rung, so the
    button sits on the same baseline as every other control of the panel, and the horizontal
    padding a text button needs to stop reading as a label with a frame around it. */
-.sus-sb-ctlpanel__reset {
+.sb-ctlpanel__reset {
     height: var(--sb-h-ctl);
     margin: 0;
     padding-left: 10px;
@@ -1175,12 +1175,12 @@
     font-size: var(--sb-fs-11);
 }
 
-.sus-sb-ctlpanel__count {
+.sb-ctlpanel__count {
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
 }
 
-.sus-sb-ctlpanel__badge {
+.sb-ctlpanel__badge {
     font-size: var(--sb-fs-10);
     padding-top: 1px;
     padding-bottom: 1px;
@@ -1190,56 +1190,56 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-ctlpanel__badge--ok {
+.sb-ctlpanel__badge--ok {
     color: var(--sb-ok);
     background-color: var(--sb-accent-soft);
 }
 
-.sus-sb-ctlpanel__badge--defect {
+.sb-ctlpanel__badge--defect {
     color: var(--sb-bad);
     background-color: var(--sb-line-soft);
 }
 
-.sus-sb-ctlpanel__hole {
+.sb-ctlpanel__hole {
     margin-top: 4px;
     font-size: var(--sb-fs-10);
     white-space: normal;
     color: var(--sb-muted);
 }
 
-.sus-sb-ctlpanel__hole--dead {
+.sb-ctlpanel__hole--dead {
     color: var(--sb-bad);
 }
 
-.sus-sb-ctlpanel__hole--excluded {
+.sb-ctlpanel__hole--excluded {
     color: var(--sb-ink-disabled);
 }
 
 /* -- one row ------------------------------------------------------------- */
 
-.sus-sb-ctl {
+.sb-ctl {
     padding-top: 7px;
     padding-bottom: 7px;
     border-bottom-width: 1px;
     border-bottom-color: var(--sb-line);
 }
 
-.sus-sb-ctl--inert {
+.sb-ctl--inert {
     opacity: 0.45;
 }
 
-.sus-sb-ctl__head {
+.sb-ctl__head {
     flex-direction: row;
     align-items: center;
 }
 
-.sus-sb-ctl__name {
+.sb-ctl__name {
     font-size: var(--sb-fs-11);
     color: var(--sb-ink);
     margin-right: 6px;
 }
 
-.sus-sb-ctl__badge {
+.sb-ctl__badge {
     font-size: var(--sb-fs-10);
     padding-left: 4px;
     padding-right: 4px;
@@ -1249,22 +1249,22 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-ctl__badge--dead {
+.sb-ctl__badge--dead {
     color: var(--sb-bad);
 }
 
-.sus-sb-ctl__badge--manual {
+.sb-ctl__badge--manual {
     color: var(--sb-ink-disabled);
 }
 
-.sus-sb-ctl__body {
+.sb-ctl__body {
     flex-direction: row;
     align-items: center;
     margin-top: 4px;
 }
 
-.sus-sb-ctl__note,
-.sus-sb-ctl__dependency {
+.sb-ctl__note,
+.sb-ctl__dependency {
     margin-top: 3px;
     font-size: var(--sb-fs-10);
     white-space: normal;
@@ -1273,7 +1273,7 @@
 
 /* -- bool ---------------------------------------------------------------- */
 
-.sus-sb-ctl__switch {
+.sb-ctl__switch {
     width: var(--sb-switch-w);
     height: var(--sb-switch-h);
     padding: 0;
@@ -1285,12 +1285,12 @@
     justify-content: center;
 }
 
-.sus-sb-ctl__switch--on {
+.sb-ctl__switch--on {
     background-color: var(--sb-accent);
     border-color: var(--sb-accent);
 }
 
-.sus-sb-ctl__knob {
+.sb-ctl__knob {
     width: var(--sb-knob);
     height: var(--sb-knob);
     margin-left: 2px;
@@ -1298,13 +1298,13 @@
     background-color: var(--sb-bg);
 }
 
-.sus-sb-ctl__switch--on .sus-sb-ctl__knob {
+.sb-ctl__switch--on .sb-ctl__knob {
     margin-left: 18px;
 }
 
 /* -- closed sets --------------------------------------------------------- */
 
-.sus-sb-ctl__segment {
+.sb-ctl__segment {
     flex-grow: 1;
     flex-direction: row;
     padding: 2px;
@@ -1312,7 +1312,7 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-ctl__seg {
+.sb-ctl__seg {
     flex-grow: 1;
     margin: 0;
     padding-top: 3px;
@@ -1328,14 +1328,14 @@
     overflow: hidden;
 }
 
-.sus-sb-ctl__seg--active {
+.sb-ctl__seg--active {
     background-color: var(--sb-panel);
     color: var(--sb-ink);
     border-width: 1px;
     border-color: var(--sb-line);
 }
 
-.sus-sb-ctl__dropdown {
+.sb-ctl__dropdown {
     flex-grow: 1;
     margin: 0;
     font-size: var(--sb-fs-11);
@@ -1343,29 +1343,29 @@
 
 /* -- text, icon, numbers ------------------------------------------------- */
 
-.sus-sb-ctl__text,
-.sus-sb-ctl__number,
-.sus-sb-ctl__hex,
-.sus-sb-ctl__list-row {
+.sb-ctl__text,
+.sb-ctl__number,
+.sb-ctl__hex,
+.sb-ctl__list-row {
     margin: 0;
     font-size: var(--sb-fs-11);
 }
 
-.sus-sb-ctl__text {
+.sb-ctl__text {
     flex-grow: 1;
 }
 
-.sus-sb-ctl__number {
+.sb-ctl__number {
     width: 52px;
     margin-left: 6px;
 }
 
-.sus-sb-ctl__slider {
+.sb-ctl__slider {
     flex-grow: 1;
     margin: 0;
 }
 
-.sus-sb-ctl__glyph {
+.sb-ctl__glyph {
     width: 16px;
     height: 16px;
     margin-right: 6px;
@@ -1373,12 +1373,12 @@
 
 /* -- colour -------------------------------------------------------------- */
 
-.sus-sb-ctl__swatches {
+.sb-ctl__swatches {
     flex-direction: row;
     align-items: center;
 }
 
-.sus-sb-ctl__swatch {
+.sb-ctl__swatch {
     width: 18px;
     height: 18px;
     margin-top: 0;
@@ -1405,36 +1405,36 @@
  * named, in one block. Whether a preview of the subject belongs in the shell's sheet at all, or
  * in a sheet of its own under the stage, is an architecture question and it is asked as a card,
  * not decided by a grep. */
-.sus-sb-ctl__swatch--primary {
+.sb-ctl__swatch--primary {
     background-color: var(--sus-primary);
 }
 
-.sus-sb-ctl__swatch--secondary {
+.sb-ctl__swatch--secondary {
     background-color: var(--sus-secondary);
 }
 
-.sus-sb-ctl__swatch--neutral {
+.sb-ctl__swatch--neutral {
     background-color: var(--sus-text-secondary);
 }
 
-.sus-sb-ctl__swatch--success {
+.sb-ctl__swatch--success {
     background-color: var(--sus-success);
 }
 
-.sus-sb-ctl__swatch--error {
+.sb-ctl__swatch--error {
     background-color: var(--sus-error);
 }
 
-.sus-sb-ctl__swatch--ink {
+.sb-ctl__swatch--ink {
     background-color: var(--sus-text-primary);
 }
 
-.sus-sb-ctl__hex {
+.sb-ctl__hex {
     width: 84px;
     margin-left: 4px;
 }
 
-.sus-sb-ctl__value {
+.sb-ctl__value {
     margin-left: 6px;
     font-size: var(--sb-fs-10);
     color: var(--sb-ink-disabled);
@@ -1442,7 +1442,7 @@
 
 /* -- list and model ------------------------------------------------------ */
 
-.sus-sb-ctl__list-summary {
+.sb-ctl__list-summary {
     margin: 0;
     padding-top: 3px;
     padding-bottom: 3px;
@@ -1456,18 +1456,18 @@
     color: var(--sb-muted);
 }
 
-.sus-sb-ctl__list {
+.sb-ctl__list {
     margin-top: 4px;
     padding-left: 8px;
     border-left-width: 1px;
     border-left-color: var(--sb-line);
 }
 
-.sus-sb-ctl__list-row {
+.sb-ctl__list-row {
     margin-bottom: 3px;
 }
 
-.sus-sb-ctl__list-add {
+.sb-ctl__list-add {
     margin: 0;
     padding-top: 2px;
     padding-bottom: 2px;
@@ -1477,7 +1477,7 @@
     color: var(--sb-muted);
 }
 
-.sus-sb-ctl__mono {
+.sb-ctl__mono {
     flex-grow: 1;
     font-size: var(--sb-fs-10);
     color: var(--sb-muted);
@@ -1486,7 +1486,7 @@
 
 /* -- icon picker (T-3035) ------------------------------------------------ */
 
-.sus-sb-ctl__iconfield {
+.sb-ctl__iconfield {
     flex-grow: 1;
     flex-direction: row;
     align-items: center;
@@ -1500,7 +1500,7 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-ctl__iconname {
+.sb-ctl__iconname {
     flex-grow: 1;
     font-size: var(--sb-fs-11);
     color: var(--sb-ink);
@@ -1508,17 +1508,17 @@
     -unity-text-align: middle-left;
 }
 
-.sus-sb-ctl__iconname--empty {
+.sb-ctl__iconname--empty {
     color: var(--sb-muted);
 }
 
-.sus-sb-ctl__iconcaret {
+.sb-ctl__iconcaret {
     width: 12px;
     height: 12px;
     flex-shrink: 0;
 }
 
-.sus-sb-iconpicker {
+.sb-iconpicker {
     width: 236px;
     padding: 8px;
     border-width: 1px;
@@ -1527,7 +1527,7 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-iconpicker__search {
+.sb-iconpicker__search {
     flex-direction: row;
     align-items: center;
     height: 28px;
@@ -1539,14 +1539,14 @@
     background-color: var(--sb-code);
 }
 
-.sus-sb-iconpicker__search-glyph {
+.sb-iconpicker__search-glyph {
     width: 13px;
     height: 13px;
     margin-right: 6px;
     flex-shrink: 0;
 }
 
-.sus-sb-iconpicker__search-input {
+.sb-iconpicker__search-input {
     flex-grow: 1;
     margin: 0;
     padding: 0;
@@ -1556,7 +1556,7 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-iconpicker__search-input > #unity-text-input {
+.sb-iconpicker__search-input > #unity-text-input {
     border-width: 0;
     padding-left: 0;
     padding-right: 0;
@@ -1564,18 +1564,18 @@
     color: var(--sb-ink);
 }
 
-.sus-sb-iconpicker__placeholder {
+.sb-iconpicker__placeholder {
     position: absolute;
     left: 27px;
     font-size: var(--sb-fs-12);
     color: var(--sb-muted);
 }
 
-.sus-sb-iconpicker__placeholder.sus-sb-hidden {
+.sb-iconpicker__placeholder.sb-hidden {
     display: none;
 }
 
-.sus-sb-iconpicker__none {
+.sb-iconpicker__none {
     margin: 0;
     margin-top: 6px;
     padding-top: 3px;
@@ -1588,21 +1588,21 @@
     -unity-text-align: middle-left;
 }
 
-.sus-sb-iconpicker__scroll {
+.sb-iconpicker__scroll {
     max-height: 176px;
     margin-top: 6px;
 }
 
-.sus-sb-iconpicker__scroll.sus-sb-hidden {
+.sb-iconpicker__scroll.sb-hidden {
     display: none;
 }
 
-.sus-sb-iconpicker__grid {
+.sb-iconpicker__grid {
     flex-direction: row;
     flex-wrap: wrap;
 }
 
-.sus-sb-iconpicker__cell {
+.sb-iconpicker__cell {
     width: 34px;
     height: 34px;
     margin: 1px;
@@ -1615,21 +1615,21 @@
     background-color: rgba(0, 0, 0, 0);
 }
 
-.sus-sb-iconpicker__cell:hover {
+.sb-iconpicker__cell:hover {
     background-color: var(--sb-line-soft);
 }
 
-.sus-sb-iconpicker__cell--selected {
+.sb-iconpicker__cell--selected {
     border-color: var(--sb-accent);
     background-color: var(--sb-accent-soft);
 }
 
-.sus-sb-iconpicker__cell-glyph {
+.sb-iconpicker__cell-glyph {
     width: 18px;
     height: 18px;
 }
 
-.sus-sb-iconpicker__empty {
+.sb-iconpicker__empty {
     margin-top: 10px;
     margin-bottom: 4px;
     padding-left: 4px;
@@ -1639,25 +1639,25 @@
     white-space: normal;
 }
 
-.sus-sb-iconpicker__empty.sus-sb-hidden {
+.sb-iconpicker__empty.sb-hidden {
     display: none;
 }
 
-.sus-sb-iconpicker__foot {
+.sb-iconpicker__foot {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     margin-top: 8px;
 }
 
-.sus-sb-iconpicker__count,
-.sus-sb-iconpicker__hint {
+.sb-iconpicker__count,
+.sb-iconpicker__hint {
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
     -unity-font-definition: var(--sb-font-mono);
 }
 
-.sus-sb-iconpicker__hint.sus-sb-hidden {
+.sb-iconpicker__hint.sb-hidden {
     display: none;
 }
 
@@ -1676,7 +1676,7 @@
  *
  * WHY THE SELECTORS LOOK LIKE THIS. Every rule is anchored on a shell class and reaches inward
  * with `>` before it uses a descendant step (D20): the canvas holds the SUBJECT of inspection,
- * and a rule like `.sus-sb .unity-scroller` would also repaint a ScrollView that belongs to the
+ * and a rule like `.sb-shell .unity-scroller` would also repaint a ScrollView that belongs to the
  * component being judged. Anchoring on the six named shell ScrollViews and the seven named shell
  * fields keeps the rule inside the instrument. Inside a scroller or a field there is never a
  * story, so a descendant step below that anchor is safe and survives Unity moving a part one
@@ -1698,18 +1698,18 @@
  * hierarchy back is skinned by the same rules instead of silently reverting to 24px.
  */
 
-.sus-sb-nav__list > .unity-scroller,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
-.sus-sb-stage > .unity-scroller,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
-.sus-sb-env__chips > .unity-scroller,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
-.sus-sb-matrix__scroll > .unity-scroller,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
-.sus-sb-ctlpanel__groups > .unity-scroller,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
-.sus-sb-iconpicker__scroll > .unity-scroller,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller {
+.sb-nav__list > .unity-scroller,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-stage > .unity-scroller,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-env__chips > .unity-scroller,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-matrix__scroll > .unity-scroller,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-ctlpanel__groups > .unity-scroller,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-iconpicker__scroll > .unity-scroller,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller {
     /* Unity default is a 24px band with a button at each end. The mock-up has an 8px band and
        no buttons at all. */
     background-color: rgba(0, 0, 0, 0);
@@ -1717,142 +1717,142 @@
     margin: 0;
 }
 
-.sus-sb-nav__list > .unity-scroller--vertical,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
-.sus-sb-stage > .unity-scroller--vertical,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
-.sus-sb-env__chips > .unity-scroller--vertical,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
-.sus-sb-matrix__scroll > .unity-scroller--vertical,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
-.sus-sb-ctlpanel__groups > .unity-scroller--vertical,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
-.sus-sb-iconpicker__scroll > .unity-scroller--vertical,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical {
+.sb-nav__list > .unity-scroller--vertical,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-stage > .unity-scroller--vertical,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-env__chips > .unity-scroller--vertical,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-matrix__scroll > .unity-scroller--vertical,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-ctlpanel__groups > .unity-scroller--vertical,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-iconpicker__scroll > .unity-scroller--vertical,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical {
     width: var(--sb-scrollbar);
     min-width: var(--sb-scrollbar);
 }
 
-.sus-sb-nav__list > .unity-scroller--horizontal,
-.sus-sb-stage > .unity-scroller--horizontal,
-.sus-sb-env__chips > .unity-scroller--horizontal,
-.sus-sb-matrix__scroll > .unity-scroller--horizontal,
-.sus-sb-ctlpanel__groups > .unity-scroller--horizontal,
-.sus-sb-iconpicker__scroll > .unity-scroller--horizontal {
+.sb-nav__list > .unity-scroller--horizontal,
+.sb-stage > .unity-scroller--horizontal,
+.sb-env__chips > .unity-scroller--horizontal,
+.sb-matrix__scroll > .unity-scroller--horizontal,
+.sb-ctlpanel__groups > .unity-scroller--horizontal,
+.sb-iconpicker__scroll > .unity-scroller--horizontal {
     /* No container form here: the horizontal scroller is a direct child of the ScrollView on
        every Unity version measured. */
     height: var(--sb-scrollbar);
     min-height: var(--sb-scrollbar);
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-scroller__low-button,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-stage > .unity-scroller .unity-scroller__low-button,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-env__chips > .unity-scroller .unity-scroller__low-button,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__low-button,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__low-button,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__low-button,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
-.sus-sb-nav__list > .unity-scroller .unity-scroller__high-button,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
-.sus-sb-stage > .unity-scroller .unity-scroller__high-button,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
-.sus-sb-env__chips > .unity-scroller .unity-scroller__high-button,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
-.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__high-button,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__high-button,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__high-button,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button {
+.sb-nav__list > .unity-scroller .unity-scroller__low-button,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-stage > .unity-scroller .unity-scroller__low-button,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-env__chips > .unity-scroller .unity-scroller__low-button,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-matrix__scroll > .unity-scroller .unity-scroller__low-button,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-ctlpanel__groups > .unity-scroller .unity-scroller__low-button,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-iconpicker__scroll > .unity-scroller .unity-scroller__low-button,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-nav__list > .unity-scroller .unity-scroller__high-button,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-stage > .unity-scroller .unity-scroller__high-button,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-env__chips > .unity-scroller .unity-scroller__high-button,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-matrix__scroll > .unity-scroller .unity-scroller__high-button,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-ctlpanel__groups > .unity-scroller .unity-scroller__high-button,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-iconpicker__scroll > .unity-scroller .unity-scroller__high-button,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button {
     /* The two pale squares at the ends of every band. The mock-up has none, and a drag band this
        thin has no room for a hit target anyway. */
     display: none;
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-scroller__slider,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
-.sus-sb-stage > .unity-scroller .unity-scroller__slider,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
-.sus-sb-env__chips > .unity-scroller .unity-scroller__slider,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
-.sus-sb-matrix__scroll > .unity-scroller .unity-scroller__slider,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-scroller__slider,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-scroller__slider,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider {
+.sb-nav__list > .unity-scroller .unity-scroller__slider,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-stage > .unity-scroller .unity-scroller__slider,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-env__chips > .unity-scroller .unity-scroller__slider,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-matrix__scroll > .unity-scroller .unity-scroller__slider,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-ctlpanel__groups > .unity-scroller .unity-scroller__slider,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-iconpicker__scroll > .unity-scroller .unity-scroller__slider,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider {
     margin: 0;
     min-width: var(--sb-scrollbar);
     min-height: var(--sb-scrollbar);
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-stage > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-env__chips > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__tracker,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker {
+.sb-nav__list > .unity-scroller .unity-base-slider__tracker,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-stage > .unity-scroller .unity-base-slider__tracker,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-env__chips > .unity-scroller .unity-base-slider__tracker,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-matrix__scroll > .unity-scroller .unity-base-slider__tracker,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-ctlpanel__groups > .unity-scroller .unity-base-slider__tracker,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-iconpicker__scroll > .unity-scroller .unity-base-slider__tracker,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     margin: 0;
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-stage > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger {
+.sb-nav__list > .unity-scroller .unity-base-slider__dragger,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-stage > .unity-scroller .unity-base-slider__dragger,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-env__chips > .unity-scroller .unity-base-slider__dragger,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger {
     background-color: var(--sb-line);
     border-width: 0;
     border-radius: var(--sb-r-sm);
     margin: 0;
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-stage > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger:hover,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover {
+.sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-stage > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-env__chips > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover {
     background-color: var(--sb-muted);
 }
 
-.sus-sb-nav__list > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-stage > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-env__chips > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger-border,
-.sus-sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border {
+.sb-nav__list > .unity-scroller .unity-base-slider__dragger-border,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-stage > .unity-scroller .unity-base-slider__dragger-border,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-env__chips > .unity-scroller .unity-base-slider__dragger-border,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger-border,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-ctlpanel__groups > .unity-scroller .unity-base-slider__dragger-border,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-iconpicker__scroll > .unity-scroller .unity-base-slider__dragger-border,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border {
     display: none;
 }
 
@@ -1861,8 +1861,8 @@
  *
  * Measured 2026-09-11 (sus-dev, Play, resolvedStyle of 541 shell elements outside the stage
  * canvas, before and after ONE flip of the stage theme chip): background changed on 0 of them and
- * geometry on 0, but COLOUR changed on 107 — .sus-sb-nav__row-name x95, .sus-sb-ctl__text x5,
- * .sus-sb-ctl__switch x3, .sus-sb-ctl__knob x3, .sus-sb-env__share-label x1. Two of the four chip
+ * geometry on 0, but COLOUR changed on 107 — .sb-nav__row-name x95, .sb-ctl__text x5,
+ * .sb-ctl__switch x3, .sb-ctl__knob x3, .sb-env__share-label x1. Two of the four chip
  * combinations were unreadable as a result: a story name at 0.059 on a 0.122 nav, and at 0.941 on
  * a 0.984 one.
  *
@@ -1872,30 +1872,30 @@
  * shell's own --sb-* set closes the path by itself, and closes it for every cascade above, not just
  * for the one axis that was measured (R138: the shell and the subject exchange no tokens).
  *
- * The nav name is declared through its ROW on purpose: a bare .sus-sb-nav__row-name { color }
+ * The nav name is declared through its ROW on purpose: a bare .sb-nav__row-name { color }
  * would out-specify the accent that --active passes down by inheritance, and the selected row
  * would lose its highlight.
  */
 
-.sus-sb-nav__row > .sus-sb-nav__row-name {
+.sb-nav__row > .sb-nav__row-name {
     color: var(--sb-ink);
 }
 
-.sus-sb-nav__row--active > .sus-sb-nav__row-name {
+.sb-nav__row--active > .sb-nav__row-name {
     color: var(--sb-accent-text);
 }
 
-.sus-sb-env__share > .sus-sb-env__share-label {
+.sb-env__share > .sb-env__share-label {
     color: var(--sb-ink);
 }
 
-.sus-sb-ctl__text,
-.sus-sb-ctl__number,
-.sus-sb-ctl__hex,
-.sus-sb-ctl__mono,
-.sus-sb-ctl__list-row,
-.sus-sb-ctl__switch,
-.sus-sb-ctl__knob {
+.sb-ctl__text,
+.sb-ctl__number,
+.sb-ctl__hex,
+.sb-ctl__mono,
+.sb-ctl__list-row,
+.sb-ctl__switch,
+.sb-ctl__knob {
     color: var(--sb-ink);
 }
 
@@ -1919,7 +1919,7 @@
  * instrument, which is exactly what D5 forbids.
  *
  * Hence: every text-bearing shell class that had no face of its own now declares one, and none
- * of these selectors can leave the shell. Anchoring on .sus-sb and sweeping .unity-text-element
+ * of these selectors can leave the shell. Anchoring on .sb-shell and sweeping .unity-text-element
  * from above was the tempting one-liner and is refused: it would reach INTO the stage canvas and
  * re-type the subject on display, the same trespass in the other direction (D2, D27).
  *
@@ -1929,23 +1929,23 @@
  * --active needs its own line, or the selected row would lose the 600 face it asks for.
  */
 
-.sus-sb-nav__row,
-.sus-sb-nav__row > .sus-sb-nav__row-name,
-.sus-sb-nav__tab,
-.sus-sb-env__share > .sus-sb-env__share-label,
+.sb-nav__row,
+.sb-nav__row > .sb-nav__row-name,
+.sb-nav__tab,
+.sb-env__share > .sb-env__share-label,
 .sb-btn--accent,
 .sb-btn--secondary,
 .sb-btn--ghost,
-.sus-sb__burger,
-.sus-sb__share,
-.sus-sb-env__share,
-.sus-sb-env__props,
-.sus-sb-ctl__list-add,
-.sus-sb-ctl__iconfield {
+.sb-shell__burger,
+.sb-shell__share,
+.sb-env__share,
+.sb-env__props,
+.sb-ctl__list-add,
+.sb-ctl__iconfield {
     -unity-font-definition: var(--sb-fw-500);
 }
 
-.sus-sb-nav__row--active > .sus-sb-nav__row-name {
+.sb-nav__row--active > .sb-nav__row-name {
     -unity-font-definition: var(--sb-fw-600);
 }
 
@@ -1955,16 +1955,16 @@
    the same one the state block below uses for #unity-text-input, so the two never drift apart;
    every entry is anchored on the field's own shell class, so no selector here can reach a
    TextField of the subject on display. */
-.sus-sb-nav__search-input .unity-text-element,
-.sus-sb-iconpicker__search-input .unity-text-element,
-.sus-sb-ctl__text .unity-text-element,
-.sus-sb-ctl__number .unity-text-element,
-.sus-sb-ctl__hex .unity-text-element,
-.sus-sb-ctl__list-row .unity-text-element {
+.sb-nav__search-input .unity-text-element,
+.sb-iconpicker__search-input .unity-text-element,
+.sb-ctl__text .unity-text-element,
+.sb-ctl__number .unity-text-element,
+.sb-ctl__hex .unity-text-element,
+.sb-ctl__list-row .unity-text-element {
     -unity-font-definition: var(--sb-font-ui);
 }
 
-.sus-sb-ctl__mono .unity-text-element {
+.sb-ctl__mono .unity-text-element {
     -unity-font-definition: var(--sb-font-mono);
 }
 
@@ -1977,13 +1977,13 @@
  * see which of the five states is still waiting for code instead of guessing.
  */
 
-.sus-sb-nav__search-input > #unity-text-input,
-.sus-sb-iconpicker__search-input > #unity-text-input,
-.sus-sb-ctl__text > #unity-text-input,
-.sus-sb-ctl__number > #unity-text-input,
-.sus-sb-ctl__hex > #unity-text-input,
-.sus-sb-ctl__mono > #unity-text-input,
-.sus-sb-ctl__list-row > #unity-text-input {
+.sb-nav__search-input > #unity-text-input,
+.sb-iconpicker__search-input > #unity-text-input,
+.sb-ctl__text > #unity-text-input,
+.sb-ctl__number > #unity-text-input,
+.sb-ctl__hex > #unity-text-input,
+.sb-ctl__mono > #unity-text-input,
+.sb-ctl__list-row > #unity-text-input {
     background-color: var(--sb-code);
     border-width: 1px;
     border-color: var(--sb-line);
@@ -1993,54 +1993,54 @@
     font-size: var(--sb-fs-12);
 }
 
-.sus-sb-nav__search-input:hover > #unity-text-input,
-.sus-sb-iconpicker__search-input:hover > #unity-text-input,
-.sus-sb-ctl__text:hover > #unity-text-input,
-.sus-sb-ctl__number:hover > #unity-text-input,
-.sus-sb-ctl__hex:hover > #unity-text-input,
-.sus-sb-ctl__mono:hover > #unity-text-input,
-.sus-sb-ctl__list-row:hover > #unity-text-input {
+.sb-nav__search-input:hover > #unity-text-input,
+.sb-iconpicker__search-input:hover > #unity-text-input,
+.sb-ctl__text:hover > #unity-text-input,
+.sb-ctl__number:hover > #unity-text-input,
+.sb-ctl__hex:hover > #unity-text-input,
+.sb-ctl__mono:hover > #unity-text-input,
+.sb-ctl__list-row:hover > #unity-text-input {
     border-color: var(--sb-muted);
 }
 
-.sus-sb-nav__search-input:focus > #unity-text-input,
-.sus-sb-iconpicker__search-input:focus > #unity-text-input,
-.sus-sb-ctl__text:focus > #unity-text-input,
-.sus-sb-ctl__number:focus > #unity-text-input,
-.sus-sb-ctl__hex:focus > #unity-text-input,
-.sus-sb-ctl__mono:focus > #unity-text-input,
-.sus-sb-ctl__list-row:focus > #unity-text-input,
-.sus-sb-nav__search-input > #unity-text-input:focus,
-.sus-sb-iconpicker__search-input > #unity-text-input:focus,
-.sus-sb-ctl__text > #unity-text-input:focus,
-.sus-sb-ctl__number > #unity-text-input:focus,
-.sus-sb-ctl__hex > #unity-text-input:focus,
-.sus-sb-ctl__mono > #unity-text-input:focus,
-.sus-sb-ctl__list-row > #unity-text-input:focus {
+.sb-nav__search-input:focus > #unity-text-input,
+.sb-iconpicker__search-input:focus > #unity-text-input,
+.sb-ctl__text:focus > #unity-text-input,
+.sb-ctl__number:focus > #unity-text-input,
+.sb-ctl__hex:focus > #unity-text-input,
+.sb-ctl__mono:focus > #unity-text-input,
+.sb-ctl__list-row:focus > #unity-text-input,
+.sb-nav__search-input > #unity-text-input:focus,
+.sb-iconpicker__search-input > #unity-text-input:focus,
+.sb-ctl__text > #unity-text-input:focus,
+.sb-ctl__number > #unity-text-input:focus,
+.sb-ctl__hex > #unity-text-input:focus,
+.sb-ctl__mono > #unity-text-input:focus,
+.sb-ctl__list-row > #unity-text-input:focus {
     border-color: var(--sb-accent);
     background-color: var(--sb-panel);
     color: var(--sb-ink);
 }
 
-.sus-sb-nav__search-input:disabled > #unity-text-input,
-.sus-sb-iconpicker__search-input:disabled > #unity-text-input,
-.sus-sb-ctl__text:disabled > #unity-text-input,
-.sus-sb-ctl__number:disabled > #unity-text-input,
-.sus-sb-ctl__hex:disabled > #unity-text-input,
-.sus-sb-ctl__mono:disabled > #unity-text-input,
-.sus-sb-ctl__list-row:disabled > #unity-text-input {
+.sb-nav__search-input:disabled > #unity-text-input,
+.sb-iconpicker__search-input:disabled > #unity-text-input,
+.sb-ctl__text:disabled > #unity-text-input,
+.sb-ctl__number:disabled > #unity-text-input,
+.sb-ctl__hex:disabled > #unity-text-input,
+.sb-ctl__mono:disabled > #unity-text-input,
+.sb-ctl__list-row:disabled > #unity-text-input {
     background-color: var(--sb-line-soft);
     border-color: var(--sb-line);
     color: var(--sb-ink-disabled);
 }
 
-.sus-sb-nav__search-input--invalid > #unity-text-input,
-.sus-sb-iconpicker__search-input--invalid > #unity-text-input,
-.sus-sb-ctl__text--invalid > #unity-text-input,
-.sus-sb-ctl__number--invalid > #unity-text-input,
-.sus-sb-ctl__hex--invalid > #unity-text-input,
-.sus-sb-ctl__mono--invalid > #unity-text-input,
-.sus-sb-ctl__list-row--invalid > #unity-text-input {
+.sb-nav__search-input--invalid > #unity-text-input,
+.sb-iconpicker__search-input--invalid > #unity-text-input,
+.sb-ctl__text--invalid > #unity-text-input,
+.sb-ctl__number--invalid > #unity-text-input,
+.sb-ctl__hex--invalid > #unity-text-input,
+.sb-ctl__mono--invalid > #unity-text-input,
+.sb-ctl__list-row--invalid > #unity-text-input {
     background-color: var(--sb-code);
     border-color: var(--sb-bad);
     color: var(--sb-bad);
@@ -2050,12 +2050,12 @@
  * the ONE `.unity-*` override the sheet already had before T-3354; it is kept, and now stated as
  * a deliberate exception rather than standing there as the only field anybody remembered to
  * dress. */
-.sus-sb-nav__search-input > #unity-text-input,
-.sus-sb-nav__search-input:hover > #unity-text-input,
-.sus-sb-nav__search-input:focus > #unity-text-input,
-.sus-sb-iconpicker__search-input > #unity-text-input,
-.sus-sb-iconpicker__search-input:hover > #unity-text-input,
-.sus-sb-iconpicker__search-input:focus > #unity-text-input {
+.sb-nav__search-input > #unity-text-input,
+.sb-nav__search-input:hover > #unity-text-input,
+.sb-nav__search-input:focus > #unity-text-input,
+.sb-iconpicker__search-input > #unity-text-input,
+.sb-iconpicker__search-input:hover > #unity-text-input,
+.sb-iconpicker__search-input:focus > #unity-text-input {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     padding-left: 0;
@@ -2065,37 +2065,37 @@
 
 /* -- DropdownField: field, text, arrow (4.4) -------------------------------- */
 
-.sus-sb-ctl__dropdown .unity-base-popup-field__input {
+.sb-ctl__dropdown .unity-base-popup-field__input {
     background-color: var(--sb-code);
     border-width: 1px;
     border-color: var(--sb-line);
     border-radius: var(--sb-r-sm);
 }
 
-.sus-sb-ctl__dropdown:hover .unity-base-popup-field__input {
+.sb-ctl__dropdown:hover .unity-base-popup-field__input {
     border-color: var(--sb-muted);
 }
 
-.sus-sb-ctl__dropdown:focus .unity-base-popup-field__input {
+.sb-ctl__dropdown:focus .unity-base-popup-field__input {
     border-color: var(--sb-accent);
 }
 
-.sus-sb-ctl__dropdown:disabled .unity-base-popup-field__input {
+.sb-ctl__dropdown:disabled .unity-base-popup-field__input {
     background-color: var(--sb-line-soft);
     border-color: var(--sb-line);
 }
 
-.sus-sb-ctl__dropdown .unity-base-popup-field__text {
+.sb-ctl__dropdown .unity-base-popup-field__text {
     color: var(--sb-ink);
     -unity-font-definition: var(--sb-font-ui);
     font-size: var(--sb-fs-12);
 }
 
-.sus-sb-ctl__dropdown:disabled .unity-base-popup-field__text {
+.sb-ctl__dropdown:disabled .unity-base-popup-field__text {
     color: var(--sb-ink-disabled);
 }
 
-.sus-sb-ctl__dropdown .unity-base-popup-field__arrow {
+.sb-ctl__dropdown .unity-base-popup-field__arrow {
     -unity-background-image-tint-color: var(--sb-muted);
 }
 
@@ -2106,14 +2106,14 @@
 
 /* -- Slider: tracker, dragger, the number field beside it (4.4) ------------- */
 
-.sus-sb-ctl__slider .unity-base-slider__tracker {
+.sb-ctl__slider .unity-base-slider__tracker {
     background-color: var(--sb-line);
     border-width: 0;
     border-radius: var(--sb-r-xs);
     height: 4px;
 }
 
-.sus-sb-ctl__slider .unity-base-slider__dragger {
+.sb-ctl__slider .unity-base-slider__dragger {
     background-color: var(--sb-accent);
     border-width: 0;
     border-radius: var(--sb-pill-knob);
@@ -2121,19 +2121,19 @@
     height: var(--sb-knob);
 }
 
-.sus-sb-ctl__slider:hover .unity-base-slider__dragger {
+.sb-ctl__slider:hover .unity-base-slider__dragger {
     background-color: var(--sb-ink);
 }
 
-.sus-sb-ctl__slider:disabled .unity-base-slider__tracker {
+.sb-ctl__slider:disabled .unity-base-slider__tracker {
     background-color: var(--sb-line-soft);
 }
 
-.sus-sb-ctl__slider:disabled .unity-base-slider__dragger {
+.sb-ctl__slider:disabled .unity-base-slider__dragger {
     background-color: var(--sb-ink-disabled);
 }
 
-.sus-sb-ctl__slider .unity-base-slider__dragger-border {
+.sb-ctl__slider .unity-base-slider__dragger-border {
     display: none;
 }
 
@@ -2149,8 +2149,8 @@
 
 /* role 1 -- accent: the one action a reader is meant to find */
 .sb-btn--accent,
-.sus-sb__share,
-.sus-sb-env__share {
+.sb-shell__share,
+.sb-env__share {
     height: var(--sb-h-ctl);
     border-width: 1px;
     border-radius: var(--sb-r-sm);
@@ -2161,24 +2161,24 @@
 }
 
 .sb-btn--accent:hover,
-.sus-sb__share:hover,
-.sus-sb-env__share:hover {
+.sb-shell__share:hover,
+.sb-env__share:hover {
     border-color: var(--sb-ink);
     background-color: var(--sb-ink);
     color: var(--sb-bg);
 }
 
 .sb-btn--accent:active,
-.sus-sb__share:active,
-.sus-sb-env__share:active {
+.sb-shell__share:active,
+.sb-env__share:active {
     border-color: var(--sb-accent);
     background-color: var(--sb-accent-soft);
     color: var(--sb-accent);
 }
 
 .sb-btn--accent:disabled,
-.sus-sb__share:disabled,
-.sus-sb-env__share:disabled {
+.sb-shell__share:disabled,
+.sb-env__share:disabled {
     border-color: var(--sb-line);
     background-color: var(--sb-line-soft);
     color: var(--sb-ink-disabled);
@@ -2186,9 +2186,9 @@
 
 /* role 2 -- secondary: a framed button that is not the main action */
 .sb-btn--secondary,
-.sus-sb__burger,
-.sus-sb-ctl__list-add,
-.sus-sb-ctl__iconfield {
+.sb-shell__burger,
+.sb-ctl__list-add,
+.sb-ctl__iconfield {
     border-width: 1px;
     border-radius: var(--sb-r-sm);
     border-color: var(--sb-line);
@@ -2197,26 +2197,26 @@
 }
 
 .sb-btn--secondary:hover,
-.sus-sb__burger:hover,
-.sus-sb-ctl__list-add:hover,
-.sus-sb-ctl__iconfield:hover {
+.sb-shell__burger:hover,
+.sb-ctl__list-add:hover,
+.sb-ctl__iconfield:hover {
     border-color: var(--sb-muted);
     background-color: var(--sb-line-soft);
 }
 
 .sb-btn--secondary:active,
-.sus-sb__burger:active,
-.sus-sb-ctl__list-add:active,
-.sus-sb-ctl__iconfield:active {
+.sb-shell__burger:active,
+.sb-ctl__list-add:active,
+.sb-ctl__iconfield:active {
     border-color: var(--sb-accent);
     background-color: var(--sb-accent-soft);
     color: var(--sb-accent);
 }
 
 .sb-btn--secondary:disabled,
-.sus-sb__burger:disabled,
-.sus-sb-ctl__list-add:disabled,
-.sus-sb-ctl__iconfield:disabled {
+.sb-shell__burger:disabled,
+.sb-ctl__list-add:disabled,
+.sb-ctl__iconfield:disabled {
     border-color: var(--sb-line);
     background-color: rgba(0, 0, 0, 0);
     color: var(--sb-ink-disabled);
@@ -2224,32 +2224,32 @@
 
 /* role 3 -- ghost: frameless, reads as text until pointed at */
 .sb-btn--ghost,
-.sus-sb-nav__tab,
-.sus-sb-matrix__toggle,
-.sus-sb-ctl__list-summary {
+.sb-nav__tab,
+.sb-matrix__toggle,
+.sb-ctl__list-summary {
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
     color: var(--sb-muted);
 }
 
 .sb-btn--ghost:hover,
-.sus-sb-matrix__toggle:hover,
-.sus-sb-ctl__list-summary:hover {
+.sb-matrix__toggle:hover,
+.sb-ctl__list-summary:hover {
     background-color: var(--sb-line-soft);
     color: var(--sb-ink);
 }
 
 .sb-btn--ghost:active,
-.sus-sb-matrix__toggle:active,
-.sus-sb-ctl__list-summary:active {
+.sb-matrix__toggle:active,
+.sb-ctl__list-summary:active {
     background-color: var(--sb-accent-soft);
     color: var(--sb-accent);
 }
 
 .sb-btn--ghost:disabled,
-.sus-sb-nav__tab:disabled,
-.sus-sb-matrix__toggle:disabled,
-.sus-sb-ctl__list-summary:disabled {
+.sb-nav__tab:disabled,
+.sb-matrix__toggle:disabled,
+.sb-ctl__list-summary:disabled {
     background-color: rgba(0, 0, 0, 0);
     color: var(--sb-ink-disabled);
 }
@@ -2257,24 +2257,24 @@
 /* The nav tab is a ghost button that ALSO has to show which of the two lists is open, and the
  * underline is that signal -- restated after the ghost role so the role does not quietly erase
  * it. */
-.sus-sb-nav__tab {
+.sb-nav__tab {
     border-bottom-width: 2px;
     border-bottom-color: rgba(0, 0, 0, 0);
 }
 
-.sus-sb-nav__tab:hover {
+.sb-nav__tab:hover {
     color: var(--sb-ink);
     background-color: rgba(0, 0, 0, 0);
 }
 
-.sus-sb-nav__tab--active {
+.sb-nav__tab--active {
     color: var(--sb-ink);
     border-bottom-color: var(--sb-accent);
 }
 
 /* -- zone B: the entry into zone D on a narrow shell (T-3377, D25) ---------- */
 
-.sus-sb-env__props {
+.sb-env__props {
     height: 24px;
     flex-shrink: 0;
     flex-direction: row;
@@ -2291,16 +2291,16 @@
     font-size: var(--sb-fs-11);
 }
 
-.sus-sb--narrow .sus-sb-env__props {
+.sb-shell--narrow .sb-env__props {
     display: flex;
 }
 
-.sus-sb-env__props:hover {
+.sb-env__props:hover {
     border-color: var(--sb-muted);
     background-color: var(--sb-line-soft);
 }
 
-.sus-sb--panel-open .sus-sb-env__props {
+.sb-shell--panel-open .sb-env__props {
     border-color: var(--sb-accent);
     background-color: var(--sb-accent-soft);
     color: var(--sb-accent);

@@ -67,7 +67,7 @@ namespace Sharq.Core.Editor.Tests
             control.Flip();
 
             Assert.IsTrue(_component.Disabled.Value, "prop written through TrySetValue");
-            Assert.IsTrue(control.Switch.ClassListContains("sus-sb-ctl__switch--on"), "state is a class");
+            Assert.IsTrue(control.Switch.ClassListContains("sb-ctl__switch--on"), "state is a class");
         }
 
         // ── closed sets ─────────────────────────────────────────────────
@@ -79,13 +79,13 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.AreEqual(SusControlKind.Segment, control.Kind);
             CollectionAssert.AreEqual(new[] { "sm", "md", "lg" }, control.Options);
-            Assert.IsTrue(control.Buttons[1].ClassListContains("sus-sb-ctl__seg--active"), "md is current");
+            Assert.IsTrue(control.Buttons[1].ClassListContains("sb-ctl__seg--active"), "md is current");
 
             Assert.IsTrue(control.SetFromString("lg"));
 
             Assert.AreEqual("lg", _component.Size.Value);
-            Assert.IsTrue(control.Buttons[2].ClassListContains("sus-sb-ctl__seg--active"));
-            Assert.IsFalse(control.Buttons[1].ClassListContains("sus-sb-ctl__seg--active"));
+            Assert.IsTrue(control.Buttons[2].ClassListContains("sb-ctl__seg--active"));
+            Assert.IsFalse(control.Buttons[1].ClassListContains("sb-ctl__seg--active"));
         }
 
         [Test]
@@ -202,7 +202,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreEqual(SusControlKind.Color, control.Kind);
             Assert.AreEqual(SusControlContext.StandardColorTokens.Count, control.Swatches.Count);
             // The colour is the skin's, so the swatch carries a class and no colour literal.
-            Assert.IsTrue(control.Swatches[0].ClassListContains("sus-sb-ctl__swatch--primary"));
+            Assert.IsTrue(control.Swatches[0].ClassListContains("sb-ctl__swatch--primary"));
 
             Assert.IsTrue(control.SetFromString("#00FF00FF"));
 

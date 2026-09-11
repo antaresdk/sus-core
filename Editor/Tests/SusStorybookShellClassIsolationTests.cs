@@ -34,7 +34,7 @@ namespace Sharq.Core.Editor.Tests
 
         /// <summary>
         /// The campaign's corpus, element for element: everything under the shell carrying a class
-        /// of the SHELL's own namespace (<c>sus-sb*</c>) - 517 of them on the live tree, of which
+        /// of the SHELL's own namespace (<c>sb-*</c>) - 517 of them on the live tree, of which
         /// 314 also wore a kit/core class (report ux-reviewer 2026-09-11). A component instance
         /// mounted on the stage or in the state matrix is NOT in this set: it wears the product's
         /// names, never the shell's.
@@ -45,18 +45,22 @@ namespace Sharq.Core.Editor.Tests
                 // class of its own on a SusComponent at all - the state matrix wraps each cell's
                 // instance in a box of the shell's own, and the instance inside wears the
                 // product's names only. Until T-3421 this selection had to drop every
-                // SusComponent, because sus-sb-matrix__item sat on the instance itself and every
+                // SusComponent, because sb-matrix__item sat on the instance itself and every
                 // matrix cell read as "shell chrome wearing sus-alert" (it first fired at T-3409,
                 // when the default story of an EditMode host stopped being a core fixture).
                 .Where(e => e.GetClasses().Any(c => c.StartsWith(ShellPrefix)))
                 .ToList();
 
-        private const string ShellPrefix = "sus-sb";
+        private const string ShellPrefix = "sb-";
 
-        /// <summary>A class of the product: kit (<c>sk-</c>) or core (<c>sus-</c> but not the shell's).</summary>
+        /// <summary>
+        /// A class of the product: kit (<c>sk-</c>) or core (<c>sus-</c>). Card T-3387 is what
+        /// makes this one line instead of two: while the shell was named <c>sus-sb*</c>, every
+        /// test of "is this a product class" had to carve the shell back out of the <c>sus-</c>
+        /// space by hand. With the shell on <c>sb-</c> the two namespaces no longer overlap.
+        /// </summary>
         private static bool IsProductClass(string cls) =>
-            !IsStateContractClass(cls)
-            && (cls.StartsWith("sk-") || (cls.StartsWith("sus-") && !cls.StartsWith(ShellPrefix)));
+            !IsStateContractClass(cls) && (cls.StartsWith("sk-") || cls.StartsWith("sus-"));
 
         /// <summary>
         /// Two product prefixes on a shell element are a CONTRACT, not skin: UI Toolkit has no API
@@ -124,8 +128,8 @@ namespace Sharq.Core.Editor.Tests
             // dresses a box of its OWN around it. What a buyer mounts in an application and what
             // the stand shows must carry the same class list, or the stand stops being evidence.
             //
-            // The witness that made this a card: SusStoryMatrix put sus-sb-matrix__item on the
-            // SusComponent itself, and 16 matrix cells came out as sus-alert...sus-sb-matrix__item
+            // The witness that made this a card: SusStoryMatrix put sb-matrix__item on the
+            // SusComponent itself, and 16 matrix cells came out as sus-alert...sb-matrix__item
             // (card T-3409, when the default story of an EditMode host stopped being a core
             // fixture and became a real kit component).
             using var host = new SusStorybookHost();
@@ -148,7 +152,7 @@ namespace Sharq.Core.Editor.Tests
         {
             // Not painting is only half the isolation: Unity's Default Theme must not step in
             // where sus-label used to be, otherwise the shell trades one foreign cascade for
-            // another. Colour and font come from `.sus-sb` by inheritance.
+            // another. Colour and font come from `.sb-shell` by inheritance.
             using var host = new SusStorybookHost();
             WalkedRootWith(host);
 

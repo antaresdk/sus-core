@@ -49,7 +49,7 @@ namespace Sharq.Core.Storybook.Controls
     public class SusControl : VisualElement, IDisposable
     {
         /// <summary>USS class that hides an element; the shell uses the same one.</summary>
-        public const string HiddenClass = "sus-sb-hidden";
+        public const string HiddenClass = "sb-hidden";
 
         /// <summary>Caption of a text prop that currently holds the empty string.</summary>
         public const string EmptyStringNote = "empty string · legal";
@@ -83,29 +83,29 @@ namespace Sharq.Core.Storybook.Controls
             Context = context;
             Kind = kind;
 
-            AddToClassList("sus-sb-ctl");
-            AddToClassList("sus-sb-ctl--" + kind.ToString().ToLowerInvariant());
+            AddToClassList("sb-ctl");
+            AddToClassList("sb-ctl--" + kind.ToString().ToLowerInvariant());
             name = "sus-storybook-control-" + prop.Name;
 
             var head = new VisualElement();
-            head.AddToClassList("sus-sb-ctl__head");
+            head.AddToClassList("sb-ctl__head");
 
             _name.text = prop.Name;
-            _name.AddToClassList("sus-sb-ctl__name");
+            _name.AddToClassList("sb-ctl__name");
             head.Add(_name);
 
-            _deadBadge.AddToClassList("sus-sb-ctl__badge");
-            _deadBadge.AddToClassList("sus-sb-ctl__badge--dead");
+            _deadBadge.AddToClassList("sb-ctl__badge");
+            _deadBadge.AddToClassList("sb-ctl__badge--dead");
             head.Add(_deadBadge);
 
-            _manualBadge.AddToClassList("sus-sb-ctl__badge");
-            _manualBadge.AddToClassList("sus-sb-ctl__badge--manual");
+            _manualBadge.AddToClassList("sb-ctl__badge");
+            _manualBadge.AddToClassList("sb-ctl__badge--manual");
             head.Add(_manualBadge);
 
-            _body.AddToClassList("sus-sb-ctl__body");
+            _body.AddToClassList("sb-ctl__body");
 
-            _note.AddToClassList("sus-sb-ctl__note");
-            _dependency.AddToClassList("sus-sb-ctl__dependency");
+            _note.AddToClassList("sb-ctl__note");
+            _dependency.AddToClassList("sb-ctl__dependency");
 
             Add(head);
             Add(_body);
@@ -208,7 +208,7 @@ namespace Sharq.Core.Storybook.Controls
                 IsActive = true;
                 _dependency.text = string.Empty;
                 _dependency.AddToClassList(HiddenClass);
-                RemoveFromClassList("sus-sb-ctl--inert");
+                RemoveFromClassList("sb-ctl--inert");
                 return;
             }
 
@@ -217,7 +217,7 @@ namespace Sharq.Core.Storybook.Controls
             if (!IsActive) text += " · inert while it does not hold";
             _dependency.text = text;
             _dependency.RemoveFromClassList(HiddenClass);
-            EnableInClassList("sus-sb-ctl--inert", !IsActive);
+            EnableInClassList("sb-ctl--inert", !IsActive);
         }
 
         /// <summary>Subclass hook: write the prop value into the widget.</summary>
@@ -270,9 +270,9 @@ namespace Sharq.Core.Storybook.Controls
         internal SusToggleControl(SusPropInfo prop, SusControlContext context)
             : base(prop, SusControlKind.Toggle, context)
         {
-            _switch.AddToClassList("sus-sb-ctl__switch");
+            _switch.AddToClassList("sb-ctl__switch");
             var knob = new VisualElement();
-            knob.AddToClassList("sus-sb-ctl__knob");
+            knob.AddToClassList("sb-ctl__knob");
             _switch.Add(knob);
             _switch.clicked += Flip;
             Body.Add(_switch);
@@ -290,7 +290,7 @@ namespace Sharq.Core.Storybook.Controls
         public void Flip() => Write(!Current);
 
         protected override void OnRefresh() =>
-            _switch.EnableInClassList("sus-sb-ctl__switch--on", Current);
+            _switch.EnableInClassList("sb-ctl__switch--on", Current);
 
         public override bool SetFromString(string text) =>
             bool.TryParse(text, out var b) && Write(b);
@@ -325,12 +325,12 @@ namespace Sharq.Core.Storybook.Controls
         {
             _options = options;
             var strip = new VisualElement();
-            strip.AddToClassList("sus-sb-ctl__segment");
+            strip.AddToClassList("sb-ctl__segment");
             for (int i = 0; i < options.Count; i++)
             {
                 var option = options[i];
                 var b = new Button(() => Write(option)) { text = option };
-                b.AddToClassList("sus-sb-ctl__seg");
+                b.AddToClassList("sb-ctl__seg");
                 strip.Add(b);
                 _buttons.Add(b);
             }
@@ -353,7 +353,7 @@ namespace Sharq.Core.Storybook.Controls
             var current = StringValue;
             for (int i = 0; i < _buttons.Count; i++)
             {
-                _buttons[i].EnableInClassList("sus-sb-ctl__seg--active",
+                _buttons[i].EnableInClassList("sb-ctl__seg--active",
                     string.Equals(_options[i], current, StringComparison.OrdinalIgnoreCase));
             }
         }
@@ -370,7 +370,7 @@ namespace Sharq.Core.Storybook.Controls
         {
             _options = options;
             _field = new DropdownField(new List<string>(options), 0);
-            _field.AddToClassList("sus-sb-ctl__dropdown");
+            _field.AddToClassList("sb-ctl__dropdown");
             _field.RegisterValueChangedCallback(e => Write(e.newValue));
             Body.Add(_field);
             Refresh();
@@ -409,7 +409,7 @@ namespace Sharq.Core.Storybook.Controls
         internal SusTextControl(SusPropInfo prop, SusControlContext context)
             : base(prop, SusControlKind.Text, context)
         {
-            _field.AddToClassList("sus-sb-ctl__text");
+            _field.AddToClassList("sb-ctl__text");
             _field.RegisterValueChangedCallback(e => Write(e.newValue));
             Body.Add(_field);
             Refresh();
@@ -440,8 +440,8 @@ namespace Sharq.Core.Storybook.Controls
         internal SusIconControl(SusPropInfo prop, SusControlContext context)
             : base(prop, SusControlKind.Icon, context)
         {
-            _glyph.AddToClassList("sus-sb-ctl__glyph");
-            _field.AddToClassList("sus-sb-ctl__text");
+            _glyph.AddToClassList("sb-ctl__glyph");
+            _field.AddToClassList("sb-ctl__text");
             _field.RegisterValueChangedCallback(e => Write(e.newValue));
             Body.Add(_glyph);
             Body.Add(_field);
@@ -484,11 +484,11 @@ namespace Sharq.Core.Storybook.Controls
                         prop.ValueType == typeof(short) || prop.ValueType == typeof(byte);
 
             _slider = new Slider((float)Minimum, (float)Maximum);
-            _slider.AddToClassList("sus-sb-ctl__slider");
+            _slider.AddToClassList("sb-ctl__slider");
             _slider.RegisterValueChangedCallback(e =>
                 Write(_integral ? Math.Round(e.newValue) : (double)e.newValue));
 
-            _field.AddToClassList("sus-sb-ctl__number");
+            _field.AddToClassList("sb-ctl__number");
             _field.RegisterValueChangedCallback(e =>
             {
                 if (double.TryParse(e.newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
@@ -550,7 +550,7 @@ namespace Sharq.Core.Storybook.Controls
     /// <c>Prop&lt;Color&gt;</c>: one swatch per skin token plus a free hex field.
     ///
     /// The swatch colour is NOT named in C#: each swatch carries the USS class
-    /// <c>sus-sb-ctl__swatch--&lt;token&gt;</c>, the skin paints it, and the click reads the
+    /// <c>sb-ctl__swatch--&lt;token&gt;</c>, the skin paints it, and the click reads the
     /// painted colour back through <c>resolvedStyle</c>. A skin swap therefore changes what the
     /// swatches offer, with no code change (R53/R120).
     /// </summary>
@@ -565,22 +565,22 @@ namespace Sharq.Core.Storybook.Controls
         {
             var tokens = context?.ColorTokens ?? SusControlContext.StandardColorTokens;
             var strip = new VisualElement();
-            strip.AddToClassList("sus-sb-ctl__swatches");
+            strip.AddToClassList("sb-ctl__swatches");
             for (int i = 0; i < tokens.Count; i++)
             {
                 var token = tokens[i];
                 var b = new Button();
-                b.AddToClassList("sus-sb-ctl__swatch");
-                b.AddToClassList("sus-sb-ctl__swatch--" + token);
+                b.AddToClassList("sb-ctl__swatch");
+                b.AddToClassList("sb-ctl__swatch--" + token);
                 b.clicked += () => PickToken(b, token);
                 strip.Add(b);
                 _swatches.Add(b);
             }
 
-            _hex.AddToClassList("sus-sb-ctl__hex");
+            _hex.AddToClassList("sb-ctl__hex");
             _hex.RegisterValueChangedCallback(e => SetFromString(e.newValue));
 
-            _value.AddToClassList("sus-sb-ctl__value");
+            _value.AddToClassList("sb-ctl__value");
 
             Body.Add(strip);
             Body.Add(_hex);
@@ -643,11 +643,11 @@ namespace Sharq.Core.Storybook.Controls
             ItemType = ResolveItemType(prop.ValueType);
 
             _summary = new Button(Toggle);
-            _summary.AddToClassList("sus-sb-ctl__list-summary");
+            _summary.AddToClassList("sb-ctl__list-summary");
 
-            _rows.AddToClassList("sus-sb-ctl__list");
+            _rows.AddToClassList("sb-ctl__list");
             _add = new Button(AddRow) { text = "+ row" };
-            _add.AddToClassList("sus-sb-ctl__list-add");
+            _add.AddToClassList("sb-ctl__list-add");
 
             Body.Add(_summary);
             Add(_rows);
@@ -737,7 +737,7 @@ namespace Sharq.Core.Storybook.Controls
                         ? string.Empty
                         : Convert.ToString(items[i], CultureInfo.InvariantCulture),
                 };
-                field.AddToClassList("sus-sb-ctl__list-row");
+                field.AddToClassList("sb-ctl__list-row");
                 field.RegisterValueChangedCallback(e =>
                 {
                     var next = Snapshot();
@@ -773,7 +773,7 @@ namespace Sharq.Core.Storybook.Controls
         internal SusReadOnlyControl(SusPropInfo prop, SusControlContext context)
             : base(prop, SusControlKind.ReadOnly, context)
         {
-            _value.AddToClassList("sus-sb-ctl__mono");
+            _value.AddToClassList("sb-ctl__mono");
             Body.Add(_value);
             SetNote(ReadOnlyNote);
             Refresh();

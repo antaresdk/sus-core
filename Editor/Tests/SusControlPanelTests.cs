@@ -63,7 +63,7 @@ namespace Sharq.Core.Editor.Tests
         {
             var panel = Panel(new SusIntrospectionFixture());
 
-            var groups = panel.Query<VisualElement>(className: "sus-sb-ctlpanel__group").ToList();
+            var groups = panel.Query<VisualElement>(className: "sb-ctlpanel__group").ToList();
             var names = new List<string>();
             for (int i = 0; i < groups.Count; i++) names.Add(groups[i].name);
 
@@ -143,13 +143,13 @@ namespace Sharq.Core.Editor.Tests
             var icon = panel.Find("Icon");
             Assert.IsFalse(icon.IsActive, "ContentMode is 'text', so Icon does nothing");
             StringAssert.Contains("ContentMode = icon", icon.DependencyNote);
-            Assert.IsTrue(icon.ClassListContains("sus-sb-ctl--inert"), "dimming is a class");
+            Assert.IsTrue(icon.ClassListContains("sb-ctl--inert"), "dimming is a class");
 
             // Driving the prop it depends on revives it - through the panel, as a user would.
             Assert.IsTrue(panel.Find("ContentMode").SetFromString("icon"));
 
             Assert.IsTrue(icon.IsActive);
-            Assert.IsFalse(icon.ClassListContains("sus-sb-ctl--inert"));
+            Assert.IsFalse(icon.ClassListContains("sb-ctl--inert"));
         }
 
         // ── empty panel ─────────────────────────────────────────────────
@@ -164,7 +164,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreEqual(0, panel.ControlCount);
             Assert.IsTrue(panel.IsCovered, "no props is not a hole");
 
-            var empty = panel.Q<VisualElement>(className: "sus-sb-ctlpanel__empty");
+            var empty = panel.Q<VisualElement>(className: "sb-ctlpanel__empty");
             Assert.IsNotNull(empty);
             Assert.IsFalse(empty.ClassListContains(SusControl.HiddenClass), "the empty state is shown");
         }

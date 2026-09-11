@@ -30,7 +30,7 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>
         /// Colour token names offered as swatches. Each name <c>t</c> is drawn by the USS class
-        /// <c>sus-sb-ctl__swatch--t</c>, so the swatch shows the SKIN's colour and the C# side
+        /// <c>sb-ctl__swatch--t</c>, so the swatch shows the SKIN's colour and the C# side
         /// never names a colour value (R53/R120).
         /// </summary>
         public IReadOnlyList<string> ColorTokens { get; }

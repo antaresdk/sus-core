@@ -65,14 +65,14 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "scale", "input", "shell-theme" }),
                 "skin/locale have no provider here, so they are absent, not empty (plan §4.4)");
 
-            var chips = bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList();
+            var chips = bar.Query<VisualElement>(className: "sb-env__chip").ToList();
             Assert.That(chips.Count, Is.EqualTo(6));
-            Assert.That(chips.Last().ClassListContains("sus-sb-env__chip--last"), Is.True);
-            Assert.That(chips.Last().ClassListContains("sus-sb-env__chip--shell"), Is.True,
+            Assert.That(chips.Last().ClassListContains("sb-env__chip--last"), Is.True);
+            Assert.That(chips.Last().ClassListContains("sb-env__chip--shell"), Is.True,
                 "the instrument's own switch is set apart by a rule, not by hope (T-3371, D4)");
             foreach (var chip in chips)
             {
-                Assert.That(chip.Q<Label>(className: "sus-sb-env__chip-value"), Is.Not.Null);
+                Assert.That(chip.Q<Label>(className: "sb-env__chip-value"), Is.Not.Null);
             }
         }
 
@@ -192,14 +192,14 @@ namespace Sharq.Core.Editor.Tests
             axis.Apply("light");
 
             Assert.That(axis.Current, Is.EqualTo("light"));
-            Assert.That(shell.ClassListContains("sus-sb--theme-light"), Is.True);
+            Assert.That(shell.ClassListContains("sb-shell--theme-light"), Is.True);
             Assert.That(SusThemeService.Current.Value, Is.EqualTo(SusTheme.Dark),
                 "the tool's skin is not the subject's theme — no core service may move");
             Assert.That(preview.ClassListContains("theme-light"), Is.False);
             Assert.That(shell.ClassListContains("theme-light"), Is.False);
 
             axis.Apply("dark");
-            Assert.That(shell.ClassListContains("sus-sb--theme-light"), Is.False);
+            Assert.That(shell.ClassListContains("sb-shell--theme-light"), Is.False);
         }
 
         [Test]
@@ -273,11 +273,11 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "skin", "scale", "input", "shell-theme" }),
                 "skin sits between theme and scale, exactly the mock-up chipDefs order; the shell's "
                 + "own chip stays behind all of them (T-3371, D4) — no provider gets past it");
-            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(7));
+            Assert.That(bar.Query<VisualElement>(className: "sb-env__chip").ToList().Count, Is.EqualTo(7));
 
             SusStoryEnvAxisRegistry.Unregister("skin");
             Assert.That(bar.ActiveAxes().Any(a => a.Id == "skin"), Is.False);
-            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(6));
+            Assert.That(bar.Query<VisualElement>(className: "sb-env__chip").ToList().Count, Is.EqualTo(6));
         }
 
         // ── deep-link round trip (plan §4.4: "оси среды пишутся в query отдельным префиксом") ──
@@ -334,11 +334,11 @@ namespace Sharq.Core.Editor.Tests
         {
             using var host = new SusStorybookHost();
 
-            Assert.That(host.Q<Label>(className: "sus-sb__link"), Is.Not.Null);
-            Assert.That(host.Query<Label>(className: "sus-sb__link").ToList().Count, Is.EqualTo(1),
+            Assert.That(host.Q<Label>(className: "sb-shell__link"), Is.Not.Null);
+            Assert.That(host.Query<Label>(className: "sb-shell__link").ToList().Count, Is.EqualTo(1),
                 "T-3036 must move, not duplicate, the T-3033 deep-link label");
-            Assert.That(host.Query<Button>(className: "sus-sb__share").ToList().Count, Is.EqualTo(1));
-            Assert.That(host.ZoneEnvironment.Contains(host.Q<Label>(className: "sus-sb__link")), Is.True);
+            Assert.That(host.Query<Button>(className: "sb-shell__share").ToList().Count, Is.EqualTo(1));
+            Assert.That(host.ZoneEnvironment.Contains(host.Q<Label>(className: "sb-shell__link")), Is.True);
         }
 
         [Test]

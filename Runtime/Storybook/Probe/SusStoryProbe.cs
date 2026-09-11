@@ -100,18 +100,18 @@ namespace Sharq.Core.Storybook.Probe
 
         public SusStoryProbe()
         {
-            AddToClassList("sus-sb-probe__body");
+            AddToClassList("sb-probe__body");
 
-            _strip.AddToClassList("sus-sb-probe__strip");
-            _eventsLabel.AddToClassList("sus-sb-probe__title");
-            _chips.AddToClassList("sus-sb-probe__chips");
-            _noCalls.AddToClassList("sus-sb-probe__none");
-            _unfired.AddToClassList("sus-sb-probe__unfired");
+            _strip.AddToClassList("sb-probe__strip");
+            _eventsLabel.AddToClassList("sb-probe__title");
+            _chips.AddToClassList("sb-probe__chips");
+            _noCalls.AddToClassList("sb-probe__none");
+            _unfired.AddToClassList("sb-probe__unfired");
 
-            _healthBox.AddToClassList("sus-sb-probe__status");
-            _dot.AddToClassList("sus-sb-probe__dot");
-            _health.AddToClassList("sus-sb-probe__health");
-            _frame.AddToClassList("sus-sb-probe__frame");
+            _healthBox.AddToClassList("sb-probe__status");
+            _dot.AddToClassList("sb-probe__dot");
+            _health.AddToClassList("sb-probe__health");
+            _frame.AddToClassList("sb-probe__frame");
             _healthBox.Add(_dot);
             _healthBox.Add(_health);
             _healthBox.Add(_frame);
@@ -122,7 +122,7 @@ namespace Sharq.Core.Storybook.Probe
             _strip.Add(_unfired);
             _strip.Add(_healthBox);
 
-            _anomalyList.AddToClassList("sus-sb-probe__anomalies");
+            _anomalyList.AddToClassList("sb-probe__anomalies");
 
             Add(_strip);
             Add(_anomalyList);
@@ -201,7 +201,7 @@ namespace Sharq.Core.Storybook.Probe
         public string UnfiredText => _unfired.text;
 
         /// <summary>True while the warning line is shown.</summary>
-        public bool HasUnfired => !_unfired.ClassListContains("sus-sb-hidden");
+        public bool HasUnfired => !_unfired.ClassListContains("sb-hidden");
 
         /// <summary>The "health N" text.</summary>
         public string HealthText => _health.text;
@@ -415,10 +415,10 @@ namespace Sharq.Core.Storybook.Probe
             for (int i = 0; i < recent.Count; i++)
             {
                 var chip = new Label(recent[i]);
-                chip.AddToClassList("sus-sb-probe__chip");
+                chip.AddToClassList("sb-probe__chip");
                 _chips.Add(chip);
             }
-            _noCalls.EnableInClassList("sus-sb-hidden", recent.Count > 0);
+            _noCalls.EnableInClassList("sb-hidden", recent.Count > 0);
         }
 
         void RenderUnfired()
@@ -430,7 +430,7 @@ namespace Sharq.Core.Storybook.Probe
             Writes++;
 
             _unfired.text = text;
-            _unfired.EnableInClassList("sus-sb-hidden", unfired.Count == 0);
+            _unfired.EnableInClassList("sb-hidden", unfired.Count == 0);
         }
 
         void RenderHealth()
@@ -450,8 +450,8 @@ namespace Sharq.Core.Storybook.Probe
 
             _health.text = text;
             bool bad = n > 0;
-            _dot.EnableInClassList("sus-sb-probe__dot--bad", bad);
-            _health.EnableInClassList("sus-sb-probe__health--bad", bad);
+            _dot.EnableInClassList("sb-probe__dot--bad", bad);
+            _health.EnableInClassList("sb-probe__health--bad", bad);
         }
 
         void RenderFrame()
@@ -466,8 +466,8 @@ namespace Sharq.Core.Storybook.Probe
             Writes++;
 
             _frame.text = text;
-            _frame.EnableInClassList("sus-sb-hidden", !available);
-            _frame.EnableInClassList("sus-sb-probe__frame--bad", _frameResult.IsAnomaly);
+            _frame.EnableInClassList("sb-hidden", !available);
+            _frame.EnableInClassList("sb-probe__frame--bad", _frameResult.IsAnomaly);
         }
 
         void RenderAnomalies()
@@ -481,19 +481,19 @@ namespace Sharq.Core.Storybook.Probe
             for (int i = 0; i < _anomalies.Count; i++)
             {
                 var row = new VisualElement();
-                row.AddToClassList("sus-sb-probe__anomaly");
+                row.AddToClassList("sb-probe__anomaly");
 
                 var icon = new SusIconElement("warning");
-                icon.AddToClassList("sus-sb-probe__anomaly-icon");
+                icon.AddToClassList("sb-probe__anomaly-icon");
 
                 var text = new Label(_anomalies[i]);
-                text.AddToClassList("sus-sb-probe__anomaly-text");
+                text.AddToClassList("sb-probe__anomaly-text");
 
                 row.Add(icon);
                 row.Add(text);
                 _anomalyList.Add(row);
             }
-            _anomalyList.EnableInClassList("sus-sb-hidden", _anomalies.Count == 0);
+            _anomalyList.EnableInClassList("sb-hidden", _anomalies.Count == 0);
         }
 
         public void Dispose()

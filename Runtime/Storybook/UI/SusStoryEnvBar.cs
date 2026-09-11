@@ -30,9 +30,9 @@ namespace Sharq.Core.Storybook.UI
             { "breakpoint", "density", "theme", "skin", "scale", "input", "locale", "shell-theme" };
 
         /// <summary>Shell-root class the zone D drawer opens with (card T-3377, decision D25).</summary>
-        internal const string PanelOpenClass = "sus-sb--panel-open";
+        internal const string PanelOpenClass = "sb-shell--panel-open";
 
-        const string ScrimClass = "sus-sb__scrim";
+        const string ScrimClass = "sb-shell__scrim";
 
         readonly Dictionary<string, ISusStoryEnvAxis> _builtin = new(StringComparer.Ordinal);
         readonly ScrollView _chips = new(ScrollViewMode.Horizontal);
@@ -46,9 +46,9 @@ namespace Sharq.Core.Storybook.UI
 
         public SusStoryEnvBar(VisualElement shellRoot, VisualElement previewRoot)
         {
-            AddToClassList("sus-sb-env__bar");
+            AddToClassList("sb-env__bar");
 
-            _chips.AddToClassList("sus-sb-env__chips");
+            _chips.AddToClassList("sb-env__chips");
             _chips.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
             Add(_chips);
 
@@ -64,7 +64,7 @@ namespace Sharq.Core.Storybook.UI
             // same complaint back one wave later.
             _shellRoot = shellRoot;
             _props = new Button(TogglePanel) { text = "props" };
-            _props.AddToClassList("sus-sb-env__props");
+            _props.AddToClassList("sb-env__props");
             _props.tooltip = "zone D — props panel (Esc or the scrim closes it)";
             Add(_props);
 
@@ -189,19 +189,19 @@ namespace Sharq.Core.Storybook.UI
 
             foreach (var axis in ActiveAxes())
             {
-                var chip = new VisualElement { name = "sus-sb-env-chip-" + axis.Id };
-                chip.AddToClassList("sus-sb-env__chip");
-                if (ReferenceEquals(axis, last)) chip.AddToClassList("sus-sb-env__chip--last");
+                var chip = new VisualElement { name = "sb-env-chip-" + axis.Id };
+                chip.AddToClassList("sb-env__chip");
+                if (ReferenceEquals(axis, last)) chip.AddToClassList("sb-env__chip--last");
                 // The instrument's own switch is set apart by a rule, not by hope that a reader
                 // notices two chips saying "dark" mean different things (card T-3371, D4).
                 if (string.Equals(axis.Id, "shell-theme", StringComparison.Ordinal))
-                    chip.AddToClassList("sus-sb-env__chip--shell");
+                    chip.AddToClassList("sb-env__chip--shell");
 
                 var icon = new SusIconElement(axis.Icon);
-                icon.AddToClassList("sus-sb-env__chip-icon");
+                icon.AddToClassList("sb-env__chip-icon");
 
-                var value = new Label(axis.Current) { name = "sus-sb-env-chip-value" };
-                value.AddToClassList("sus-sb-env__chip-value");
+                var value = new Label(axis.Current) { name = "sb-env-chip-value" };
+                value.AddToClassList("sb-env__chip-value");
 
                 chip.Add(icon);
                 chip.Add(value);

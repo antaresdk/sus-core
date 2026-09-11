@@ -44,7 +44,7 @@ namespace Sharq.Core.Storybook.Env
 
         /// <summary>
         /// The shell's OWN light/dark switch (card T-3371, decision D4): it puts
-        /// <c>sus-sb--theme-light</c> on the shell root, where <c>Storybook.uss</c> redefines the
+        /// <c>sb-shell--theme-light</c> on the shell root, where <c>Storybook.uss</c> redefines the
         /// thirteen <c>--sb-*</c> colour names. It touches no core service and therefore no story:
         /// that is the point of having two chips instead of one.
         ///
@@ -54,7 +54,7 @@ namespace Sharq.Core.Storybook.Env
         /// </summary>
         internal sealed class ShellThemeAxis : ISusStoryEnvAxis
         {
-            internal const string LightClass = "sus-sb--theme-light";
+            internal const string LightClass = "sb-shell--theme-light";
             static readonly string[] s_values = { "dark", "light" };
             readonly VisualElement _root;
 

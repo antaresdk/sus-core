@@ -86,33 +86,33 @@ namespace Sharq.Core.Storybook
 
         public SusStorybookHost(StyleSheet styleSheet = null)
         {
-            AddToClassList("sus-sb");
+            AddToClassList("sb-shell");
             if (styleSheet != null) styleSheets.Add(styleSheet);
 
             // ── top bar ──────────────────────────────────────────────────
             var top = new VisualElement();
-            top.AddToClassList("sus-sb__topbar");
+            top.AddToClassList("sb-shell__topbar");
 
             _burger = new Button(ToggleDrawer) { text = "≡" };
-            _burger.AddToClassList("sus-sb__burger");
+            _burger.AddToClassList("sb-shell__burger");
 
-            _crumbs.AddToClassList("sus-sb__crumbs");
+            _crumbs.AddToClassList("sb-shell__crumbs");
 
             top.Add(_burger);
             top.Add(_crumbs);
 
             // ── body: zone A + main ──────────────────────────────────────
             var body = new VisualElement();
-            body.AddToClassList("sus-sb__body");
+            body.AddToClassList("sb-shell__body");
 
-            _scrim.AddToClassList("sus-sb__scrim");
+            _scrim.AddToClassList("sb-shell__scrim");
             _scrim.RegisterCallback<PointerDownEvent>(_ => CloseDrawer());
 
             var main = new VisualElement();
-            main.AddToClassList("sus-sb-main");
+            main.AddToClassList("sb-main");
 
             var center = new VisualElement();
-            center.AddToClassList("sus-sb-center");
+            center.AddToClassList("sb-center");
 
             // Zone B — environment (plan §4.4, card T-3036): chip group left, deep-link and share
             // right. The deep-link label and the share button are the SAME instances the T-3033
@@ -120,8 +120,8 @@ namespace Sharq.Core.Storybook
             // каркасе — переиспользуй, не дублируй"). Share stops setting Button.text directly so
             // narrow mode can hide the label and keep only the icon (mock-up, card T-3036).
             _zoneEnv.name = "sus-storybook-zone-b";
-            _zoneEnv.AddToClassList("sus-sb-zone");
-            _zoneEnv.AddToClassList("sus-sb-env");
+            _zoneEnv.AddToClassList("sb-zone");
+            _zoneEnv.AddToClassList("sb-env");
 
             _env = new SusStoryEnvBar(this, _canvas);
             _env.Changed += RefreshAddress;
@@ -129,14 +129,14 @@ namespace Sharq.Core.Storybook
             // stage, so it is one of D17's named occasions for zone E (card T-3358).
             _env.Changed += () => { _probe.MarkDirty(); _sizes.Refresh(); };
 
-            _address.AddToClassList("sus-sb__link");
-            _address.AddToClassList("sus-sb-env__link");
+            _address.AddToClassList("sb-shell__link");
+            _address.AddToClassList("sb-env__link");
 
             _share = new Button(ShareCurrentAddress);
-            _share.AddToClassList("sus-sb__share");
-            _share.AddToClassList("sus-sb-env__share");
-            _shareIcon.AddToClassList("sus-sb-env__share-icon");
-            _shareLabel.AddToClassList("sus-sb-env__share-label");
+            _share.AddToClassList("sb-shell__share");
+            _share.AddToClassList("sb-env__share");
+            _shareIcon.AddToClassList("sb-env__share-icon");
+            _shareLabel.AddToClassList("sb-env__share-label");
             _share.Add(_shareIcon);
             _share.Add(_shareLabel);
 
@@ -147,14 +147,14 @@ namespace Sharq.Core.Storybook
             // Zone C — stage (card T-3038): crumbs, header, state matrix, live instance on a
             // dotted canvas, live measurements.
             _stage.name = "sus-storybook-zone-c";
-            _stage.AddToClassList("sus-sb-stage");
-            _stageCrumbs.AddToClassList("sus-sb-stage__crumbs");
-            _stageTitle.AddToClassList("sus-sb-stage__title");
-            _stagePurpose.AddToClassList("sus-sb-stage__purpose");
+            _stage.AddToClassList("sb-stage");
+            _stageCrumbs.AddToClassList("sb-stage__crumbs");
+            _stageTitle.AddToClassList("sb-stage__title");
+            _stagePurpose.AddToClassList("sb-stage__purpose");
             _liveHint.text = "live instance · driven by the props panel";
-            _liveHint.AddToClassList("sus-sb-stage__live-hint");
+            _liveHint.AddToClassList("sb-stage__live-hint");
             _canvas.name = "sus-storybook-canvas";
-            _canvas.AddToClassList("sus-sb-stage__canvas");
+            _canvas.AddToClassList("sb-stage__canvas");
             // The canvas is a cascade root of its own (card T-3400, plan D27): the stage axes must
             // be able to say "this element" and be believed. Without the declaration
             // SusThemeService.ResolveCascadeRoot answers with SusBootstrap.TokenCascadeRoot — in
@@ -165,9 +165,9 @@ namespace Sharq.Core.Storybook
             // inside the canvas, not only for the chip that was measured.
             SusThemeService.MarkScopedCascadeRoot(_canvas);
 
-            _stageEmpty.AddToClassList("sus-sb-stage__empty");
-            _stageEmptyTitle.AddToClassList("sus-sb-stage__empty-title");
-            _stageEmptyText.AddToClassList("sus-sb-stage__empty-text");
+            _stageEmpty.AddToClassList("sb-stage__empty");
+            _stageEmptyTitle.AddToClassList("sb-stage__empty-title");
+            _stageEmptyText.AddToClassList("sb-stage__empty-text");
             _stageEmpty.Add(_stageEmptyTitle);
             _stageEmpty.Add(_stageEmptyText);
 
@@ -186,15 +186,15 @@ namespace Sharq.Core.Storybook
 
             // Zone E — probe (card T-3040): event feed, health of the stage canvas, frame verdict.
             _zoneProbe.name = "sus-storybook-zone-e";
-            _zoneProbe.AddToClassList("sus-sb-zone");
-            _zoneProbe.AddToClassList("sus-sb-probe");
+            _zoneProbe.AddToClassList("sb-zone");
+            _zoneProbe.AddToClassList("sb-probe");
             _zoneProbe.Add(_probe);
             center.Add(_zoneProbe);
 
             // Zone D — the control panel, built from the mounted story (card T-3034).
             _zonePanel.name = "sus-storybook-zone-d";
-            _zonePanel.AddToClassList("sus-sb-zone");
-            _zonePanel.AddToClassList("sus-sb-panel");
+            _zonePanel.AddToClassList("sb-zone");
+            _zonePanel.AddToClassList("sb-panel");
             _zonePanel.Add(SlotHint("zone D — no story mounted"));
 
             main.Add(center);
@@ -320,7 +320,7 @@ namespace Sharq.Core.Storybook
         ///
         /// Two things this used to do and no longer does.
         ///
-        /// It used to GROW THE CANVAS (<c>sus-sb-stage__canvas--overlay</c>, min-height 120 → 350
+        /// It used to GROW THE CANVAS (<c>sb-stage__canvas--overlay</c>, min-height 120 → 350
         /// in the shell sheet): every popover, tooltip and menu opening on the stage moved the
         /// canvas and everything under it by 230 px, and closing moved it back — the single most
         /// visible source of "all the elements jump" (card T-3362). It was done deliberately, so
@@ -759,14 +759,14 @@ namespace Sharq.Core.Storybook
         // it lives in Runtime, and "state through classes" is the house rule either way.
         void SetStageEmpty(bool empty)
         {
-            _stageEmpty.EnableInClassList("sus-sb-hidden", !empty);
-            _canvas.EnableInClassList("sus-sb-hidden", empty);
-            _stageTitle.EnableInClassList("sus-sb-hidden", empty);
-            _stagePurpose.EnableInClassList("sus-sb-hidden", empty);
+            _stageEmpty.EnableInClassList("sb-hidden", !empty);
+            _canvas.EnableInClassList("sb-hidden", empty);
+            _stageTitle.EnableInClassList("sb-hidden", empty);
+            _stagePurpose.EnableInClassList("sb-hidden", empty);
             // Zone C, card T-3038.
-            _stageCrumbs.EnableInClassList("sus-sb-hidden", empty);
-            _liveHint.EnableInClassList("sus-sb-hidden", empty);
-            _sizes.EnableInClassList("sus-sb-hidden", empty);
+            _stageCrumbs.EnableInClassList("sb-hidden", empty);
+            _liveHint.EnableInClassList("sb-hidden", empty);
+            _sizes.EnableInClassList("sb-hidden", empty);
             if (empty) _matrix.Clear();
         }
 
@@ -782,9 +782,9 @@ namespace Sharq.Core.Storybook
             _shareReset = schedule.Execute(() => _shareLabel.text = ShareLabel).StartingIn(ShareFeedbackMs);
         }
 
-        void ToggleDrawer() => EnableInClassList("sus-sb--drawer-open", !ClassListContains("sus-sb--drawer-open"));
+        void ToggleDrawer() => EnableInClassList("sb-shell--drawer-open", !ClassListContains("sb-shell--drawer-open"));
 
-        void CloseDrawer() => RemoveFromClassList("sus-sb--drawer-open");
+        void CloseDrawer() => RemoveFromClassList("sb-shell--drawer-open");
 
         // Card T-3362: this handler writes NOTHING that participates in layout. It raises the
         // dirty flag of zone E and asks the size line for a re-read; the size line is what used
@@ -801,15 +801,15 @@ namespace Sharq.Core.Storybook
             float width = evt.newRect.width;
 
             bool narrow = width > 0 && width < NarrowWidth;
-            if (narrow != ClassListContains("sus-sb--narrow"))
+            if (narrow != ClassListContains("sb-shell--narrow"))
             {
-                EnableInClassList("sus-sb--narrow", narrow);
+                EnableInClassList("sb-shell--narrow", narrow);
                 if (!narrow) CloseDrawer();
             }
 
             // Zone B's deep-link only fits a host wide enough to show it without crowding the
             // chips (card T-3036, mock-up: "деролинк... только ≥1200").
-            EnableInClassList("sus-sb--wide", width >= WideWidth);
+            EnableInClassList("sb-shell--wide", width >= WideWidth);
         }
 
         void OnKeyDown(KeyDownEvent evt)
@@ -817,7 +817,7 @@ namespace Sharq.Core.Storybook
             // Ctrl+K / Cmd+K focuses the search field of zone A (mock-up "поиск стори ⌘K").
             if (evt.keyCode == UnityEngine.KeyCode.K && (evt.ctrlKey || evt.commandKey))
             {
-                if (ClassListContains("sus-sb--narrow")) EnableInClassList("sus-sb--drawer-open", true);
+                if (ClassListContains("sb-shell--narrow")) EnableInClassList("sb-shell--drawer-open", true);
                 _nav.FocusSearch();
                 evt.StopPropagation();
                 return;
@@ -837,7 +837,7 @@ namespace Sharq.Core.Storybook
         static Label SlotHint(string text)
         {
             var l = new Label(text);
-            l.AddToClassList("sus-sb-slot-hint");
+            l.AddToClassList("sb-slot-hint");
             return l;
         }
 

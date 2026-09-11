@@ -129,12 +129,12 @@ namespace Sharq.Core.Editor.Tests
                 var clear = panel.Find("ClearIcon");
                 Assert.That(clear.IsActive, Is.False);
                 Assert.That(clear.DependencyNote, Does.Contain("Clearable or PersistentClear"));
-                Assert.That(clear.ClassListContains("sus-sb-ctl--inert"), Is.True);
+                Assert.That(clear.ClassListContains("sb-ctl--inert"), Is.True);
 
                 // Driving one member of the OR-group through the panel revives the row.
                 Assert.That(panel.Find("Clearable").SetFromString("true"), Is.True);
                 Assert.That(clear.IsActive, Is.True);
-                Assert.That(clear.ClassListContains("sus-sb-ctl--inert"), Is.False);
+                Assert.That(clear.ClassListContains("sb-ctl--inert"), Is.False);
 
                 var icon = panel.Find("Icon");
                 Assert.That(icon.IsActive, Is.True, "no portrait yet");
