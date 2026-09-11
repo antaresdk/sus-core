@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -406,6 +407,263 @@ namespace Sharq.Core.Runtime.Tests
             StringAssert.Contains("\"ok\":true", json);
             StringAssert.Contains("\"mode\":\"scrollTo\"", json);
             Assert.Greater(sv.scrollOffset.y, 100f);
+        }
+    }
+
+    /// <summary>
+    /// PlayMode: the geometry vocabulary (T-3474). Before it the detector knew one question --
+    /// "is a visible SusComponent 0x0?" -- and printed "0 anomalies" over the owner's frame where
+    /// a table icon hung out of its row and a progress bar was cut by its column. Every class
+    /// below is planted with a positive case AND a negative control, because a detector that
+    /// fires on healthy layout is the same lie in the other direction.
+    /// </summary>
+    public class SusUiProbeGeometryPlaymodeTests : UIDocumentTestHelper
+    {
+        static VisualElement Box(string name, float w, float h)
+        {
+            var el = new VisualElement { name = name };
+            el.style.position = Position.Absolute;
+            el.style.left = 0;
+            el.style.top = 0;
+            el.style.width = w;
+            el.style.height = h;
+            return el;
+        }
+
+        static VisualElement Child(string name, float w, float h)
+        {
+            var el = new VisualElement { name = name };
+            el.style.width = w;
+            el.style.height = h;
+            el.style.minWidth = w;
+            el.style.minHeight = h;
+            el.style.flexShrink = 0;
+            return el;
+        }
+
+        [UnityTest]
+        public IEnumerator OutOfBounds_ChildTallerThanRow_IsNamedWithPixels()
+        {
+            // The owner's defect in miniature: a 64px glyph inside a 40px row.
+            var row = Box("row", 200f, 40f);
+            row.Add(Child("glyph", 64f, 64f));
+            Root.Add(row);
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains(SusUiProbe.ClassOutOfBounds, json);
+            StringAssert.Contains("#glyph", json);
+            StringAssert.Contains("24px", json);
+            StringAssert.Contains("bottom", json);
+        }
+
+        [UnityTest]
+        public IEnumerator OutOfBounds_ChildFitsRow_NoAnomaly()
+        {
+            var row = Box("row-ok", 200f, 40f);
+            row.Add(Child("glyph-ok", 24f, 24f));
+            Root.Add(row);
+            yield return WaitFrames(3);
+
+            var anomalies = SusUiProbe.GetAnomalies(Root);
+
+            CollectionAssert.IsEmpty(anomalies);
+        }
+
+        [UnityTest]
+        public IEnumerator Clipped_ParentHidesOverflow_IsNamedClipped()
+        {
+            var cell = Box("cell", 120f, 32f);
+            cell.style.overflow = Overflow.Hidden;
+            cell.Add(Child("bar", 200f, 20f));
+            Root.Add(cell);
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains(SusUiProbe.ClassClipped, json);
+            StringAssert.Contains("#bar", json);
+            StringAssert.Contains("80px", json);
+            StringAssert.Contains("right", json);
+        }
+
+        [UnityTest]
+        public IEnumerator Clipped_ContentFitsClippingParent_NoAnomaly()
+        {
+            var cell = Box("cell-ok", 120f, 32f);
+            cell.style.overflow = Overflow.Hidden;
+            cell.Add(Child("bar-ok", 100f, 20f));
+            Root.Add(cell);
+            yield return WaitFrames(3);
+
+            var anomalies = SusUiProbe.GetAnomalies(Root);
+
+            CollectionAssert.IsEmpty(anomalies);
+        }
+
+        [UnityTest]
+        public IEnumerator Overlap_NegativeMarginSiblings_IsNamedWithPixels()
+        {
+            var row = Box("overlap-row", 300f, 40f);
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(Child("left", 100f, 20f));
+            var right = Child("right", 100f, 20f);
+            right.style.marginLeft = -40f;
+            row.Add(right);
+            Root.Add(row);
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains(SusUiProbe.ClassOverlap, json);
+            StringAssert.Contains("#left", json);
+            StringAssert.Contains("#right", json);
+            StringAssert.Contains("40x20px", json);
+        }
+
+        [UnityTest]
+        public IEnumerator Overlap_PlainRow_NoAnomaly()
+        {
+            var row = Box("row-plain", 300f, 40f);
+            row.style.flexDirection = FlexDirection.Row;
+            row.Add(Child("a", 100f, 20f));
+            row.Add(Child("b", 100f, 20f));
+            Root.Add(row);
+            yield return WaitFrames(3);
+
+            var anomalies = SusUiProbe.GetAnomalies(Root);
+
+            CollectionAssert.IsEmpty(anomalies);
+        }
+
+        [UnityTest]
+        public IEnumerator OffCanvas_ElementParkedOutsidePanel_IsNamed()
+        {
+            var stray = Box("stray", 40f, 40f);
+            stray.style.left = -4000f;
+            stray.style.top = -4000f;
+            Root.Add(stray);
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains(SusUiProbe.ClassOffCanvas, json);
+            StringAssert.Contains("#stray", json);
+        }
+
+        [UnityTest]
+        public IEnumerator OffCanvas_ElementInsidePanel_NoAnomaly()
+        {
+            Root.Add(Box("home", 40f, 40f));
+            yield return WaitFrames(3);
+
+            var anomalies = SusUiProbe.GetAnomalies(Root);
+
+            CollectionAssert.IsEmpty(anomalies);
+        }
+
+        [UnityTest]
+        public IEnumerator OverlayOnAbsolute_IsExemptWithReason_NotAnomaly()
+        {
+            // An overlay leaving its host is the legitimate case the card asks to DECLARE,
+            // not to pass over in silence: it must still be measured and still be printed.
+            var host = Box("overlay-host", 80f, 24f);
+            var pop = Child("popup", 200f, 120f);
+            pop.style.position = Position.Absolute;
+            pop.style.left = 0;
+            pop.style.top = 24f;
+            host.Add(pop);
+            Root.Add(host);
+            yield return WaitFrames(3);
+
+            var exempt = new List<string>();
+            var anomalies = SusUiProbe.GetAnomalies(Root, exempt);
+
+            CollectionAssert.IsEmpty(anomalies);
+            Assert.IsTrue(exempt.Exists(l => l.Contains("#popup") && l.Contains("absolute")),
+                "overlay must be reported as exempt WITH a reason, not silently dropped: "
+                + string.Join(" | ", exempt));
+        }
+
+        [UnityTest]
+        public IEnumerator DeclaredExemptClass_MovesFindingToExemptList()
+        {
+            var row = Box("declared-row", 200f, 40f);
+            var glyph = Child("declared-glyph", 64f, 64f);
+            glyph.AddToClassList("sus-anomaly-ok");
+            row.Add(glyph);
+            Root.Add(row);
+            yield return WaitFrames(3);
+
+            var exempt = new List<string>();
+            var anomalies = SusUiProbe.GetAnomalies(Root, exempt);
+
+            CollectionAssert.IsEmpty(anomalies);
+            Assert.IsTrue(exempt.Exists(l => l.Contains("#declared-glyph") && l.Contains("sus-anomaly-ok")),
+                "declared exemption must carry its reason into the exempt list: "
+                + string.Join(" | ", exempt));
+        }
+
+        [UnityTest]
+        public IEnumerator ScrolledContent_IsNotAnAnomaly()
+        {
+            var sv = new ScrollView { name = "probe-scroll" };
+            sv.style.position = Position.Absolute;
+            sv.style.left = 0;
+            sv.style.top = 0;
+            sv.style.width = 200f;
+            sv.style.height = 100f;
+            for (int i = 0; i < 20; i++)
+                sv.Add(Child("row-" + i, 180f, 30f));
+            Root.Add(sv);
+            yield return WaitFrames(4);
+
+            var anomalies = SusUiProbe.GetAnomalies(Root);
+
+            CollectionAssert.IsEmpty(anomalies);
+        }
+
+        [UnityTest]
+        public IEnumerator HealthJson_PrintsTheVocabularyItAsked()
+        {
+            Root.Add(Box("plain", 40f, 40f));
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains("\"vocabulary\"", json);
+            foreach (var cls in SusUiProbe.AnomalyClasses)
+                StringAssert.Contains(cls, json);
+        }
+
+        [UnityTest]
+        public IEnumerator TableRowsUnderClosedComposite_AreVisited()
+        {
+            // T-2849 parity: a MultiColumnListView/ListView reports childCount == 0, so the old
+            // Walk never reached a single table row -- the second reason the owner's frame said
+            // "0 anomalies". A defect planted inside such a composite must now be named.
+            var list = new ListView { name = "closed-composite" };
+            list.style.position = Position.Absolute;
+            list.style.left = 0;
+            list.style.top = 0;
+            list.style.width = 300f;
+            list.style.height = 200f;
+            Root.Add(list);
+            yield return WaitFrames(2);
+
+            var host = list.hierarchy.childCount > 0 ? list.hierarchy[0] : null;
+            Assert.IsNotNull(host, "ListView must expose a physical child to host the planted row");
+            Assert.AreEqual(0, list.childCount, "fixture is only meaningful while the logical view is empty");
+
+            var row = Box("planted-row", 200f, 40f);
+            row.Add(Child("planted-glyph", 64f, 64f));
+            host.hierarchy.Add(row);
+            yield return WaitFrames(3);
+
+            var json = SusUiProbe.GetHealthJson(Root);
+
+            StringAssert.Contains("#planted-glyph", json);
         }
     }
 }

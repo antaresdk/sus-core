@@ -165,12 +165,13 @@ namespace Sharq.Core.Diagnostics
 
         // ── Health ──────────────────────────────────────────────
 
-        /// <summary>Counts + anomalies (visible-but-zero-size SusComponents) as JSON.</summary>
+        /// <summary>Counts + anomalies (the whole class vocabulary, see <see cref="AnomalyClasses"/>) as JSON.</summary>
         public static string GetHealthJson(VisualElement root, bool emitToConsole = false)
         {
             int elements = 0, components = 0, children = 0, maxDepth = 0;
             var anomalies = new List<string>();
-            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies);
+            var exempt = new List<string>();
+            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies, exempt);
 
             var sb = new StringBuilder();
             sb.Append('{');
@@ -183,6 +184,25 @@ namespace Sharq.Core.Diagnostics
             {
                 if (i > 0) sb.Append(',');
                 sb.Append(Q(anomalies[i]));
+            }
+            sb.Append("],");
+            // T-3474: the classes the detector KNOWS, printed next to the findings. A reader who
+            // sees `"anomalies":[]` next to this list knows which questions were actually asked --
+            // "0 anomalies" stops meaning "everything is fine" and starts meaning "none of these".
+            sb.Append("\"vocabulary\":[");
+            for (int i = 0; i < AnomalyClasses.Length; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append(Q(AnomalyClasses[i]));
+            }
+            sb.Append("],");
+            // Legitimate geometry declared by DATA (absolute overlay, scroll content, an explicit
+            // `sus-anomaly-ok` class) is listed with its reason, not swallowed in silence.
+            sb.Append("\"exempt\":[");
+            for (int i = 0; i < exempt.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append(Q(exempt[i]));
             }
             sb.Append("]}");
             var json = sb.ToString();
@@ -197,15 +217,23 @@ namespace Sharq.Core.Diagnostics
         /// parser away from disagreeing with <c>sus_ui_health</c> about the same tree.
         /// </summary>
         public static IReadOnlyList<string> GetAnomalies(VisualElement root)
+            => GetAnomalies(root, null);
+
+        /// <summary>
+        /// Anomalies plus the legitimate-geometry lines (<paramref name="exempt"/>) that the
+        /// detector measured and then spared, each carrying the reason it was spared.
+        /// </summary>
+        public static IReadOnlyList<string> GetAnomalies(VisualElement root, List<string> exempt)
         {
             int elements = 0, components = 0, children = 0, maxDepth = 0;
             var anomalies = new List<string>();
-            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies);
+            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies, exempt);
             return anomalies;
         }
 
         private static void Walk(VisualElement el, int depth,
-            ref int elements, ref int components, ref int children, ref int maxDepth, List<string> anomalies)
+            ref int elements, ref int components, ref int children, ref int maxDepth,
+            List<string> anomalies, List<string> exempt)
         {
             if (el == null) return;
             elements++;
@@ -214,11 +242,22 @@ namespace Sharq.Core.Diagnostics
             {
                 components++;
                 if (IsVisibleZeroSizeAnomaly(el))
-                    anomalies.Add($"{el.GetType().Name}{(string.IsNullOrEmpty(el.name) ? string.Empty : " #" + el.name)}: visible but zero-size");
+                    Add(anomalies, $"{ClassZeroSize} {Addr(el)}: visible but zero-size");
             }
+
+            CheckGeometry(el, anomalies, exempt);
+            CheckOverlap(el, anomalies, exempt);
+
             children += el.childCount;
-            foreach (var child in el.Children())
-                Walk(child, depth + 1, ref elements, ref components, ref children, ref maxDepth, anomalies);
+            // T-3474 / T-2849: the LOGICAL view of a "closed" composite (MultiColumnListView,
+            // ListView, ScrollView) is empty -- walking only `Children()` made every table row and
+            // every list item invisible to this detector. That is the second reason the owner's
+            // frame printed "0 anomalies" next to an icon spilling out of a row: the row was never
+            // visited at all. Same fallback rule as AppendNode, so tree and health agree.
+            var useHierarchy = el.childCount == 0 && el.hierarchy.childCount > 0;
+            var kids = useHierarchy ? el.hierarchy.Children() : el.Children();
+            foreach (var child in kids)
+                Walk(child, depth + 1, ref elements, ref components, ref children, ref maxDepth, anomalies, exempt);
         }
 
         /// <summary>
@@ -227,22 +266,22 @@ namespace Sharq.Core.Diagnostics
         /// Structurally collapsed = decorative Ignore picker, self/ancestor display:none,
         /// self/ancestor invisible, or ancestor with zero/NaN bounds (closed popup host,
         /// empty clear slot, idle loader, layout-not-ready chrome).
-        /// NaN bounds mean layout not computed yet — not an actionable anomaly.
+        /// NaN bounds mean layout not computed yet -- not an actionable anomaly.
         /// </summary>
         private static bool IsVisibleZeroSizeAnomaly(VisualElement el)
         {
             if (el == null || el.panel == null) return false;
             if (!el.visible) return false;
             if (el.resolvedStyle.display == DisplayStyle.None) return false;
-            // Decorative faces (icons inside chrome) are not layout defects — same as BoundsAudit.
+            // Decorative faces (icons inside chrome) are not layout defects -- same as BoundsAudit.
             if (el.pickingMode == PickingMode.Ignore) return false;
 
             var wb = el.worldBound;
-            // Layout pending / indeterminate — do not treat as zero-size defect.
+            // Layout pending / indeterminate -- do not treat as zero-size defect.
             if (float.IsNaN(wb.width) || float.IsNaN(wb.height)) return false;
             if (wb.width > 0 || wb.height > 0) return false;
 
-            // Ancestor collapsed or not laid out → descendant 0×0 is expected.
+            // Ancestor collapsed or not laid out -> descendant 0x0 is expected.
             for (var p = el.parent; p != null; p = p.parent)
             {
                 if (!p.visible) return false;
@@ -253,6 +292,257 @@ namespace Sharq.Core.Diagnostics
             }
 
             return true;
+        }
+
+        // -- Geometry anomaly vocabulary (T-3474) ----------------
+        //
+        // Before this block the detector knew ONE question -- "is a visible SusComponent 0x0?" --
+        // and the storybook health strip printed its answer as "0 anomalies". A reader reads that
+        // line as "the screen is fine"; it only ever meant "nothing collapsed". The owner's frame
+        // of kit/data/table-cells is the proof: a 64px icon hanging out of a 40px row and a
+        // progress bar cut by its column, both under a green "0 anomalies". Both are geometry,
+        // and geometry was outside the vocabulary. Each class below has a name that appears
+        // verbatim at the head of the health line, a threshold in DATA (the static fields below),
+        // and a pixel count with the address of the element -- so the line answers what, where
+        // and how much, not just how many.
+
+        /// <summary>Visible SusComponent laid out to 0x0.</summary>
+        public const string ClassZeroSize = "zero-size";
+        /// <summary>Element sticks out of the box that is supposed to hold it (parent does not clip).</summary>
+        public const string ClassOutOfBounds = "out-of-bounds";
+        /// <summary>Element is cut by its container (parent clips, element is larger).</summary>
+        public const string ClassClipped = "clipped";
+        /// <summary>Two visible in-flow siblings cover each other.</summary>
+        public const string ClassOverlap = "overlap";
+        /// <summary>Element lies entirely outside the panel it is attached to.</summary>
+        public const string ClassOffCanvas = "off-canvas";
+
+        /// <summary>Every class this detector can name -- printed next to the findings.</summary>
+        public static readonly string[] AnomalyClasses =
+        {
+            ClassZeroSize, ClassOutOfBounds, ClassClipped, ClassOverlap, ClassOffCanvas,
+        };
+
+        /// <summary>Threshold in data: below this the finding is rounding, not a defect.</summary>
+        public static float OutOfBoundsMinPx = 2f;
+        /// <inheritdoc cref="OutOfBoundsMinPx"/>
+        public static float ClippedMinPx = 2f;
+        /// <inheritdoc cref="OutOfBoundsMinPx"/>
+        public static float OverlapMinPx = 2f;
+        /// <summary>Stop after this many findings -- a broken layout must not flood the strip.</summary>
+        public static int MaxAnomalies = 60;
+        /// <summary>Parents with more children than this are skipped by the O(n^2) overlap pass.</summary>
+        public static int OverlapMaxSiblings = 40;
+
+        /// <summary>
+        /// USS class -> why geometry under it is legitimate. A host declares its own exceptions
+        /// HERE (data with a reason), and the probe still measures them and still prints them --
+        /// into the `exempt` list instead of `anomalies`. Silence is never an exemption.
+        /// </summary>
+        public static readonly Dictionary<string, string> ExemptClasses = new()
+        {
+            ["sus-anomaly-ok"] = "declared legitimate by the author (class sus-anomaly-ok)",
+        };
+
+        /// <summary>Attached, visible, displayed, finite and non-empty -- worth measuring.</summary>
+        static bool IsLaidOut(VisualElement el)
+        {
+            if (el == null || el.panel == null) return false;
+            if (!el.visible) return false;
+            if (el.resolvedStyle.display == DisplayStyle.None) return false;
+            var r = el.worldBound;
+            if (!IsFinite(r.width) || !IsFinite(r.height)) return false;
+            return r.width > 0f && r.height > 0f;
+        }
+
+        static bool IsAbsolute(VisualElement el)
+            => el != null && el.resolvedStyle.position == Position.Absolute;
+
+        /// <summary>
+        /// A scroller box: content legitimately larger than its viewport is what scrolling IS,
+        /// and a row scrolled past the edge is legitimately cut. Never a defect.
+        /// </summary>
+        static bool IsScrollBox(VisualElement el)
+        {
+            if (el == null) return false;
+            if (el is ScrollView || el is Scroller) return true;
+            return el.ClassListContains("unity-scroll-view__content-viewport")
+                || el.ClassListContains("unity-scroll-view__content-container")
+                || el.ClassListContains("unity-scroll-view__content-and-vertical-scroll-container")
+                || el.ClassListContains("unity-scroller")
+                || el.ClassListContains("unity-collection-view__virtual-scrolling-container");
+        }
+
+        static bool IsInsideScroll(VisualElement el)
+        {
+            for (var p = el; p != null; p = p.hierarchy.parent)
+                if (IsScrollBox(p)) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Declared reason this finding is legitimate, or null when it is a defect.
+        /// <paramref name="absoluteIsLegit"/> is true for the parent-box classes -- an overlay on
+        /// `position:absolute` leaves its host on purpose -- and false for off-canvas, where
+        /// landing outside the panel entirely is a defect no matter how it was positioned.
+        /// </summary>
+        static string ExemptReason(VisualElement el, VisualElement parent, bool absoluteIsLegit = true)
+        {
+            for (var p = el; p != null; p = p.hierarchy.parent)
+            {
+                foreach (var kv in ExemptClasses)
+                    if (p.ClassListContains(kv.Key))
+                        return kv.Value;
+            }
+            if (absoluteIsLegit && IsAbsolute(el))
+                return "position:absolute -- an overlay leaves its host on purpose";
+            if (IsScrollBox(el) || IsScrollBox(parent))
+                return "scroll content -- larger than the viewport by design";
+            return null;
+        }
+
+        /// <summary>
+        /// Does <paramref name="el"/> cut what sticks out of it? `overflow` is not on every Unity
+        /// version's IResolvedStyle, so it is read reflectively once and cached; when the property
+        /// is missing the detector degrades to naming everything out-of-bounds rather than going
+        /// quiet.
+        /// </summary>
+        static bool ClipsContent(VisualElement el)
+        {
+            if (el == null) return false;
+            if (!_overflowProbed)
+            {
+                _overflowProbed = true;
+                _overflowProp = typeof(IResolvedStyle).GetProperty("overflow");
+            }
+            if (_overflowProp == null) return false;
+            try
+            {
+                var v = _overflowProp.GetValue(el.resolvedStyle);
+                return v != null && string.Equals(v.ToString(), "Hidden", System.StringComparison.Ordinal);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static bool _overflowProbed;
+        static PropertyInfo _overflowProp;
+
+        /// <summary>How far <paramref name="inner"/> escapes <paramref name="outer"/>, and where.</summary>
+        static float EscapeOf(Rect inner, Rect outer, out string side)
+        {
+            var left = outer.xMin - inner.xMin;
+            var top = outer.yMin - inner.yMin;
+            var right = inner.xMax - outer.xMax;
+            var bottom = inner.yMax - outer.yMax;
+            var worst = left; side = "left";
+            if (top > worst) { worst = top; side = "top"; }
+            if (right > worst) { worst = right; side = "right"; }
+            if (bottom > worst) { worst = bottom; side = "bottom"; }
+            return worst;
+        }
+
+        /// <summary>`SusIcon #icon` / `VisualElement .sus-table__cell` -- findable in the tree dump.</summary>
+        static string Addr(VisualElement el)
+        {
+            if (el == null) return "<null>";
+            var t = el.GetType().Name;
+            if (!string.IsNullOrEmpty(el.name)) return t + " #" + el.name;
+            string first = null;
+            foreach (var c in el.GetClasses())
+            {
+                if (string.IsNullOrEmpty(c)) continue;
+                first ??= c;
+                if (!c.StartsWith("unity-", System.StringComparison.Ordinal))
+                    return t + " ." + c;
+            }
+            return first == null ? t : t + " ." + first;
+        }
+
+        static string Px(float v)
+            => Mathf.RoundToInt(v).ToString(CultureInfo.InvariantCulture);
+
+        static string Box(Rect r)
+            => Px(r.width) + "x" + Px(r.height);
+
+        static void Add(List<string> sink, string line)
+        {
+            if (sink == null) return;
+            if (sink.Count >= MaxAnomalies) return;
+            sink.Add(line);
+        }
+
+        /// <summary>out-of-bounds / clipped / off-canvas for one element against the box that holds it.</summary>
+        static void CheckGeometry(VisualElement el, List<string> anomalies, List<string> exempt)
+        {
+            if (!IsLaidOut(el)) return;
+
+            var parent = el.hierarchy.parent;
+            if (parent != null && IsLaidOut(parent))
+            {
+                var er = el.worldBound;
+                var pr = parent.worldBound;
+                var escape = EscapeOf(er, pr, out var side);
+                var clips = ClipsContent(parent);
+                var cls = clips ? ClassClipped : ClassOutOfBounds;
+                var min = clips ? ClippedMinPx : OutOfBoundsMinPx;
+                if (escape >= min)
+                {
+                    var verb = clips ? "cut by" : "sticks out of";
+                    var line = $"{cls} {Addr(el)}: {verb} {Addr(parent)} by {Px(escape)}px {side} ({Box(er)} in {Box(pr)})";
+                    var reason = ExemptReason(el, parent);
+                    if (reason != null) Add(exempt, line + " -- " + reason);
+                    else Add(anomalies, line);
+                }
+            }
+
+            var canvas = el.panel?.visualTree;
+            if (canvas != null && !ReferenceEquals(canvas, el) && IsLaidOut(canvas))
+            {
+                var er = el.worldBound;
+                var cr = canvas.worldBound;
+                if (!er.Overlaps(cr))
+                {
+                    var line = $"{ClassOffCanvas} {Addr(el)}: {Box(er)} at ({Px(er.x)},{Px(er.y)}) lies outside the panel {Box(cr)}";
+                    var reason = ExemptReason(el, null, absoluteIsLegit: false)
+                        ?? (IsInsideScroll(el) ? "scrolled out of view" : null);
+                    if (reason != null) Add(exempt, line + " -- " + reason);
+                    else Add(anomalies, line);
+                }
+            }
+        }
+
+        /// <summary>Two in-flow siblings covering each other -- a flex row never does that by accident.</summary>
+        static void CheckOverlap(VisualElement parent, List<string> anomalies, List<string> exempt)
+        {
+            if (parent == null || parent.hierarchy.childCount < 2) return;
+            if (parent.hierarchy.childCount > OverlapMaxSiblings) return;
+
+            List<VisualElement> kids = null;
+            foreach (var c in parent.hierarchy.Children())
+            {
+                if (!IsLaidOut(c)) continue;
+                if (IsAbsolute(c) || IsScrollBox(c)) continue;
+                (kids ??= new List<VisualElement>()).Add(c);
+            }
+            if (kids == null || kids.Count < 2) return;
+
+            for (int i = 0; i < kids.Count; i++)
+            for (int j = i + 1; j < kids.Count; j++)
+            {
+                var a = kids[i].worldBound;
+                var b = kids[j].worldBound;
+                var w = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin);
+                var h = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin);
+                if (w < OverlapMinPx || h < OverlapMinPx) continue;
+
+                var line = $"{ClassOverlap} {Addr(kids[i])} x {Addr(kids[j])}: {Px(w)}x{Px(h)}px inside {Addr(parent)}";
+                var reason = ExemptReason(kids[i], parent) ?? ExemptReason(kids[j], parent);
+                if (reason != null) Add(exempt, line + " -- " + reason);
+                else Add(anomalies, line);
+            }
         }
 
         // ── Scroll (synthetic UX probe) ─────────────────────────
