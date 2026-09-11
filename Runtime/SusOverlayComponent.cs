@@ -337,8 +337,34 @@ namespace Sharq.Core
                     _focusReturn = focused;
             }
 
+            ArmFocusEnter();
+        }
+
+        /// <summary>
+        /// Arms the deferred initial focus. A component whose point of show runs while it is still
+        /// DETACHED (a drawer opened by Model=true before it is added to a panel) cannot use the
+        /// scheduler — the scheduler is panel-bound and the item would never tick — so the arming
+        /// waits for the attach instead.
+        /// </summary>
+        private void ArmFocusEnter()
+        {
             _focusEnter?.Pause();
+            _focusEnter = null;
+
+            if (panel == null)
+            {
+                UnregisterCallback<AttachToPanelEvent>(OnAttachArmFocus);
+                RegisterCallback<AttachToPanelEvent>(OnAttachArmFocus);
+                return;
+            }
+
             _focusEnter = schedule.Execute(FocusFirstInside).ExecuteLater(0);
+        }
+
+        private void OnAttachArmFocus(AttachToPanelEvent _)
+        {
+            UnregisterCallback<AttachToPanelEvent>(OnAttachArmFocus);
+            if (_focusSession) ArmFocusEnter();
         }
 
         /// <summary>
@@ -350,6 +376,7 @@ namespace Sharq.Core
             if (!_focusSession) return;
             _focusSession = false;
             ActiveFocusSessions.Remove(this);
+            UnregisterCallback<AttachToPanelEvent>(OnAttachArmFocus);
             _focusEnter?.Pause();
             _focusEnter = null;
             _focusReturn = null;
@@ -379,6 +406,7 @@ namespace Sharq.Core
             _focusSession = false;
             ActiveFocusSessions.Remove(this);
 
+            UnregisterCallback<AttachToPanelEvent>(OnAttachArmFocus);
             _focusEnter?.Pause();
             _focusEnter = null;
 
