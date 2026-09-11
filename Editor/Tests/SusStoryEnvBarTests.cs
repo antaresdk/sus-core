@@ -32,8 +32,9 @@ namespace Sharq.Core.Editor.Tests
             SusStoryEnvAxisRegistry.Unregister("skin");
             SusStoryEnvAxisRegistry.Unregister("locale");
 
-            // Density/theme/scale/input are process-global (plan §4.4: theme repaints the whole
-            // shell, not one story) — a leftover from one test would otherwise leak into the next.
+            // Density/theme/scale/input are process-global PROPS — what each one paints is scoped
+            // to the stage subtree since D27 (card T-3394), but the reactive prop behind it is one
+            // per process, so a leftover from one test would otherwise leak into the next.
             var scrap = new VisualElement();
             SusThemeService.Instance.SetTheme(scrap, SusTheme.Dark);
             SusDensityService.Instance.SetDensity(scrap, SusDensity.Default);
@@ -56,12 +57,19 @@ namespace Sharq.Core.Editor.Tests
             using var bar = NewBar(out _, out _);
 
             var ids = bar.ActiveAxes().Select(a => a.Id).ToList();
-            Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "scale", "input" }),
+            // SIX built-ins, not the five of card T-3036: card T-3371 / decision D27 split the one
+            // "theme" chip in two, because a single chip repainted the tool and the subject at once
+            // — a dark screenshot of a component was then taken in a different viewer than the
+            // light one. "shell-theme" is last on purpose (D4): every chip before it says what the
+            // SUBJECT looks like, the last one what the INSTRUMENT looks like.
+            Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "scale", "input", "shell-theme" }),
                 "skin/locale have no provider here, so they are absent, not empty (plan §4.4)");
 
             var chips = bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList();
-            Assert.That(chips.Count, Is.EqualTo(5));
+            Assert.That(chips.Count, Is.EqualTo(6));
             Assert.That(chips.Last().ClassListContains("sus-sb-env__chip--last"), Is.True);
+            Assert.That(chips.Last().ClassListContains("sus-sb-env__chip--shell"), Is.True,
+                "the instrument's own switch is set apart by a rule, not by hope (T-3371, D4)");
             foreach (var chip in chips)
             {
                 Assert.That(chip.Q<Label>(className: "sus-sb-env__chip-value"), Is.Not.Null);
@@ -107,8 +115,17 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(preview.ClassListContains("density-compact"), Is.False);
         }
 
+        /// <summary>
+        /// Card T-3394. This test used to be named "...repaints_the_whole_shell_root_not_the_preview"
+        /// and asserted the OPPOSITE. That expectation died with decision D27 of plan
+        /// ARCH-20260911-STORYBOOK-SHELL.md: while the theme chip painted the shell, one click took
+        /// zone A's background from 0.078 to 0.922 and the canvas to 0.961, so the dark frame of a
+        /// component was shot in a DIFFERENT viewer than the light frame and the difference could
+        /// no longer be attributed to the component at all. Since T-3371 the tool has its own
+        /// switch — <c>shell-theme</c>, covered below — and this one is the SUBJECT's switch.
+        /// </summary>
         [Test]
-        public void Theme_axis_repaints_the_whole_shell_root_not_the_preview()
+        public void Theme_axis_repaints_the_stage_subtree_not_the_shell_root()
         {
             using var bar = NewBar(out var shell, out var preview);
             var axis = bar.ActiveAxes().First(a => a.Id == "theme");
@@ -120,9 +137,69 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(axis.Current, Is.EqualTo("light"));
             Assert.That(axis.Icon, Is.EqualTo("sun"));
             Assert.That(SusThemeService.Current.Value, Is.EqualTo(SusTheme.Light));
-            Assert.That(shell.ClassListContains("theme-light"), Is.True,
-                "theme is how the TOOL reads (mock-up data-theme on the whole shell), not a per-story prop");
+            Assert.That(preview.ClassListContains("theme-light"), Is.True,
+                "the chip changes the SUBJECT, and the stage canvas is the subject's root (D27)");
+            Assert.That(shell.ClassListContains("theme-light"), Is.False,
+                "not one pixel outside the stage subtree moves when a zone B axis is switched (D27 DoD)");
+        }
+
+        /// <summary>
+        /// The half of card T-3394 that was a DEFECT, not a stale expectation. Handing the axis
+        /// <c>previewRoot</c> is not enough on its own: <c>SusThemeService.SetTheme</c> resolves the
+        /// CASCADE root before applying (<c>SusBootstrap.TokenCascadeRoot</c>, or the nearest
+        /// ancestor already carrying a <c>theme-*</c> class), and in the live storybook that root is
+        /// the UIDocument's <c>rootVisualElement</c> — an ANCESTOR of the shell
+        /// (<c>SusStorybookBehaviour.OnEnable</c> calls <c>SusBootstrap.LoadTokenCascade</c> on it
+        /// and adds the shell as its child). So D27 held only in a detached EditMode fixture, where
+        /// there is no cascade root to escape to, and failed in the editor, where it matters. This
+        /// fixture reproduces the real chain: cascade root (carrying the sheet's default
+        /// <c>theme-dark</c>, <c>_theme.uss</c> ":root, .theme-dark") -> shell -> stage canvas.
+        /// </summary>
+        [Test]
+        public void Theme_axis_does_not_escape_up_to_the_cascade_root_above_the_shell()
+        {
+            var cascadeRoot = new VisualElement();
+            cascadeRoot.AddToClassList("theme-dark");
+            var shell = new VisualElement();
+            var preview = new VisualElement();
+            cascadeRoot.Add(shell);
+            shell.Add(preview);
+
+            using var bar = new SusStoryEnvBar(shell, preview);
+            bar.ActiveAxes().First(a => a.Id == "theme").Apply("light");
+
+            Assert.That(preview.ClassListContains("theme-light"), Is.True,
+                "the stage canvas is the only element the subject's theme may land on");
+            Assert.That(shell.ClassListContains("theme-light"), Is.False);
+            Assert.That(cascadeRoot.ClassListContains("theme-light"), Is.False,
+                "escaping to the cascade root repaints the whole instrument — the T-3371 defect");
+            Assert.That(cascadeRoot.ClassListContains("theme-dark"), Is.True,
+                "and it must not be stripped either: the shell keeps its own resting theme above");
+        }
+
+        /// <summary>
+        /// The INSTRUMENT's switch (card T-3371, decision D4): it moves a shell-only class and
+        /// touches no core service, which is the whole reason there are two chips instead of one.
+        /// </summary>
+        [Test]
+        public void Shell_theme_axis_repaints_the_shell_root_and_no_core_service()
+        {
+            using var bar = NewBar(out var shell, out var preview);
+            var axis = bar.ActiveAxes().First(a => a.Id == "shell-theme");
+            Assert.That(axis.Current, Is.EqualTo("dark"),
+                "dark is the shell's resting state, so an untouched link carries no env.shell-theme");
+
+            axis.Apply("light");
+
+            Assert.That(axis.Current, Is.EqualTo("light"));
+            Assert.That(shell.ClassListContains("sus-sb--theme-light"), Is.True);
+            Assert.That(SusThemeService.Current.Value, Is.EqualTo(SusTheme.Dark),
+                "the tool's skin is not the subject's theme — no core service may move");
             Assert.That(preview.ClassListContains("theme-light"), Is.False);
+            Assert.That(shell.ClassListContains("theme-light"), Is.False);
+
+            axis.Apply("dark");
+            Assert.That(shell.ClassListContains("sus-sb--theme-light"), Is.False);
         }
 
         [Test]
@@ -193,13 +270,14 @@ namespace Sharq.Core.Editor.Tests
             SusStoryEnvAxisRegistry.Register(new FakeAxis("skin", "(none)", "TestSkin"));
 
             var ids = bar.ActiveAxes().Select(a => a.Id).ToList();
-            Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "skin", "scale", "input" }),
-                "skin sits between theme and scale, exactly the mock-up chipDefs order");
-            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(6));
+            Assert.That(ids, Is.EqualTo(new[] { "breakpoint", "density", "theme", "skin", "scale", "input", "shell-theme" }),
+                "skin sits between theme and scale, exactly the mock-up chipDefs order; the shell's "
+                + "own chip stays behind all of them (T-3371, D4) — no provider gets past it");
+            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(7));
 
             SusStoryEnvAxisRegistry.Unregister("skin");
             Assert.That(bar.ActiveAxes().Any(a => a.Id == "skin"), Is.False);
-            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(5));
+            Assert.That(bar.Query<VisualElement>(className: "sus-sb-env__chip").ToList().Count, Is.EqualTo(6));
         }
 
         // ── deep-link round trip (plan §4.4: "оси среды пишутся в query отдельным префиксом") ──

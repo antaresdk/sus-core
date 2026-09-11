@@ -7,12 +7,16 @@ using UnityEngine.UIElements;
 namespace Sharq.Core.Storybook.Env
 {
     /// <summary>
-    /// The five environment axes core owns outright (plan §4.4, card T-3036): breakpoint, density,
-    /// theme, scale and input. Each wraps the real core service directly — a story's rendering is
-    /// meant to react exactly as it would in a shipped app, not to a storybook-only stand-in.
+    /// The SIX environment axes core owns outright: five that change the SUBJECT (plan §4.4, card
+    /// T-3036 — breakpoint, density, theme, scale, input) and one that changes the INSTRUMENT
+    /// (<see cref="ShellThemeAxis"/>, card T-3371). The five wrap the real core service directly —
+    /// a story's rendering is meant to react exactly as it would in a shipped app, not to a
+    /// storybook-only stand-in.
     ///
     /// EVERY axis that changes the SUBJECT binds to <c>previewRoot</c> (the stage canvas, card
     /// T-3033's <c>QaCanvas</c>): breakpoint, density, scale — and, since card T-3371, theme too.
+    /// "Binds" has to mean the element itself: card T-3394 found theme still leaving the stage
+    /// through <c>SusThemeService</c>'s cascade-root resolution — see <see cref="ThemeAxis.Apply"/>.
     ///
     /// Theme used to bind to <c>shellRoot</c>, which is card T-3371's defect and decision D27 of
     /// plan ARCH-20260911-STORYBOOK-SHELL.md. One click on the "theme" chip repainted the whole
@@ -170,7 +174,33 @@ namespace Sharq.Core.Storybook.Env
                 var theme = string.Equals(value, "light", StringComparison.OrdinalIgnoreCase)
                     ? SusTheme.Light
                     : SusTheme.Dark;
-                SusThemeService.Instance.SetTheme(_root, theme);
+                if (_root == null) return;
+
+                // The class is put on THIS element by hand, and not through
+                // SusThemeService.SetTheme(_root, theme), because that method cannot mean "this
+                // element": it calls ResolveCascadeRoot first, which prefers
+                // SusBootstrap.TokenCascadeRoot whenever it shares a panel with the hint. In the
+                // live storybook the cascade root is the UIDocument's rootVisualElement
+                // (SusStorybookBehaviour.OnEnable → SusBootstrap.LoadTokenCascade) and the shell
+                // is its CHILD — so the chip kept repainting the whole instrument, above the
+                // shell, while this file claimed the stage (card T-3394: D27 was true in detached
+                // EditMode, where TokenCascadeRoot is null, and false in the editor). DensityAxis
+                // and ScaleAxis were never affected — SusDensityService/SusScaleService write the
+                // element they are handed — and BreakpointAxis buys the same guarantee by
+                // Attach()ing the preview root in its constructor.
+                //
+                // A class lower down is enough: .theme-dark/.theme-light only re-alias --thm-*
+                // (_theme.uss L2, ":root, .theme-dark" — dark is the sheet's default), and Unity
+                // resolves var() from the CONSUMING element upwards, so the nearest theme class
+                // above a component wins. That is the same scoped override kit stories already
+                // ship (Samples~/Stories/Store*Story.cs "ThemedCardPanel").
+                _root.RemoveFromClassList(SusTheme.Dark.CssClass);
+                _root.RemoveFromClassList(SusTheme.Light.CssClass);
+                _root.AddToClassList(theme.CssClass);
+
+                // Process prop last, exactly like SusThemeService.SetTheme: a Watch(Current)
+                // handler that re-reads the tree must not see it half-applied.
+                SusThemeService.Current.Value = theme;
             }
         }
 
