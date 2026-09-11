@@ -32,13 +32,28 @@ namespace Sharq.Core.Editor.Tests
         const string MatrixLeak = "enginetests/overlay/matrix-modal";
         const string Counter = "enginetests/primitives/counter";
 
+        /// <summary>
+        /// Frames every case waits before it reads the matrix. The body of a grid arrives over
+        /// several scheduled passes that WAIT for the layout to stop moving (card T-3482,
+        /// SusStoryMatrix.SettleFrames), so two frames is no longer enough to have any cells at
+        /// all - and "no cells" would have read as "nothing escaped".
+        /// </summary>
+        const int Settle = 20;
+
         EditorWindow _window;
         SusStorybookHost _host;
         OverlayHost _appOverlay;
+        Vector2 _cellMaxBefore;
 
         [SetUp]
         public void SetUp()
         {
+            // What these tests are about is where a CELL's popup lands, and their subject is a
+            // modal that opens itself - which by measurement belongs in a switcher and would have
+            // no cells at all (card T-3482). The bound is widened so the grid path stays under
+            // test; the fork itself is asserted in SusStoryCellGeometryTests.
+            _cellMaxBefore = SusStoryMatrix.CellMaxSize;
+            SusStoryMatrix.CellMaxSize = new Vector2(8000f, 8000f);
             Assume.That(!Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
@@ -60,6 +75,7 @@ namespace Sharq.Core.Editor.Tests
         [TearDown]
         public void TearDown()
         {
+            SusStoryMatrix.CellMaxSize = _cellMaxBefore;
             _host?.Dispose();
             _host = null;
             if (_window != null) _window.Close();
@@ -84,8 +100,7 @@ namespace Sharq.Core.Editor.Tests
         public IEnumerator Matrix_cells_do_not_escape_to_the_panel_root()
         {
             Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
-            yield return null;
-            yield return null;
+            for (int f = 0; f < Settle; f++) yield return null;
 
             Assert.That(_host.Matrix.BuiltCellCount, Is.GreaterThan(0), "sanity: the matrix built cells");
             Assert.That(MarkersInPanel(), Is.GreaterThan(1), "sanity: the cells are real instances");
@@ -113,8 +128,7 @@ namespace Sharq.Core.Editor.Tests
         public IEnumerator A_cell_that_opens_itself_stays_inside_its_own_cell()
         {
             Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
-            yield return null;
-            yield return null;
+            for (int f = 0; f < Settle; f++) yield return null;
 
             var cells = _host.Matrix.Query<VisualElement>(className: "sb-matrix__cell").ToList();
             Assert.That(cells.Count, Is.EqualTo(_host.Matrix.BuiltCellCount),
@@ -144,8 +158,7 @@ namespace Sharq.Core.Editor.Tests
         public IEnumerator Switching_away_leaves_no_matrix_overlay_a_frame_later()
         {
             Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
-            yield return null;
-            yield return null;
+            for (int f = 0; f < Settle; f++) yield return null;
 
             Assert.IsTrue(_host.ShowStoryById(Counter), "switch away -> Unmount()");
             yield return null;
@@ -163,7 +176,7 @@ namespace Sharq.Core.Editor.Tests
         public IEnumerator Switching_back_and_forth_does_not_accumulate_overlays()
         {
             Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
-            yield return null;
+            for (int f = 0; f < Settle; f++) yield return null;
             int first = MarkersInPanel();
 
             for (int i = 0; i < 3; i++)
@@ -171,7 +184,7 @@ namespace Sharq.Core.Editor.Tests
                 Assert.IsTrue(_host.ShowStoryById(Counter));
                 yield return null;
                 Assert.IsTrue(_host.ShowStoryById(MatrixLeak));
-                yield return null;
+                for (int f = 0; f < Settle; f++) yield return null;
             }
             yield return null;
 

@@ -74,6 +74,55 @@ namespace Sharq.Core.Storybook.UI
         /// </summary>
         public const float CellMaxHeight = 140f;
 
+        /// <summary>
+        /// The bound the mode fork actually compares against, defaulting to
+        /// <see cref="CellMaxWidth"/> x <see cref="CellMaxHeight"/>.
+        ///
+        /// A settable property for the same reason <see cref="AxisPropName"/> is one: a rig has to
+        /// be able to exercise the GRID path over a component that would never take it. The
+        /// overlay-teardown corpus of T-3160 / T-3189 is exactly that - a modal that opens itself
+        /// at t=0, which by measurement belongs in a switcher, while what those tests are about is
+        /// where a CELL's popup lands. Without this seam the regression would have been deleted by
+        /// the mode fork rather than kept.
+        /// </summary>
+        public static Vector2 CellMaxSize { get; set; } = new Vector2(CellMaxWidth, CellMaxHeight);
+
+        /// <summary>
+        /// Frames a measuring pass waits for the layout before it reads anyway (cards T-3482 /
+        /// T-3483).
+        ///
+        /// It has to WAIT, and the first version of this did not, which is worth writing down
+        /// because the failure was silent and looked like data. A scheduled item runs at the top
+        /// of a frame, BEFORE that frame's layout pass, so "one frame after I added it" reads the
+        /// element before anyone has sized it: the first live sweep came back with a natural size
+        /// of 0x0 for 146 of 154 stories, every one of them then classified as small enough for a
+        /// grid, and 318 cells accused of being squeezed against a reference that was never
+        /// measured. A measurement that did not happen must not be able to look like a
+        /// measurement that came out zero.
+        ///
+        /// And waiting for a box is not enough either: the first box is not the last one. The
+        /// second live sweep measured buttons at 64px wide - the width of the label before the
+        /// text had been laid out - and then reported all eighteen cells as squeezed against it,
+        /// while the grid on screen was correct at 117. So a pass reads only when the numbers have
+        /// STOPPED MOVING (<see cref="StableFrames"/>), which is the same condition the frame
+        /// capture waits on, and for the same reason.
+        /// </summary>
+        public const int SettleFrames = 12;
+
+        /// <summary>
+        /// Times the column sizing may re-apply itself before it stops. It converges by
+        /// construction - a pass that changes nothing is the last one - and this only bounds a
+        /// component whose size oscillates with the room it is given.
+        /// </summary>
+        public const int MaxSizePasses = 8;
+
+        /// <summary>
+        /// Times the mode may be re-decided for one story. See <c>Revise</c>: a first measurement
+        /// can be an intermediate layout, and the mode has to be allowed to follow the truth -
+        /// but not forever.
+        /// </summary>
+        public const int MaxRevisions = 2;
+
         /// <summary>Label of the single row used when the component has no axis.</summary>
         public const string DefaultRow = "default";
 
@@ -150,6 +199,11 @@ namespace Sharq.Core.Storybook.UI
         bool _measurePending;
         bool _sized;
         bool _oversize;
+        IVisualElementScheduledItem _measureTick;
+        IVisualElementScheduledItem _sizeTick;
+        IVisualElementScheduledItem _recordTick;
+        int _passes;
+        int _revisions;
         string _switcherState;
         int _created;
         SusComponent _probeInstance;
@@ -164,6 +218,8 @@ namespace Sharq.Core.Storybook.UI
             public VisualElement Cell;
             public VisualElement Item;
             public Vector2 Natural;
+            public float AppliedW = float.NaN;
+            public float AppliedH = float.NaN;
         }
 
         public SusStoryMatrix()
@@ -180,11 +236,12 @@ namespace Sharq.Core.Storybook.UI
             _note.AddToClassList("sb-matrix__note");
             _measure.AddToClassList("sb-matrix__measure");
             _measure.pickingMode = PickingMode.Ignore;
-            // Two doors into the same idempotent finish, because neither alone is reliable: the
-            // geometry event never arrives for an instance that measures 0x0, and a scheduled
-            // item does not exist outside a panel (card T-3482).
-            _measure.RegisterCallback<GeometryChangedEvent>(_ => FinishMeasure());
             _measure.Add(_measureHost);
+            // The cells' half of the same two doors (see BeginMeasure): in an EditorWindow rig
+            // the panel does not tick, so the only thing that ever advances the sizing passes is
+            // the layout event itself. SyncCells is idempotent, so being called from both costs
+            // one comparison.
+            _grid.RegisterCallback<GeometryChangedEvent>(_ => SyncCells());
 
             Add(_toggle);
             Add(_scroll);
@@ -293,12 +350,11 @@ namespace Sharq.Core.Storybook.UI
                 if (_silent != null) return _silent;
                 if (!_open) return CollapseReason ?? "folded";
                 if (_oversize)
-                    return "one instance is " + Dim(_natural) + ", over the " +
-                           Dim(new Vector2(CellMaxWidth, CellMaxHeight)) +
+                    return "one instance is " + Dim(_natural) + ", over the " + Dim(CellMaxSize) +
                            " a grid cell may take - states are shown one at a time";
                 return _measured
-                    ? "one instance is " + Dim(_natural) + ", within the " +
-                      Dim(new Vector2(CellMaxWidth, CellMaxHeight)) + " a grid cell may take"
+                    ? "one instance is " + Dim(_natural) + ", within the " + Dim(CellMaxSize) +
+                      " a grid cell may take"
                     : "grid";
             }
         }
@@ -452,30 +508,84 @@ namespace Sharq.Core.Storybook.UI
         {
             _measurePending = true;
             _probeInstance = probe;
+            _revisions = 0;
+            probe.RegisterCallback<GeometryChangedEvent>(OnProbeGeometry);
             _measure.Add(probe);
-            _measure.schedule.Execute(FinishMeasure);
+
+            // Two doors, and they are not redundant - between them they cover the two rigs this
+            // code has to work in. In Play the scheduler ticks every frame and the layout events
+            // arrive with it. In an EditorWindow rig the panel does not tick unless something
+            // asks it to, so a state machine driven only by `schedule` never advances: that is
+            // what left the T-3160 corpus with zero cells after twenty frames, and it did not
+            // look like a hang, it looked like "nothing escaped".
+            int frames = 0;
+            _measureTick?.Pause();
+            _measureTick = _measure.schedule.Execute(() =>
+            {
+                if (!_measurePending) { _measureTick?.Pause(); return; }
+                if (!Laid(_probeInstance) && ++frames < SettleFrames) return;
+                FinishMeasure();
+            }).Every(0);
+        }
+
+        /// <summary>Has the layout given this element a box yet?</summary>
+        static bool Laid(VisualElement el) =>
+            el != null && !float.IsNaN(el.layout.width) &&
+            (el.layout.width > 0f || el.layout.height > 0f);
+
+        /// <summary>Size the layout gave an element, or zero while it has none.</summary>
+        static Vector2 BoxOf(VisualElement el) =>
+            Laid(el) ? new Vector2(el.layout.width, el.layout.height) : Vector2.zero;
+
+        void OnProbeGeometry(GeometryChangedEvent _)
+        {
+            if (_measurePending) { FinishMeasure(); return; }
+            Revise();
         }
 
         /// <summary>
-        /// Reads the natural size off the parked instance and lets the matrix build. Idempotent:
-        /// the geometry event and the scheduled item race on purpose, and whichever arrives first
-        /// wins.
+        /// Takes the first real size the layout gives the parked instance and lets the matrix
+        /// build on it.
+        ///
+        /// The FIRST size and not the settled one, deliberately. Waiting for the numbers to stop
+        /// moving is the right thing for the cells, which are read as evidence; it is the wrong
+        /// thing here, because until this returns nothing is built at all, and a story whose
+        /// instance never settles would show an empty zone C forever. An early reading can only
+        /// be wrong in one direction that matters - a component that looks small now and grows
+        /// past the threshold later - and <see cref="Revise"/> answers that when it happens.
         /// </summary>
         void FinishMeasure()
         {
             if (!_measurePending) return;
             _measurePending = false;
+            _measureTick?.Pause();
 
             // The instance BY REFERENCE and not by index: a story that opened itself is no longer
             // a child of the measuring box at all, it is in the box's overlay host - and what it
             // measures there (a full overlay) is the honest answer for it.
-            var size = _probeInstance == null
-                ? Vector2.zero
-                : new Vector2(_probeInstance.layout.width, _probeInstance.layout.height);
-            if (float.IsNaN(size.x) || float.IsNaN(size.y)) size = Vector2.zero;
-            ClearMeasure();
-
+            var size = BoxOf(_probeInstance);
             Decide(size, size != Vector2.zero);
+            SetOpen(CollapseReason == null);
+        }
+
+        /// <summary>
+        /// Re-decides the mode when the measured instance turns out to be a different size than it
+        /// first looked - a table that fills in its rows, a card that loads an image.
+        ///
+        /// Bounded by <see cref="MaxRevisions"/>: a component whose size oscillates would
+        /// otherwise rebuild the grid forever, and a matrix that rebuilds forever is worse than a
+        /// matrix that chose the wrong mode once.
+        /// </summary>
+        void Revise()
+        {
+            if (_entry == null || _silent != null || _revisions >= MaxRevisions) return;
+            var size = BoxOf(_probeInstance);
+            if (size == Vector2.zero) return;
+            bool wasOversize = _oversize;
+            Decide(size, true);
+            if (_oversize == wasOversize) return;
+            _revisions++;
+            ClearCells();
             SetOpen(CollapseReason == null);
         }
 
@@ -488,7 +598,8 @@ namespace Sharq.Core.Storybook.UI
         {
             _natural = natural;
             _measured = measured;
-            _oversize = measured && (natural.x > CellMaxWidth || natural.y > CellMaxHeight);
+            var bound = CellMaxSize;
+            _oversize = measured && (natural.x > bound.x || natural.y > bound.y);
         }
 
         /// <summary>Empties the matrix and hides it — what an empty stage needs.</summary>
@@ -523,6 +634,8 @@ namespace Sharq.Core.Storybook.UI
         /// </summary>
         void ClearMeasure()
         {
+            _measureTick?.Pause();
+            _probeInstance?.UnregisterCallback<GeometryChangedEvent>(OnProbeGeometry);
             _measureHost.ClearAll();
             for (int i = _measure.childCount - 1; i >= 0; i--)
                 if (!ReferenceEquals(_measure[i], _measureHost))
@@ -664,7 +777,15 @@ namespace Sharq.Core.Storybook.UI
             // given a width. The second records where everything ended up - which is the evidence
             // of T-3483, and it has to be taken after the columns, or it would describe the
             // intermediate layout instead of the one on screen.
-            _grid.schedule.Execute(SizeColumns);
+            //
+            // Neither pass counts frames. Both are IDEMPOTENT and both are driven by the layout
+            // itself: sizing a column writes a width, writing a width provokes a layout, and the
+            // layout calls back. When a pass finds nothing left to change, the numbers have
+            // stopped moving - which is the same condition a frame capture waits on, established
+            // by the thing itself rather than by a guess about how many frames it takes.
+            _passes = 0;
+            _sizeTick?.Pause();
+            _sizeTick = _grid.schedule.Execute(SyncCells).Every(0);
         }
 
         /// <summary>
@@ -673,39 +794,69 @@ namespace Sharq.Core.Storybook.UI
         /// grid a ragged pile and destroy the only thing a matrix is for, comparing the same
         /// place across states.
         /// </summary>
-        void SizeColumns()
+        void SyncCells()
         {
-            if (!_built || _sized || _refs.Count == 0) return;
-            _sized = true;
+            if (_oversize || !_built || _refs.Count == 0) { _sizeTick?.Pause(); return; }
+            if (_passes >= MaxSizePasses) { _sizeTick?.Pause(); return; }
+            for (int i = 0; i < _refs.Count; i++)
+                if (!Laid(_refs[i].Item)) return;   // not one box yet: nothing to size against
 
+            if (SizeColumns())
+            {
+                _passes++;
+                return;   // the widths just written are an input to the NEXT layout pass
+            }
+
+            _sizeTick?.Pause();
+            _sized = true;
+            RecordCells();
+        }
+
+        /// <summary>
+        /// Gives every column the width of its widest cell and every row the height of its
+        /// tallest, and says whether that CHANGED anything. Called until it changes nothing.
+        /// </summary>
+        bool SizeColumns()
+        {
             var colW = new float[_columns.Count];
             var lineH = new float[_rows.Count];
             for (int i = 0; i < _refs.Count; i++)
             {
                 var r = _refs[i];
-                r.Natural = new Vector2(r.Item.layout.width, r.Item.layout.height);
-                if (float.IsNaN(r.Natural.x) || float.IsNaN(r.Natural.y)) r.Natural = Vector2.zero;
+                r.Natural = BoxOf(r.Item);
                 if (r.Column >= 0 && r.Natural.x > colW[r.Column]) colW[r.Column] = r.Natural.x;
                 if (r.Line >= 0 && r.Natural.y > lineH[r.Line]) lineH[r.Line] = r.Natural.y;
             }
 
+            bool changed = false;
             for (int i = 0; i < _refs.Count; i++)
             {
                 var r = _refs[i];
-                // sus:uss-impossible the width is a measured size of live instances, computed
-                // from this layout pass - USS has no number for "as wide as the widest of these
-                // eighteen components turned out to be"
-                r.Cell.style.minWidth = colW[r.Column];
-                // sus:uss-impossible same measured height, from the same pass
-                r.Cell.style.minHeight = lineH[r.Line];
+                if (Mathf.Abs(r.AppliedW - colW[r.Column]) > 0.01f)
+                {
+                    r.AppliedW = colW[r.Column];
+                    changed = true;
+                    // sus:uss-impossible the width is a measured size of live instances, computed
+                    // from this layout pass - USS has no number for "as wide as the widest of
+                    // these eighteen components turned out to be"
+                    r.Cell.style.minWidth = colW[r.Column];
+                }
+                if (Mathf.Abs(r.AppliedH - lineH[r.Line]) > 0.01f)
+                {
+                    r.AppliedH = lineH[r.Line];
+                    changed = true;
+                    // sus:uss-impossible same measured height, from the same pass
+                    r.Cell.style.minHeight = lineH[r.Line];
+                }
             }
+
+            if (!changed) return false;
 
             var heads = _grid.Query<Label>(className: "sb-matrix__colhead").ToList();
             for (int i = 0; i < heads.Count && i < colW.Length; i++)
                 // sus:uss-impossible the column head follows the measured width of its column
                 heads[i].style.minWidth = colW[i];
-
-            _grid.schedule.Execute(RecordCells);
+            return true;
         }
 
         /// <summary>
@@ -722,9 +873,14 @@ namespace Sharq.Core.Storybook.UI
                 var cellWorld = r.Cell.LocalToWorld(r.Cell.contentRect);
                 var itemWorld = r.Item.worldBound;
                 var scale = ScaleBetween(r.Cell, r.Item);
+                // The stage reference is the size ONE instance took in the measuring box, where
+                // nothing but the stage's own width was around it (card T-3483). Reading it off
+                // the cell instead - the first thing this code did - makes the number a function
+                // of the cell it is supposed to judge, and the comparison says nothing.
+                var stage = _natural;
                 _cells.Add(new SusStoryCellGeometry(
-                    r.Row, r.State, cellWorld, itemWorld, r.Natural, scale,
-                    SusStoryCellGeometry.Judge(cellWorld, itemWorld, r.Natural, scale)));
+                    r.Row, r.State, cellWorld, itemWorld, stage, scale,
+                    SusStoryCellGeometry.Judge(cellWorld, itemWorld, stage, scale)));
             }
         }
 
@@ -829,6 +985,8 @@ namespace Sharq.Core.Storybook.UI
             // that parent, the cell, must already be detached when the host is emptied. A
             // detached element's scheduler never fires, and the restore dies with it; the other
             // order would put the cell's instance back on screen one frame later.
+            _sizeTick?.Pause();
+            _recordTick?.Pause();
             _grid.Clear();
             _overlay.ClearAll();
             _refs.Clear();

@@ -43,13 +43,28 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
-        public void An_instance_that_fits_but_was_squeezed_is_still_a_violation()
+        public void A_cell_smaller_than_what_its_instance_needs_is_a_violation()
         {
             // The subtle half of d:3750a2: containment alone would call this healthy. The
-            // instance sits inside its cell — because the cell made it smaller than it is.
-            var verdict = SusStoryCellGeometry.Judge(Cell, new Rect(0f, 0f, 64f, 32f), new Vector2(81f, 32f), 1f);
+            // instance sits inside its cell - because the cell made it smaller than it is. This
+            // is the exact shape of T-3355: a 64x28 cell over a component that needs 117x40.
+            var verdict = SusStoryCellGeometry.Judge(
+                new Rect(0f, 0f, 64f, 28f), new Rect(0f, 0f, 64f, 28f), new Vector2(117f, 40f), 1f);
 
-            Assert.That(verdict, Does.Contain("64").And.Contain("81"));
+            Assert.That(verdict, Does.Contain("64").And.Contain("117"));
+            Assert.That(verdict, Does.Contain("28").And.Contain("40"));
+        }
+
+        [Test]
+        public void An_instance_that_reflowed_smaller_in_a_roomy_cell_is_not_a_violation()
+        {
+            // game/hud/weapon-panel, measured live: it asked for 339 and settled at 312 once the
+            // column gave it 339. A component that reflows when given MORE room has not been cut,
+            // and the first version of this judge called all four of its cells cropped.
+            Assert.That(
+                SusStoryCellGeometry.Judge(
+                    new Rect(0f, 0f, 339f, 57f), new Rect(0f, 0f, 312f, 57f), new Vector2(339f, 57f), 1f),
+                Is.Null);
         }
 
         [Test]

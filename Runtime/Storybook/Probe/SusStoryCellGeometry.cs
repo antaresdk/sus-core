@@ -41,8 +41,9 @@ namespace Sharq.Core.Storybook.Probe
     /// <see cref="Cell"/> is the box that promised to hold it, <see cref="Stage"/> is the size the
     /// SAME instance takes with nothing around it, and <see cref="Scale"/> is the transform chain
     /// between them. The T-3355 crop passed acceptance precisely because the report carried none
-    /// of them: an instance can sit inside its cell and still be a lie, if the cell squeezed it
-    /// (<see cref="Stage"/> ≠ <see cref="Item"/>) or shrank it (<see cref="Scale"/> ≠ 1).
+    /// of them: an instance can sit inside its cell and still be a lie, if the cell was smaller
+    /// than what the instance asked for (<see cref="Stage"/> over <see cref="Cell"/>) or if
+    /// something shrank it (<see cref="Scale"/> other than 1).
     ///
     /// Everything here is read from LAYOUT, never from the rendered frame, so
     /// <c>overflow: hidden</c> cannot hide a violation from it — USS is not read at all.
@@ -91,6 +92,14 @@ namespace Sharq.Core.Storybook.Probe
         /// <summary>
         /// Judges the three points of the promise and returns the violation text, or null.
         /// Static and pure so a test states the rule without a panel.
+        ///
+        /// The stage size is read as "what the instance ASKED for", and it is compared against
+        /// the CELL rather than against the instance. The difference matters, and it cost a live
+        /// sweep to find out: comparing it against the instance accused
+        /// <c>game/hud/weapon-panel</c> of being squeezed to 312 in a 339 cell that had asked to
+        /// be 339 - a component that reflows when given more room is not a component that was
+        /// cut. What IS a crop is a cell smaller than what its instance needs, which is exactly
+        /// what the 64x28 of T-3355 was.
         /// </summary>
         public static string Judge(Rect cell, Rect item, Vector2 stage, float scale)
         {
@@ -101,10 +110,12 @@ namespace Sharq.Core.Storybook.Probe
             else if (item.xMin < cell.xMin - Tolerance || item.yMin < cell.yMin - Tolerance ||
                      item.xMax > cell.xMax + Tolerance || item.yMax > cell.yMax + Tolerance)
                 faults.Add("item hangs out of its cell");
-            if (stage.x > 0f && Mathf.Abs(item.width - stage.x) > Tolerance)
-                faults.Add("width " + N(item.width) + " ≠ stage " + N(stage.x));
-            if (stage.y > 0f && Mathf.Abs(item.height - stage.y) > Tolerance)
-                faults.Add("height " + N(item.height) + " ≠ stage " + N(stage.y));
+            if (stage.x > 0f && stage.x > cell.width + Tolerance)
+                faults.Add("cell " + N(cell.width) + " narrower than the instance needs (" +
+                           N(stage.x) + ")");
+            if (stage.y > 0f && stage.y > cell.height + Tolerance)
+                faults.Add("cell " + N(cell.height) + " shorter than the instance needs (" +
+                           N(stage.y) + ")");
             if (Mathf.Abs(scale - 1f) > 0.01f)
                 faults.Add("scale " + N(scale));
             return faults.Count == 0 ? null : string.Join("; ", faults);
