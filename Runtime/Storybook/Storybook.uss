@@ -949,8 +949,7 @@
 }
 
 .sb-sizes__metrics,
-.sb-sizes__overlay,
-.sb-sizes__fit {
+.sb-sizes__overlay {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
@@ -958,12 +957,18 @@
 }
 
 /* Card T-3389, plan §4.7: a subject that does not fit says so. The line is the shell's own
-   voice about the frame rather than a measurement of the component, so it takes the accent
-   colour of a hint and not the muted grey of the numbers next to it. It reserves no box: the
-   note is absent far more often than present, and an empty reserved column would cost zone C
-   width on every story that fits. */
+   voice about the frame rather than a measurement of the component - full sentences ("wider
+   than the window - scroll sideways for the rest"), not a row of numbers that has to line up
+   in a column, so it takes the interface face and the accent colour of a hint rather than the
+   mono chain and the muted grey of the numbers next to it (R144: a mono-place is data read
+   character by character, and prose is not that). It reserves no box: the note is absent far
+   more often than present, and an empty reserved column would cost zone C width on every story
+   that fits. */
 .sb-sizes__fit {
+    -unity-font-definition: var(--sb-font-ui);
+    font-size: var(--sb-fs-11);
     color: var(--sb-accent);
+    margin-right: 18px;
     white-space: normal;
 }
 

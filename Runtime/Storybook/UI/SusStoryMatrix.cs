@@ -865,9 +865,10 @@ namespace Sharq.Core.Storybook.UI
                 {
                     r.AppliedW = colW[r.Column];
                     changed = true;
-                    // sus:uss-impossible the width is a measured size of live instances, computed
-                    // from this layout pass - USS has no number for "as wide as the widest of
-                    // these eighteen components turned out to be"
+                    // The width is a measured size of live instances, computed from this layout
+                    // pass - USS has no number for "as wide as the widest of these eighteen
+                    // components turned out to be".
+                    // sus:uss-impossible measured size of live instances, computed from this layout pass
                     r.Cell.style.minWidth = colW[r.Column];
                 }
                 if (Mathf.Abs(r.AppliedH - lineH[r.Line]) > 0.01f)
@@ -895,7 +896,11 @@ namespace Sharq.Core.Storybook.UI
         /// </summary>
         void RecordCells()
         {
-            _cells.Clear();
+            // Every entry is recomputed fresh from the CURRENT layout below - this is not a
+            // cache. What changed here (card review, R141/zone-e-rate) is only how the backing
+            // list is filled: overwriting by index instead of dropping and reallocating the
+            // whole list on every call, since `_refs.Count` rarely changes between two calls in
+            // the same settle. Growing or shrinking still lands on `Add`/`RemoveRange` below.
             for (int i = 0; i < _refs.Count; i++)
             {
                 var r = _refs[i];
@@ -911,10 +916,13 @@ namespace Sharq.Core.Storybook.UI
                 // not exist. What the story-level number IS good for is the whole grid rather
                 // than one cell of it: see CellShortfall.
                 var stage = r.Natural;
-                _cells.Add(new SusStoryCellGeometry(
+                var next = new SusStoryCellGeometry(
                     r.Row, r.State, cellWorld, itemWorld, stage, scale,
-                    SusStoryCellGeometry.Judge(cellWorld, itemWorld, stage, scale)));
+                    SusStoryCellGeometry.Judge(cellWorld, itemWorld, stage, scale));
+                if (i < _cells.Count) _cells[i] = next;
+                else _cells.Add(next);
             }
+            if (_cells.Count > _refs.Count) _cells.RemoveRange(_refs.Count, _cells.Count - _refs.Count);
         }
 
         /// <summary>Scale of the transform chain between two elements; 1 when nothing scales.</summary>
