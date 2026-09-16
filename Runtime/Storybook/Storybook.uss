@@ -893,7 +893,7 @@
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     background-color: rgba(0, 0, 0, 0);
-    -unity-font-definition: var(--sb-font-mono);
+    -unity-font-definition: var(--sb-font-ui);
     font-size: var(--sb-fs-11);
     color: var(--sb-muted);
 }
