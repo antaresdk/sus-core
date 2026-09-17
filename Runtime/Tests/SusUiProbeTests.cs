@@ -7,6 +7,9 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Diagnostics;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Sharq.Core.Runtime.Tests
 {
@@ -665,6 +668,245 @@ namespace Sharq.Core.Runtime.Tests
 
             StringAssert.Contains("#planted-glyph", json);
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// T-3490 — the owner's own measurement (2026-09-11-ux-reviewer-2.md): a Play-mode sweep
+        /// read `kit/data/table-cells` right after a fixed tick count and printed a false near-zero
+        /// because `MultiColumnListView` had not finished building its rows yet (66 elements
+        /// against an eventual 493). Reproduced here with
+        /// <c>VisualElement.schedule.Execute(...).StartingIn(ms)</c> — the technique
+        /// <c>SusPanelCaptureConvergenceTests</c> documents as the one that reproduces a genuinely
+        /// time-paced, multi-tick reaction live (an immediate <see cref="GeometryChangedEvent"/>
+        /// reaction resolves synchronously within one editor layout pass and cannot produce this
+        /// shape). A synchronous <see cref="SusUiProbe.GetAnomalies(VisualElement)"/> read taken on
+        /// the very next tick must still see nothing (the bug, reproduced) — the FIX under test is
+        /// <see cref="SusUiProbe.GetAnomaliesConverged"/>, which must wait past the delayed build
+        /// and hand back the real finding instead of the early false zero.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator GetAnomalies_ReadOnTheVeryNextTick_MissesADeferredBuild()
+        {
+            var row = Box("deferred-row", 200f, 40f);
+            Root.Add(row);
+            yield return WaitFrames(2);
+
+            row.schedule.Execute(() => row.Add(Child("deferred-glyph", 64f, 64f))).StartingIn(80);
+            yield return WaitFrame();
+
+            var early = SusUiProbe.GetAnomalies(Root);
+            CollectionAssert.IsEmpty(early,
+                "fixture sanity: the scheduled child must not exist yet on the very next tick");
+
+            yield return WaitUntilFrames(() => row.Q("deferred-glyph") != null, maxFrames: 90);
+            yield return WaitFrames(2);
+
+            var late = SusUiProbe.GetAnomalies(Root);
+            StringAssert.Contains(SusUiProbe.ClassOutOfBounds, string.Join(" | ", late));
+            StringAssert.Contains("#deferred-glyph", string.Join(" | ", late));
+        }
+
+        [UnityTest]
+        public IEnumerator GetAnomaliesConverged_WaitsPastTheDeferredBuild_FindsTheRealAnomaly()
+        {
+            var row = Box("deferred-row-2", 200f, 40f);
+            Root.Add(row);
+            yield return WaitFrames(2);
+
+            // Progressive, tick-over-tick growth (filler rows, THEN the anomaly-producing glyph),
+            // not a single delayed jump: a body realizing rows one at a time across several real
+            // ticks is what MultiColumnListView actually does, and it is also the shape that does
+            // NOT hit the known quiet-before-a-late-reaction limitation documented on
+            // SusUiProbe.HasConverged / SusPanelCapture.SnapshotsMatch (a value held flat for
+            // MinConvergeTicks before changing false-converges early — see
+            // MinConvergeTicks_PreventsTrivialEarlyExit for that case in isolation).
+            var step = 0;
+            var built = false;
+            EditorApplication.CallbackFunction grow = null;
+            grow = () =>
+            {
+                step++;
+                if (step == 1) row.Add(Child("filler-a", 40f, 20f));
+                else if (step == 2) row.Add(Child("filler-b", 40f, 20f));
+                else if (step == 3) { row.Add(Child("deferred-glyph-2", 64f, 64f)); built = true; }
+                if (built) EditorApplication.update -= grow;
+            };
+            EditorApplication.update += grow;
+
+            IReadOnlyList<string> result = null;
+            bool? converged = null;
+            SusUiProbe.GetAnomaliesConverged(Root, (a, c, f) => { result = a; converged = c; }, maxWaitFrames: 60);
+
+            yield return WaitUntilFrames(() => result != null, maxFrames: 90);
+            EditorApplication.update -= grow; // safety: unsubscribe even if the callback never ran
+
+            Assert.IsNotNull(result, "GetAnomaliesConverged must eventually call back");
+            Assert.IsTrue(converged.Value,
+                "this tree DOES settle -- must not report a give-up for a fixture that finishes building");
+            StringAssert.Contains("#deferred-glyph-2", string.Join(" | ", result),
+                "must hand back the REAL finding, not the early false zero the fixed-tick sweep read");
+        }
+
+        /// <summary>
+        /// The "or refuse" half of the card: a tree that never stops changing (continuous churn,
+        /// e.g. a live animation or a runaway rebuild) must hit the safety ceiling and say so, not
+        /// silently report whatever it happened to see last as a clean/settled read.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator GetAnomaliesConverged_TreeNeverStopsChanging_ReportsNotConverged()
+        {
+            var host = new VisualElement { name = "churn-host" };
+            Root.Add(host);
+
+            var n = 0;
+            EditorApplication.CallbackFunction churn = null;
+            churn = () =>
+            {
+                var el = new VisualElement { name = "churn-" + n };
+                el.style.width = 4;
+                el.style.height = 4;
+                host.Add(el);
+                n++;
+            };
+            EditorApplication.update += churn;
+            try
+            {
+                IReadOnlyList<string> result = null;
+                bool? converged = null;
+                SusUiProbe.GetAnomaliesConverged(Root, (a, c, f) => { result = a; converged = c; }, maxWaitFrames: 5);
+
+                yield return WaitUntilFrames(() => result != null, maxFrames: 60);
+
+                Assert.IsNotNull(result, "GetAnomaliesConverged must still call back at the ceiling");
+                Assert.IsFalse(converged.Value,
+                    "a tree that never stops changing must hit the safety ceiling, not a false convergence");
+            }
+            finally
+            {
+                EditorApplication.update -= churn;
+            }
+        }
+#endif
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    /// <summary>
+    /// T-3490 — pure, deterministic tests of <see cref="SusUiProbe.AnomalyShape"/> /
+    /// <see cref="SusUiProbe.HasConverged"/> against explicit hand-built per-tick shapes, the same
+    /// way <c>SusPanelCaptureConvergenceTests</c> pins down
+    /// <c>SusPanelCapture.HasConverged</c>/<c>SnapshotsMatch</c> — no live panel, no GPU, no
+    /// Play/Editor-tick dependency, so the exact shipped decision is fast and flake-free to check.
+    /// </summary>
+    public class SusUiProbeConvergenceTests
+    {
+        static SusUiProbe.AnomalyShape Shape(int elements, params string[] anomalies)
+            => new SusUiProbe.AnomalyShape(elements, 0, 0, anomalies, null);
+
+        [Test]
+        public void HasConverged_FirstTick_NeverConverges()
+        {
+            Assert.IsFalse(SusUiProbe.HasConverged(1, null, Shape(10)));
+        }
+
+        [Test]
+        public void HasConverged_BelowMinConvergeTicks_DoesNotHonorAnEarlyMatch()
+        {
+            // Ticks 1 and 2 happen to read the identical shape -- must not be trusted yet.
+            Assert.IsFalse(SusUiProbe.HasConverged(2, Shape(10), Shape(10)));
+            Assert.AreEqual(3, SusUiProbe.MinConvergeTicks,
+                "test assumes the shipped MinConvergeTicks constant; update this test if it changes");
+        }
+
+        [Test]
+        public void HasConverged_AtMinConvergeTicks_SameShapeTwice_Converges()
+        {
+            Assert.IsTrue(SusUiProbe.HasConverged(SusUiProbe.MinConvergeTicks, Shape(10), Shape(10)));
+        }
+
+        [Test]
+        public void HasConverged_ElementCountStillGrowing_DoesNotConverge()
+        {
+            // The reported bug in miniature: 66 elements this tick, 493 the next -- same anomaly
+            // TEXT (both empty) must not be enough to call it settled.
+            Assert.IsFalse(SusUiProbe.HasConverged(5, Shape(66), Shape(493)));
+        }
+
+        [Test]
+        public void HasConverged_SameCountsDifferentAnomalyText_DoesNotConverge()
+        {
+            // Geometry still moving (pixel numbers changing) while element count already settled.
+            var a = Shape(12, "out-of-bounds #row: sticks out of #parent by 10px bottom");
+            var b = Shape(12, "out-of-bounds #row: sticks out of #parent by 4px bottom");
+            Assert.IsFalse(SusUiProbe.HasConverged(5, a, b));
+        }
+
+        /// <summary>
+        /// Runs the same loop shape <see cref="SusUiProbe.GetAnomaliesConverged"/> runs each real
+        /// tick, against a caller-supplied element-count-per-tick function.
+        /// </summary>
+        static (int tick, int elements) RunConvergenceLoop(System.Func<int, int> elementsAtTick, int maxTicks)
+        {
+            SusUiProbe.AnomalyShape? previous = null;
+            for (var i = 1; i <= maxTicks; i++)
+            {
+                var current = Shape(elementsAtTick(i));
+                var converged = SusUiProbe.HasConverged(i, previous, current);
+                previous = current;
+                if (converged) return (i, current.Elements);
+            }
+            return (maxTicks, elementsAtTick(maxTicks));
+        }
+
+        [Test]
+        public void RunConvergenceLoop_DeferredBuild_SettlesOnTheFinalCount_NotTheEarlyOne()
+        {
+            // Rows realize progressively -- 66, 173, 280, 387, then 493 and holds. Climbing
+            // (not a flat-then-jump) on purpose: a value held flat for MinConvergeTicks BEFORE a
+            // late jump reproduces the same known limitation SusPanelCapture documents for a
+            // delayed schedule.Execute reaction (quiet-before-the-jump reads as "settled") -- see
+            // HasConverged_SameCountsDifferentAnomalyText_DoesNotConverge above for that boundary
+            // and MinConvergeTicks_PreventsTrivialEarlyExit below for the constant-value case.
+            // Real MultiColumnListView realization is progressive (rows added tick over tick), so
+            // climbing is the representative shape.
+            int ElementsAtTick(int tick) => tick >= 5 ? 493 : 66 + (tick - 1) * 107;
+
+            var (tick, elements) = RunConvergenceLoop(ElementsAtTick, maxTicks: 30);
+
+            Assert.AreEqual(493, elements,
+                "convergence must land on the true post-build count, not an early mid-build read");
+            Assert.GreaterOrEqual(tick, 5,
+                "sanity: must have actually waited through the build (holds from tick 5)");
+        }
+
+        [Test]
+        public void MinConvergeTicks_PreventsTrivialEarlyExit()
+        {
+            // Documents the SAME known limitation SusPanelCapture.SnapshotsMatch records: a body
+            // that has not started building yet reads as a constant, unchanging shape, and
+            // MinConvergeTicks only raises how early that quiet period can be mistaken for
+            // settled -- it does not make the check correct for an arbitrarily long delay before
+            // the first reaction. A delay shorter than MinConvergeTicks still false-converges on
+            // the pre-build shape.
+            int ElementsAtTick(int tick) => tick < 5 ? 66 : 493; // delay (5) > MinConvergeTicks (3)
+
+            var (tick, elements) = RunConvergenceLoop(ElementsAtTick, maxTicks: 30);
+
+            Assert.AreEqual(66, elements,
+                "known limitation: a delay longer than MinConvergeTicks still false-converges on the quiet pre-build shape");
+            Assert.Less(tick, 5, "false convergence must fire before the real build (tick 5) even happens");
+        }
+
+        [Test]
+        public void RunConvergenceLoop_NeverSettles_FallsBackToCeiling_DoesNotHang()
+        {
+            int ElementsAtTick(int tick) => 10 + tick; // keeps growing forever
+            const int maxTicks = 20;
+
+            var (tick, _) = RunConvergenceLoop(ElementsAtTick, maxTicks);
+
+            Assert.AreEqual(maxTicks, tick, "a tree that never settles must run out the ceiling, not hang");
+        }
+    }
+#endif
 }
 #endif

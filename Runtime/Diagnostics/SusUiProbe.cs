@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -230,6 +231,174 @@ namespace Sharq.Core.Diagnostics
             Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies, exempt);
             return anomalies;
         }
+
+        // -- Convergence (T-3490) ---------------------------------------------------------------
+        //
+        // The owner's own measurement found the bug: a Play-mode sweep waited a FIXED 30 ticks of
+        // EditorApplication.update (~0.1s) before calling GetAnomalies on kit/data/table-cells and
+        // printed 1 anomaly, while SusPanelCapture — which waits for two consecutive tree
+        // snapshots to MATCH instead of counting ticks — read the same story's canvas at 7. The
+        // canvas had 66 elements at the moment of the sweep's fixed-tick read against an eventual
+        // 493: UI Toolkit's MultiColumnListView builds its body (the virtualized rows) a few ticks
+        // AFTER the panel itself reports a resolved layout, so GetAnomalies honestly walked an
+        // empty body and printed a false near-zero. A fixed wait races that build exactly the way
+        // SusPanelCapture's own fixed-frame predecessor raced a resize reflow (T-1682) — the fix
+        // is the same shape: compare successive scans instead of trusting a tick count.
+        //
+        // GetAnomalies itself stays a pure, synchronous, single-frame read (existing callers —
+        // SusStoryProbe's live health strip, sus_ui_health — keep the exact contract they have).
+        // What is new is a SHAPE a tick-driven caller can compare across scans (AnomalyShape /
+        // HasConverged, mirroring SusPanelCapture.SnapshotsMatch/HasConverged for pixels), plus an
+        // Editor-only convenience that drives that comparison across real ticks the way
+        // SusPanelCapture.CaptureAsync already does for a screenshot — so "wait until settled, or
+        // say so" is one call instead of every caller hand-rolling its own fixed-tick guess again.
+
+        /// <summary>
+        /// Cheap fingerprint of one anomaly scan (the <c>GetAnomalies</c> overload below that
+        /// returns it) — everything that would make a second scan of the SAME canvas answer differently:
+        /// element/child/depth counts (so a body still growing from 66 to 493 elements is visibly
+        /// NOT the same shape twice, even while it reports zero anomalies both times) plus the
+        /// anomaly and exempt text itself (so a settled element COUNT with still-moving geometry —
+        /// different pixel numbers in the same lines — also fails to match).
+        /// </summary>
+        public readonly struct AnomalyShape : IEquatable<AnomalyShape>
+        {
+            public readonly int Elements;
+            public readonly int Children;
+            public readonly int MaxDepth;
+            public readonly string Fingerprint;
+
+            public AnomalyShape(int elements, int children, int maxDepth,
+                IReadOnlyList<string> anomalies, IReadOnlyList<string> exempt)
+            {
+                Elements = elements;
+                Children = children;
+                MaxDepth = maxDepth;
+                Fingerprint = Join(anomalies) + "␟␟" + Join(exempt);
+            }
+
+            static string Join(IReadOnlyList<string> lines)
+            {
+                if (lines == null || lines.Count == 0) return string.Empty;
+                var sb = new StringBuilder();
+                for (var i = 0; i < lines.Count; i++)
+                {
+                    if (i > 0) sb.Append('␟');
+                    sb.Append(lines[i]);
+                }
+                return sb.ToString();
+            }
+
+            public bool Equals(AnomalyShape other)
+                => Elements == other.Elements && Children == other.Children && MaxDepth == other.MaxDepth
+                   && string.Equals(Fingerprint, other.Fingerprint, StringComparison.Ordinal);
+
+            public override bool Equals(object obj) => obj is AnomalyShape s && Equals(s);
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    var hash = Elements;
+                    hash = (hash * 397) ^ Children;
+                    hash = (hash * 397) ^ MaxDepth;
+                    hash = (hash * 397) ^ (Fingerprint?.GetHashCode() ?? 0);
+                    return hash;
+                }
+            }
+        }
+
+        /// <summary>
+        /// <see cref="GetAnomalies(VisualElement,List{string})"/> plus the <see cref="AnomalyShape"/>
+        /// of the scan it just took, for a caller that wants to compare this call against the
+        /// previous one instead of reading a single snapshot on faith.
+        /// </summary>
+        public static IReadOnlyList<string> GetAnomalies(VisualElement root, out AnomalyShape shape, List<string> exempt = null)
+        {
+            int elements = 0, components = 0, children = 0, maxDepth = 0;
+            var anomalies = new List<string>();
+            Walk(root, 0, ref elements, ref components, ref children, ref maxDepth, anomalies, exempt);
+            shape = new AnomalyShape(elements, children, maxDepth, anomalies, exempt);
+            return anomalies;
+        }
+
+        /// <summary>
+        /// Same false-early-match guard a downstream panel-screenshot capturer uses for its own
+        /// pixel-convergence wait (T-1682) — two scans that happen to agree on tick 1 and 2 are not
+        /// proof the tree is done changing, only that nothing had changed YET.
+        /// </summary>
+        public const int MinConvergeTicks = 3;
+
+        /// <summary>Ceiling used by <c>GetAnomaliesConverged</c> below (editor-only) — same default
+        /// magnitude as that capturer's own frame ceiling.</summary>
+        public const int DefaultConvergeWaitFrames = 30;
+
+        /// <summary>
+        /// True once <paramref name="tick"/> has reached <see cref="MinConvergeTicks"/> and
+        /// <paramref name="previous"/> equals <paramref name="current"/> — the per-tick decision a
+        /// tick-driven caller (a Play-mode sweep, <c>GetAnomaliesConverged</c> below, editor-only)
+        /// makes to know the same scan would come back again. <paramref name="previous"/> is null on the
+        /// first tick and never matches, so at least <see cref="MinConvergeTicks"/> ticks are
+        /// always taken before anyone is allowed to trust a zero.
+        /// </summary>
+        public static bool HasConverged(int tick, AnomalyShape? previous, AnomalyShape current)
+            => tick >= MinConvergeTicks && previous.HasValue && previous.Value.Equals(current);
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor-only convenience (T-3490): drives <see cref="HasConverged"/> across real
+        /// <see cref="EditorApplication.update"/> ticks the same way a downstream panel-screenshot
+        /// capturer already waits before reading pixels, so a caller that wants "the anomalies
+        /// once the tree has settled, or an honest
+        /// no" does not have to hand-roll a fixed-tick wait — the exact mistake that produced the
+        /// false near-zero this card fixes. <paramref name="done"/> always receives the LAST scan
+        /// taken, whether or not convergence was reached before <paramref name="maxWaitFrames"/> —
+        /// <paramref name="converged"/> says which, so the caller can refuse to trust a read that
+        /// only ever hit the safety-net ceiling instead of settling. Never assigns
+        /// <c>EditorApplication.update</c> wholesale (only <c>-=</c> its own callback) — an editor
+        /// whose main-thread pump gets zeroed out stops answering entirely (T-3494).
+        /// </summary>
+        public static void GetAnomaliesConverged(
+            VisualElement root,
+            Action<IReadOnlyList<string>, bool, int> done,
+            int maxWaitFrames = DefaultConvergeWaitFrames,
+            List<string> exempt = null)
+        {
+            if (root == null)
+            {
+                done?.Invoke(Array.Empty<string>(), false, 0);
+                return;
+            }
+
+            maxWaitFrames = Mathf.Max(MinConvergeTicks, maxWaitFrames);
+
+            AnomalyShape? previous = null;
+            IReadOnlyList<string> lastAnomalies = Array.Empty<string>();
+            var frame = 0;
+            EditorApplication.CallbackFunction tick = null;
+            tick = () =>
+            {
+                frame++;
+                var converged = false;
+                try
+                {
+                    lastAnomalies = GetAnomalies(root, out var shape, exempt);
+                    converged = HasConverged(frame, previous, shape);
+                    previous = shape;
+                }
+                catch (Exception)
+                {
+                    // Defensive: tree torn down mid-wait (story unmounted) — fall back to the
+                    // frame ceiling below instead of hanging forever, same as CaptureAsync.
+                }
+                if (!converged && frame < maxWaitFrames) return;
+
+                EditorApplication.update -= tick;
+                done?.Invoke(lastAnomalies, converged, frame);
+            };
+            EditorApplication.update += tick;
+        }
+#endif
 
         private static void Walk(VisualElement el, int depth,
             ref int elements, ref int components, ref int children, ref int maxDepth,
@@ -874,7 +1043,7 @@ namespace Sharq.Core.Diagnostics
             return false;
         }
 
-        private static string AssetPathOf(Object obj)
+        private static string AssetPathOf(UnityEngine.Object obj)
         {
             if (obj == null) return string.Empty;
 #if UNITY_EDITOR
