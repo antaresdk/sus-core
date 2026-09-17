@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-17
+
+### Fixed
+- Storybook shell: the state switcher's own label and the sizing note read as prose again, no longer forced onto the mono face meant for aligned data.
+- The state matrix's settle loop overwrites cell geometry by index and only grows or shrinks the list when the cell count actually changes, instead of clearing and rebuilding every pass.
+- A `sus:uss-impossible` marker now sits directly above the write it exempts, so the integrity check sees it.
+
 ## [1.1.0] - 2026-09-11
 
 ### Added
