@@ -19,6 +19,7 @@ namespace Sharq.Core.Editor
     ///   "sources":   ["Components"],
     ///   "generated": "Runtime/Generated",
     ///   "resources": "Runtime/Resources/SusRuntime",
+    ///   "uss": "resources",
     ///   "watch": true,
     ///   "namespace": "MyCompany.UI"
     /// }
@@ -31,11 +32,25 @@ namespace Sharq.Core.Editor
             @"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$",
             RegexOptions.Compiled);
 
+        internal const string UssModeGenerated = "generated";
+        internal const string UssModeResources = "resources";
+
         // ─── JSON fields (JsonUtility) ───────────────────────────────
         public string displayName;
         public string[] sources;
         public string generated;
         public string resources;   // optional — empty string when the package has no runtime USS
+        /// <summary>
+        /// (ARCH-20260917-PKG-REFACTOR-I §5 S1) Where the generator writes its compiled
+        /// <c>.g.uss</c> output. <c>"generated"</c> (default, omitted ⇒ this) — legacy
+        /// behavior: USS lands in <see cref="generated"/> and is then mirrored into
+        /// <see cref="resources"/> by <c>SharqCompilePipeline.SyncUssToResources</c>.
+        /// <c>"resources"</c> — the generator writes <c>.g.uss</c> straight into
+        /// <see cref="resources"/> (which must be non-empty); no second copy is ever
+        /// produced, and a stale copy left in <see cref="generated"/> by a prior
+        /// <c>"generated"</c>-mode run is pruned on the next compile.
+        /// </summary>
+        public string uss;
         public bool watch = true;
         /// <summary>
         /// Optional C# namespace for generated <c>.g.cs</c> types.
@@ -60,6 +75,21 @@ namespace Sharq.Core.Editor
 
         /// <summary>Null when the descriptor declares no resources mirror.</summary>
         public string AbsResourcesDir => string.IsNullOrEmpty(resources) ? null : Abs(resources);
+
+        /// <summary>
+        /// (§5 S1) True when <see cref="uss"/> selects the <c>"resources"</c> mode — the
+        /// generator writes <c>.g.uss</c> straight into <see cref="AbsResourcesDir"/>, no
+        /// second copy in <see cref="AbsGeneratedDir"/>. False (default) is the legacy
+        /// <c>"generated"</c> mode.
+        /// </summary>
+        public bool UssInResourcesOnly => uss == UssModeResources;
+
+        /// <summary>
+        /// Directory the generator writes <c>.g.uss</c> into: <see cref="AbsResourcesDir"/>
+        /// when <see cref="UssInResourcesOnly"/>, otherwise <see cref="AbsGeneratedDir"/>
+        /// (byte-identical to pre-§5-S1 behavior).
+        /// </summary>
+        public string AbsUssDir => UssInResourcesOnly ? AbsResourcesDir : AbsGeneratedDir;
 
         private string Abs(string rel) =>
             Path.GetFullPath(Path.Combine(PackageRoot ?? "", rel ?? "")).Replace('\\', '/');
@@ -114,6 +144,22 @@ namespace Sharq.Core.Editor
                 Debug.LogError(
                     $"[SusPackages] '{jsonPath}': \"namespace\" must be a dotted C# identifier " +
                     $"(e.g. MyCompany.UI); got '{@namespace}'.");
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(uss) && uss != UssModeGenerated && uss != UssModeResources)
+            {
+                Debug.LogError(
+                    $"[SusPackages] '{jsonPath}': \"uss\" must be \"{UssModeGenerated}\" or " +
+                    $"\"{UssModeResources}\" (or omitted); got '{uss}'.");
+                return false;
+            }
+
+            if (uss == UssModeResources && string.IsNullOrEmpty(resources))
+            {
+                Debug.LogError(
+                    $"[SusPackages] '{jsonPath}': \"uss\": \"{UssModeResources}\" requires a " +
+                    "non-empty \"resources\" — there would be nowhere to write .g.uss.");
                 return false;
             }
 

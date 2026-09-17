@@ -98,16 +98,22 @@ namespace Sharq.Core.Editor
         }
 
         /// <summary>
-        /// Full write of all artifacts to <paramref name="generatedDir"/> (delete-if-null).
+        /// Full write of all artifacts (delete-if-null). <c>.g.cs</c> and the source map always
+        /// go to <paramref name="generatedDir"/>; the three <c>.g.uss</c> suffixes go to
+        /// <paramref name="ussDir"/> — the same directory as <paramref name="generatedDir"/> for
+        /// a package descriptor with <c>"uss": "generated"</c> (default, byte-identical to
+        /// pre-§5-S1 behavior), or the resources mirror directly for <c>"uss": "resources"</c>
+        /// (ARCH-20260917-PKG-REFACTOR-I §5 S1) — no second copy is ever written in that case.
         /// Used by the batch/full-regen path.
         /// </summary>
-        internal static void WriteAll(in Artifacts a, string className, string generatedDir)
+        internal static void WriteAll(in Artifacts a, string className, string generatedDir, string ussDir)
         {
             Directory.CreateDirectory(generatedDir);
+            if (ussDir != generatedDir) Directory.CreateDirectory(ussDir);
             AtomicWrite(Path.Combine(generatedDir, $"{className}.g.cs"), a.Code);
-            WriteOrDelete(Path.Combine(generatedDir, $"{className}_static.g.uss"), a.StaticUss);
-            WriteOrDelete(Path.Combine(generatedDir, $"{className}_scoped.g.uss"), a.ScopedUss);
-            WriteOrDelete(Path.Combine(generatedDir, $"{className}.g.uss"), a.GlobalUss);
+            WriteOrDelete(Path.Combine(ussDir, $"{className}_static.g.uss"), a.StaticUss);
+            WriteOrDelete(Path.Combine(ussDir, $"{className}_scoped.g.uss"), a.ScopedUss);
+            WriteOrDelete(Path.Combine(ussDir, $"{className}.g.uss"), a.GlobalUss);
             WriteSourceMap(in a, className, generatedDir);
         }
 
@@ -141,13 +147,20 @@ namespace Sharq.Core.Editor
 
         /// <summary>
         /// Mirrors generated USS files (<c>_static</c>/<c>_scoped</c>/global) from
-        /// <paramref name="generatedDir"/> into <paramref name="resourcesDir"/> for runtime
-        /// <c>Resources.Load</c>.
+        /// <paramref name="ussDir"/> into <paramref name="resourcesDir"/> for runtime
+        /// <c>Resources.Load</c> — <c>"uss": "generated"</c> mode (default), where
+        /// <paramref name="ussDir"/> equals <paramref name="generatedDir"/> and a real copy is
+        /// still needed (player builds only include assets under a <c>Resources/</c> folder).
         ///
-        /// P2.9: the copy is unavoidable — player builds only include assets under a
-        /// <c>Resources/</c> folder, and the canonical <c>Generated/</c> output lives outside
-        /// it. To keep the mirror exact and desync-free this method now:
-        ///  • prunes a stale Resources copy when its <c>Generated</c> source no longer exists
+        /// (ARCH-20260917-PKG-REFACTOR-I §5 S1) When <paramref name="ussDir"/> already equals
+        /// <paramref name="resourcesDir"/> (<c>"uss": "resources"</c> mode) <see cref="WriteAll"/>
+        /// wrote <c>.g.uss</c> straight there — nothing to mirror. This method then only prunes a
+        /// stale <c>Generated/&lt;Class&gt;{_static,_scoped,}.g.uss</c> (+ <c>.meta</c>) left
+        /// behind by a prior <c>"generated"</c>-mode run, so Resources never gets a second copy
+        /// and Generated never keeps an orphan either.
+        ///
+        /// P2.9: to keep the mirror exact and desync-free this method:
+        ///  • prunes a stale Resources copy when its source no longer exists
         ///    (e.g. inline styles removed → no more <c>_static.g.uss</c>);
         ///  • writes atomically (temp file + replace) so a crash mid-write can't leave a
         ///    half-written USS behind;
@@ -155,29 +168,56 @@ namespace Sharq.Core.Editor
         /// Only the three generated <c>.g.uss</c> suffixes are touched — hand-written companion
         /// USS (e.g. <c>SusButton.uss</c>) is never affected.
         /// </summary>
-        internal static void SyncUssToResources(string className, string generatedDir, string resourcesDir)
+        internal static void SyncUssToResources(string className, string generatedDir, string ussDir, string resourcesDir)
         {
             if (string.IsNullOrEmpty(resourcesDir)) return;
+
+            if (ussDir == resourcesDir)
+            {
+                PruneStaleGeneratedUss(className, generatedDir);
+                return;
+            }
+
             Directory.CreateDirectory(resourcesDir);
 
             string[] suffixes = { "_static.g.uss", "_scoped.g.uss", ".g.uss" };
             foreach (var suf in suffixes)
             {
-                var genPath = Path.Combine(generatedDir, $"{className}{suf}");
+                var srcPath = Path.Combine(ussDir, $"{className}{suf}");
                 var resPath = Path.Combine(resourcesDir, $"{className}{suf}");
 
                 // Source gone → drop the stale mirror so Resources never keeps orphans.
-                if (!File.Exists(genPath))
+                if (!File.Exists(srcPath))
                 {
                     if (File.Exists(resPath)) File.Delete(resPath);
                     continue;
                 }
 
-                var genContent = File.ReadAllText(genPath);
-                if (File.Exists(resPath) && File.ReadAllText(resPath) == genContent)
+                var srcContent = File.ReadAllText(srcPath);
+                if (File.Exists(resPath) && File.ReadAllText(resPath) == srcContent)
                     continue;
 
-                AtomicWrite(resPath, genContent);
+                AtomicWrite(resPath, srcContent);
+            }
+        }
+
+        /// <summary>
+        /// (§5 S1) Deletes a stale <c>Generated/&lt;className&gt;{_static,_scoped,}.g.uss</c> +
+        /// its <c>.meta</c>, for a package whose <c>uss</c> mode is <c>"resources"</c> — i.e. one
+        /// whose compiled USS no longer belongs in <paramref name="generatedDir"/> at all. Runs
+        /// unconditionally on every full compile of <paramref name="className"/> so a leftover
+        /// from before the package switched modes (or from re-running an older tool) never
+        /// lingers once that component is regenerated.
+        /// </summary>
+        private static void PruneStaleGeneratedUss(string className, string generatedDir)
+        {
+            string[] suffixes = { "_static.g.uss", "_scoped.g.uss", ".g.uss" };
+            foreach (var suf in suffixes)
+            {
+                var path = Path.Combine(generatedDir, $"{className}{suf}");
+                if (File.Exists(path)) File.Delete(path);
+                var meta = path + ".meta";
+                if (File.Exists(meta)) File.Delete(meta);
             }
         }
 

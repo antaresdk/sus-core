@@ -850,7 +850,13 @@ namespace Sharq.Core.Editor.Diagnostics
                 var info = kv.Value;
                 var stale = new List<string>();
 
-                CollectStaleGeneratedInZone(assetsAbsPath, info.GeneratedZone, GeneratedZoneSuffixes, info.SourceStems, stale);
+                // (§5 S1) A "uss": "resources" module's Generated zone never holds .g.uss at
+                // all — only .g.cs — so it is judged by that suffix alone; otherwise (default
+                // "generated" mode) the zone still co-locates a .g.uss per component, unchanged.
+                var generatedSuffixes = info.UssInResourcesOnly
+                    ? GeneratedOnlyCsSuffixes
+                    : GeneratedZoneSuffixes;
+                CollectStaleGeneratedInZone(assetsAbsPath, info.GeneratedZone, generatedSuffixes, info.SourceStems, stale);
                 CollectStaleGeneratedInZone(assetsAbsPath, info.ResourcesZone, ResourcesZoneSuffixes, info.SourceStems, stale);
 
                 if (stale.Count == 0) continue;
@@ -866,6 +872,13 @@ namespace Sharq.Core.Editor.Diagnostics
         /// "delete and Generate" hint on its own — its stem is still covered because the .g.cs
         /// in the same zone already flags the stem).</summary>
         private static readonly string[] GeneratedZoneSuffixes = { ".g.cs", ".g.uss" };
+
+        /// <summary>(§5 S1) Suffixes judged in a <c>"uss": "resources"</c> module's <c>generated</c>
+        /// zone — <c>.g.uss</c> never belongs there in that mode, so only <c>.g.cs</c> is judged;
+        /// a leftover <c>.g.uss</c> from before the module switched modes is pruned by the
+        /// generator itself (<c>SharqCompilePipeline.SyncUssToResources</c>) on its next compile,
+        /// not flagged here as a purchaser-facing warning.</summary>
+        private static readonly string[] GeneratedOnlyCsSuffixes = { ".g.cs" };
 
         /// <summary>Suffixes judged in a module's <c>resources</c> zone: only the runtime
         /// <c>Resources.Load</c> copy of the compiled stylesheet — DoD item 3: a hand-authored

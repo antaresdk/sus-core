@@ -45,6 +45,16 @@ namespace Sharq.Core.Editor.Diagnostics
         /// step (e.g. this manifest's own module has none).</summary>
         public string resources;
 
+        /// <summary>
+        /// (ARCH-20260917-PKG-REFACTOR-I §5 S1) Mirrors <c>SusPackageDescriptor.uss</c> —
+        /// <c>"resources"</c> means the module's generator writes <c>.g.uss</c> straight into
+        /// <see cref="resources"/>, never into <see cref="generated"/>; null/blank/anything else
+        /// is the legacy <c>"generated"</c> mode, where <see cref="generated"/> also holds a
+        /// <c>.g.uss</c> per component. Used by <see cref="SusSetDoctor.DetectStaleGenerated"/> to
+        /// pick which suffixes the <see cref="generated"/> zone is judged by.
+        /// </summary>
+        public string uss;
+
         /// <summary>Directories (relative to the module's own folder, e.g.
         /// <c>["Components"]</c>) that hold this module's <c>.sharq</c> source files —
         /// searched recursively. T-1526: the set of stems this yields (one per
@@ -126,12 +136,18 @@ namespace Sharq.Core.Editor.Diagnostics
             internal readonly string GeneratedZone;
             internal readonly string ResourcesZone;
             internal readonly HashSet<string> SourceStems;
+            /// <summary>(§5 S1) True when the module's descriptor declares <c>"uss": "resources"</c>
+            /// — its <see cref="GeneratedZone"/> holds no <c>.g.uss</c> at all, only <c>.g.cs</c>.</summary>
+            internal readonly bool UssInResourcesOnly;
 
-            internal SusGenModuleInfo(string generatedZone, string resourcesZone, HashSet<string> sourceStems)
+            internal SusGenModuleInfo(
+                string generatedZone, string resourcesZone, HashSet<string> sourceStems,
+                bool ussInResourcesOnly = false)
             {
                 GeneratedZone = generatedZone;
                 ResourcesZone = resourcesZone;
                 SourceStems = sourceStems;
+                UssInResourcesOnly = ussInResourcesOnly;
             }
         }
 
@@ -176,7 +192,7 @@ namespace Sharq.Core.Editor.Diagnostics
                         stems.Add(Path.GetFileNameWithoutExtension(f));
                 }
 
-                result[m] = new SusGenModuleInfo(genZone, resZone, stems);
+                result[m] = new SusGenModuleInfo(genZone, resZone, stems, gen.uss == "resources");
             }
             return result;
         }

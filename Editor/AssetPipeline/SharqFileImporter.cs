@@ -187,7 +187,10 @@ namespace Sharq.Core.Editor
             WriteHash(assetPath, hash);
 
             // ─── Copy USS to Resources for runtime loading ──────
-            SharqCompilePipeline.SyncUssToResources(model.ClassName, GeneratedDir, ResourcesDir);
+            // Project mode (§5 S1 D1): uss always lands in GeneratedDir here, unchanged by the
+            // package descriptor's "uss" mode — passing GeneratedDir as ussDir keeps this the
+            // real mirror-copy path, byte-identical to pre-§5-S1 behavior.
+            SharqCompilePipeline.SyncUssToResources(model.ClassName, GeneratedDir, GeneratedDir, ResourcesDir);
 
             // ─── USS hot reload notification ──────────────────────
             if (changed.StyleChanged)

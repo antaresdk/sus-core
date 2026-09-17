@@ -263,7 +263,8 @@ namespace Sharq.Core.Editor
                             d.AbsGeneratedDir,
                             log: true,
                             classNamespace: d.@namespace,
-                            extraUsings: d.usings);
+                            extraUsings: d.usings,
+                            ussDir: d.AbsUssDir);
                     }
                 }
 

@@ -493,9 +493,12 @@ namespace Sharq.Core
         /// <summary>
         /// Editor-only development fallback dirs for companion USS resolution when the
         /// Resources copy is missing/stale. Defaults to the current project's Sharq output
-        /// and sus-core's own Generated dir. Downstream packages register their own
-        /// Generated dir via <see cref="RegisterEditorGeneratedDir"/> — core has
-        /// no hardcoded knowledge of them.
+        /// and sus-core's own Generated dir. Downstream packages register their own style
+        /// output dir via <see cref="RegisterEditorGeneratedDir"/> — core has no hardcoded
+        /// knowledge of them. (ARCH-20260917-PKG-REFACTOR-I §5 S1) A package descriptor's
+        /// <c>uss</c> mode decides WHERE that dir is (its own <c>Generated</c> for the legacy
+        /// default, or its Resources mirror for <c>"uss": "resources"</c>) — this fallback
+        /// list is agnostic to which, it just needs the right path registered.
         /// </summary>
         private static readonly System.Collections.Generic.List<string> s_editorGeneratedDirs = new()
         {

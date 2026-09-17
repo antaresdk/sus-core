@@ -39,17 +39,25 @@ namespace Sharq.Core.Editor
 
         /// <summary>
         /// Compiles every <c>*.sharq</c> under <paramref name="sourceDir"/> into
-        /// <paramref name="generatedDir"/> (<c>.g.cs</c> + USS) and mirrors the USS
-        /// into <paramref name="resourcesDir"/> for runtime <c>Resources.Load</c>.
+        /// <paramref name="generatedDir"/> (<c>.g.cs</c>) + <paramref name="ussDir"/> (USS) and,
+        /// when the two differ, mirrors the USS into <paramref name="resourcesDir"/> for runtime
+        /// <c>Resources.Load</c>.
         /// </summary>
+        /// <param name="ussDir">
+        /// (§5 S1) Where <c>.g.uss</c> is written. Defaults to <paramref name="generatedDir"/>
+        /// (legacy <c>"uss": "generated"</c> behavior — a copy is then mirrored into
+        /// <paramref name="resourcesDir"/>). Pass the resources dir itself for
+        /// <c>"uss": "resources"</c> — no second copy is written.
+        /// </param>
         /// <param name="classNamespace">
         /// Optional C# namespace for generated types (from package descriptor).
         /// Empty / null → global namespace.
         /// </param>
         public static Result CompileDirectory(
             string sourceDir, string generatedDir, string resourcesDir, bool log = true,
-            string classNamespace = null, string[] extraUsings = null)
+            string classNamespace = null, string[] extraUsings = null, string ussDir = null)
         {
+            ussDir ??= generatedDir;
             var result = new Result();
 
             if (!Directory.Exists(sourceDir))
@@ -71,7 +79,7 @@ namespace Sharq.Core.Editor
                     continue;
 
                 if (CompileFile(file, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log,
-                        classNamespace, extraUsings))
+                        classNamespace, extraUsings, ussDir))
                     result.Compiled++;
                 else
                     result.Failed++;
@@ -94,7 +102,7 @@ namespace Sharq.Core.Editor
             string classNamespace = null, string[] extraUsings = null)
         {
             return CompileFile(sharqPath, generatedDir, resourcesDir, SharqBatchMode.Full, generatedDir, log,
-                classNamespace, extraUsings);
+                classNamespace, extraUsings, generatedDir);
         }
 
         /// <summary>
@@ -108,8 +116,10 @@ namespace Sharq.Core.Editor
             string cacheDir,
             bool log = true,
             string classNamespace = null,
-            string[] extraUsings = null)
+            string[] extraUsings = null,
+            string ussDir = null)
         {
+            ussDir ??= generatedDir;
             var fullPath = Path.GetFullPath(sharqPath);
             if (!File.Exists(fullPath))
             {
@@ -151,11 +161,11 @@ namespace Sharq.Core.Editor
 
             if (mode == SharqBatchMode.Full)
             {
-                SharqCompilePipeline.WriteAll(in artifacts, model.ClassName, generatedDir);
-                SharqCompilePipeline.SyncUssToResources(model.ClassName, generatedDir, resourcesDir);
+                SharqCompilePipeline.WriteAll(in artifacts, model.ClassName, generatedDir, ussDir);
+                SharqCompilePipeline.SyncUssToResources(model.ClassName, generatedDir, ussDir, resourcesDir);
 
                 // Raise USS only when style (or static from template) actually changed.
-                RaiseUssIfNeeded(model.ClassName, generatedDir, changed, writeStatic: true);
+                RaiseUssIfNeeded(model.ClassName, ussDir, changed, writeStatic: true);
                 if (changed.TemplateChanged && !changed.ScriptChanged)
                     SharqCompileEvents.RaiseTemplateChanged(model.ClassName, model.TemplateXml);
 
@@ -186,27 +196,30 @@ namespace Sharq.Core.Editor
             // Template-only: update _static.g.uss (inline styles), do NOT write .g.cs
             if (changed.TemplateChanged)
             {
+                Directory.CreateDirectory(ussDir);
                 SharqCompilePipeline.WriteOrDelete(
-                    Path.Combine(generatedDir, $"{model.ClassName}_static.g.uss"),
+                    Path.Combine(ussDir, $"{model.ClassName}_static.g.uss"),
                     artifacts.StaticUss);
             }
 
             // Style-only (or also style with template): scoped + global USS
             if (changed.StyleChanged)
             {
+                Directory.CreateDirectory(ussDir);
                 SharqCompilePipeline.WriteOrDelete(
-                    Path.Combine(generatedDir, $"{model.ClassName}_scoped.g.uss"),
+                    Path.Combine(ussDir, $"{model.ClassName}_scoped.g.uss"),
                     artifacts.ScopedUss);
                 SharqCompilePipeline.WriteOrDelete(
-                    Path.Combine(generatedDir, $"{model.ClassName}.g.uss"),
+                    Path.Combine(ussDir, $"{model.ClassName}.g.uss"),
                     artifacts.GlobalUss);
                 // T-3295: map lifecycle rides the same StyleChanged gate as the USS it describes.
+                // (D3) The map itself stays in generatedDir even when uss writes to Resources.
                 SharqCompilePipeline.WriteSourceMap(in artifacts, model.ClassName, generatedDir);
             }
 
-            SharqCompilePipeline.SyncUssToResources(model.ClassName, generatedDir, resourcesDir);
+            SharqCompilePipeline.SyncUssToResources(model.ClassName, generatedDir, ussDir, resourcesDir);
 
-            RaiseUssIfNeeded(model.ClassName, generatedDir, changed, writeStatic: changed.TemplateChanged);
+            RaiseUssIfNeeded(model.ClassName, ussDir, changed, writeStatic: changed.TemplateChanged);
 
             if (changed.TemplateChanged && !changed.ScriptChanged)
                 SharqCompileEvents.RaiseTemplateChanged(model.ClassName, model.TemplateXml);
@@ -254,7 +267,7 @@ namespace Sharq.Core.Editor
         }
 
         private static void RaiseUssIfNeeded(
-            string className, string generatedDir, SectionChanged changed, bool writeStatic)
+            string className, string ussDir, SectionChanged changed, bool writeStatic)
         {
             if (!changed.StyleChanged && !writeStatic)
                 return;
@@ -266,7 +279,7 @@ namespace Sharq.Core.Editor
             var ussPaths = new List<string>();
             void AddIfExists(string suffix)
             {
-                var p = Path.Combine(generatedDir, $"{className}{suffix}");
+                var p = Path.Combine(ussDir, $"{className}{suffix}");
                 if (File.Exists(p)) ussPaths.Add(Path.GetFullPath(p));
             }
 

@@ -929,12 +929,14 @@ namespace Sharq.Core.Editor.Tests
         // ─── DetectStaleGenerated (D8 boundary / T-1526) ────────────────────────
 
         private void WriteSharqGenDescriptor(string moduleDir, string generated = "Runtime/Generated",
-            string resources = "Runtime/Resources/SusRuntime", string sourcesJsonArray = "\"Components\"")
+            string resources = "Runtime/Resources/SusRuntime", string sourcesJsonArray = "\"Components\"",
+            string uss = null)
         {
             var dir = Path.Combine(_root, Root, moduleDir);
             Directory.CreateDirectory(dir);
             var json = "{\"generated\":\"" + generated + "\"," +
                         (resources != null ? "\"resources\":\"" + resources + "\"," : "") +
+                        (uss != null ? "\"uss\":\"" + uss + "\"," : "") +
                         "\"sources\":[" + sourcesJsonArray + "]}";
             File.WriteAllText(Path.Combine(dir, SusSharqGenManifest.FileName), json);
         }
@@ -1085,6 +1087,69 @@ namespace Sharq.Core.Editor.Tests
             var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
 
             Assert.IsEmpty(issues);
+        }
+
+        // ─── §5 S1 (T-3591): "uss": "resources" changes which suffixes the Generated zone
+        // is judged by — .g.uss no longer belongs there at all in that mode. ─────────────
+
+        [Test]
+        public void DetectStaleGenerated_UssResources_StrayGeneratedUss_NotFlagged()
+        {
+            // A module on "uss": "resources" never has .g.uss under Generated (the generator
+            // writes it straight to Resources and prunes any leftover on its own next compile —
+            // SharqCompilePipeline.SyncUssToResources). Set Doctor must not treat a leftover
+            // there as a purchaser-facing "stale generated" warning: it is transient generator
+            // debt, not something the purchaser needs to delete by hand.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit", uss: "resources");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusOldWidget.g.uss"); // stray — not .g.cs, ignored in this mode
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            Assert.IsTrue(info[kit].UssInResourcesOnly);
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.IsEmpty(issues);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_UssResources_StaleGCsStillFlagged()
+        {
+            // Same mode, but a genuinely stale .g.cs (no matching .sharq) must still be caught —
+            // §5 S1 only narrows the Generated zone's suffix set to .g.cs, it doesn't disable it.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit", uss: "resources");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusObjective.g.cs"); // stale: no SusObjective.sharq
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("SusObjective.g.cs", issues[0].Message);
+        }
+
+        [Test]
+        public void DetectStaleGenerated_UssResources_StaleResourcesUssStillFlagged()
+        {
+            // The Resources zone is still judged the same way regardless of uss mode — a stale
+            // companion .g.uss there is exactly as much a purchaser-facing find as before.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit", uss: "resources");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusOldWidget.g.uss"); // stale companion
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("SusOldWidget.g.uss", issues[0].Message);
         }
     }
 }
