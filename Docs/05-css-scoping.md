@@ -72,8 +72,11 @@ compiles that mapping from a single declaration instead:
 ```
 
 - `<axis>` — a kebab-case name (`size`, `density`, `rounded`, …).
-- `from <Prop>` — the backing prop (a `Prop<string>` or `Prop<bool>` field/property on the
-  component); defaults to the PascalCase form of the axis name when omitted.
+- `from <Prop>` — the backing prop. For an axis that emits a class (any axis without `ambient`),
+  this must be a `Prop<string>` field/property — the generator validates it with `UseAllowed`,
+  whose string-set overload only accepts `Prop<string>`. Defaults to the PascalCase form of the
+  axis name when omitted. An `ambient` axis (below) is not bound to the prop at runtime at all — it
+  only records the prop's *name* for tooling, so its declared type doesn't matter.
 - `as "<prefix>"` — overrides the emitted class prefix, for a legacy class shape that doesn't
   follow `<block>--<axis>-<value>`: `as ""` on axis `variant` emits `sus-button--elevated` instead
   of `sus-button--variant-elevated`.
@@ -82,26 +85,30 @@ compiles that mapping from a single declaration instead:
 - `ambient` — marks an axis that emits no class or rule of its own (see below); it takes no block.
 
 For each value, the compiler emits a CSS rule under the value's class and a matching condition in
-the component's generated `Build()`; for an axis without `ambient` it also emits a validator, so a
-prop value outside the recipe is caught while editing instead of silently matching nothing.
+the component's generated `Build()`; for an axis without `ambient` it also emits a runtime guard —
+if the prop is ever set to a value outside the recipe, it is **replaced** by the `default` step (or
+the first declared value if there's no `default`), and a `[PropAllowed] … not in allowed set`
+warning is logged in the editor/development builds. It's a runtime safety net, not a compile-time
+or edit-time check — nothing stops you from typing an out-of-recipe value, it just won't stick.
 
-### Example — a `size` axis
+### Example — a `size` axis (illustrative)
 
-Real recipe, abbreviated (two of five steps), from a button-style component's `<style>` block:
+No shipped component uses `@variants` yet — this is a made-up axis showing the shape, not a copy
+from a real `.sharq` file:
 
 ```
 @variants size from Size {
     xs "x-small" {
-        min-height: rung(control-height, xs);
-        padding-left: rung(space, 10); padding-right: rung(space, 10);
-        font-size: rung(font-size, xsmall);
-        &.icon-only    { width: rung(control-height, xs); max-width: rung(control-height, xs); }
-        &.rounded-pill { border-radius: rung(pill, xs); }
-        .icon-wrap     { min-width: rung(control-box, xs); min-height: rung(control-box, xs); }
+        min-height: 28px;
+        padding-left: 10px; padding-right: 10px;
+        font-size: 12px;
+        &.icon-only    { width: 28px; max-width: 28px; }
+        &.rounded-pill { border-radius: 14px; }
+        .icon-wrap     { min-width: 20px; min-height: 20px; }
     }
     default {
-        min-height: rung(control-height, lg);
-        &.icon-only    { width: rung(control-height, lg); max-width: rung(control-height, lg); }
+        min-height: 40px;
+        &.icon-only    { width: 40px; max-width: 40px; }
     }
 }
 ```
@@ -110,11 +117,11 @@ Real recipe, abbreviated (two of five steps), from a button-style component's `<
 selector, so `&.icon-only` becomes `<block>--size-xs.icon-only`, not a descendant rule. A line
 with no `&` (`.icon-wrap` above) nests as a **descendant** of the value's selector instead.
 
-`rung(<family>, <rung>)` is the one piece of arithmetic a recipe is allowed: it resolves at compile
-time against the shared dimension ladder and becomes `var(--sk-<family token>-<rung>, <fallback>)` —
-the token name comes from the ladder, never typed by hand, and the fallback is the ladder's own
-value for that family at its base step. A family or rung the ladder doesn't have is a compile error
-naming the `.sharq` file and line, not a silently-wrong number.
+> **`rung()`.** The compiler also understands a `rung(<family>, <rung>)` call that resolves against
+> SUS's own shared dimension ladder at compile time. It is not usable in this example: the ladder
+> is data that ships inside the SUS source tree, not inside the installed package, so `rung()` in a
+> `.sharq` file outside that tree fails to compile. Use plain values or your own `var(--…, <px>)`
+> tokens instead, as above.
 
 ### Ambient axes — token override, not a class
 
