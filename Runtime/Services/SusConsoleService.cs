@@ -305,8 +305,21 @@ namespace Sharq.Core
             })
             {
                 var btn = new Button(() => SetFilter(filter)) { text = label };
-                btn.name = RootClass + "-filter-" + label.ToLowerInvariant(); // stable QA/UX-run target 
+                btn.name = RootClass + "-filter-" + label.ToLowerInvariant(); // stable QA/UX-run target
                 btn.AddToClassList(RootClass + "__filter");
+                // T-3662 (audit finding, ux-reviewer@T-3521): "05-filter-warn" clicked the Warn
+                // chip and nothing happened (filter stayed All, log stayed unfiltered) — a plain
+                // UI Toolkit Button's own click detection lives entirely in its internal
+                // Clickable manipulator (pointer down/up), which does NOT answer a dispatched
+                // ClickEvent (confirmed live: SendEvent(ClickEvent) on this exact button left
+                // _filter untouched). Every OTHER clickable surface in this component set is a
+                // SusButton, which listens for ClickEvent directly (SusButton.sharq) — the one
+                // convention this service's hand-built Button/TextField chrome quietly did not
+                // follow. Same fix as the filter/search text fields already get via
+                // RegisterValueChangedCallback: answer both paths so a synthetic ClickEvent
+                // (QA/ux-run) and a real pointer click (player) both call SetFilter. SetFilter
+                // is idempotent, so a real click firing it twice (Clickable + this) is harmless.
+                btn.RegisterCallback<ClickEvent>(_ => SetFilter(filter));
                 _filterChips[filter] = btn;
                 toolbar.Add(btn);
             }
@@ -343,6 +356,8 @@ namespace Sharq.Core
             // Close button
             var closeBtn = new Button(Hide) { text = "✕" };
             closeBtn.AddToClassList(RootClass + "__close");
+            // T-3662: same ClickEvent gap as the filter chips above — cheap to close here too.
+            closeBtn.RegisterCallback<ClickEvent>(_ => Hide());
             toolbar.Add(closeBtn);
 
             _root.Add(toolbar);
