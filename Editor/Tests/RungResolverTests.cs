@@ -1,76 +1,29 @@
 using System;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
-using UnityEngine;
 
 namespace Sharq.Core.Editor.Tests
 {
     /// <summary>
-    /// T-3293 (step 5 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 3) —
+    /// T-3293 (step 5 of ARCH-20260910-SHARQ-STYLE-LAYER.md §6, DoD §7 item 3), rewritten for
+    /// T-3674 (plan `ARCH-20260918-RUNG-LADDER-SHIP.md` §6 S2, DoD §8 item 1) —
     /// <see cref="RungResolver"/>'s compile-time arithmetic: <c>rung(family, rung)</c> resolves
-    /// to <c>var(&lt;token&gt;, &lt;value at lg×default&gt;px)</c>, a family outside the ladder
-    /// and a rung outside the family are both compile errors naming file + line.
+    /// to <c>var(&lt;token&gt;, &lt;value&gt;px)</c> against the package-shipped
+    /// <see cref="RungLadder"/> table, a family outside the ladder and a rung outside the family
+    /// are both compile errors naming file + line, and a malformed call (D-4) is too.
     ///
-    /// Two tiers, deliberately kept apart:
-    ///  • the bulk of the cases below run against a small SYNTHETIC <see cref="DimensionScale"/>
-    ///    (<see cref="SyntheticScaleJson"/>) so they stay correct regardless of how the real
-    ///    ladder (`docs-canon/data/dimension-scale.json`) is edited by unrelated cards later —
-    ///    that file already has its own judge (`dim-scale --check`, R133) and re-deciding its
-    ///    numbers here would just be a second, driftable copy of the same fact;
-    ///  • <see cref="Integration_RealLadder_ResolvesThroughSharqFileParser"/> is the one test that
-    ///    DOES load the real file, proving the disk-lookup + <see cref="SharqFileParser"/> wiring
-    ///    (path walk-up, line numbers) works end to end — same split T-3289/T-3290 already use
-    ///    (corpus-idempotency vs. exact fixtures) for the same reason.
+    /// Values asserted here are read from <see cref="RungLadder"/> itself (not hand-copied
+    /// numbers) — the table's OWN fidelity to `docs-canon/data/dimension-scale.json` is judged
+    /// by `dim-scale --check` / plant-t3673 (T-3673), a second copy of that judgment here would
+    /// drift the moment either side changes. What these tests own is the RESOLUTION arithmetic:
+    /// given a family+rung, does <see cref="RungResolver"/> produce the entry the table already
+    /// carries, verbatim.
     /// </summary>
     public class RungResolverTests
     {
-        // Base row (lg×default) values baked in for the synthetic families below, computed by
-        // hand once and re-derived in comments next to each assertion — not read back from the
-        // production code under test.
-        private const string SyntheticScaleJson = @"{
-            ""schema"": ""sus-dimension-scale/v1"",
-            ""breakpoints"": [""sm"",""md"",""lg"",""xl"",""2xl""],
-            ""densities"": [""compact"",""default"",""comfortable""],
-            ""families"": {
-                ""test-tier"": {
-                    ""breakpoint"": ""variable"",
-                    ""token"": ""--sk-test-{rung}"",
-                    ""rungs"": [""xs"",""sm"",""md""],
-                    ""steps"": [[10,20,30],[11,21,31],[12,22,32]],
-                    ""bp"": {""sm"":0,""md"":0,""lg"":1,""xl"":2,""2xl"":2},
-                    ""dens"": {""compact"":-1,""default"":0,""comfortable"":1}
-                },
-                ""test-named"": {
-                    ""breakpoint"": ""variable"",
-                    ""tokens"": {""--sk-tooltip-max-width"":""tooltip"",""--sk-menu-min-width"":""menu""},
-                    ""rungs"": [""tooltip"",""menu""],
-                    ""steps"": [[100,50],[120,60]],
-                    ""bp"": {""sm"":0,""md"":0,""lg"":1,""xl"":1,""2xl"":1},
-                    ""dens"": {""compact"":0,""default"":0,""comfortable"":0}
-                },
-                ""test-half"": {
-                    ""breakpoint"": ""derived"",
-                    ""derive"": {""from"": ""test-tier"", ""op"": ""half""},
-                    ""token"": ""--sk-test-half-{rung}"",
-                    ""rungs"": [""xs"",""sm"",""md""]
-                },
-                ""test-neg"": {
-                    ""breakpoint"": ""derived"",
-                    ""derive"": {""from"": ""test-tier"", ""op"": ""neg""},
-                    ""token"": ""--sk-test-neg-{rung}"",
-                    ""rungs"": [""xs"",""sm"",""md""]
-                },
-                ""test-invariant"": {
-                    ""breakpoint"": ""invariant"",
-                    ""values"": {""--sk-test-thin"": 1}
-                }
-            }
-        }";
-
-        private static DimensionScale Scale() => DimensionScale.Parse(SyntheticScaleJson);
-
         // ─────────────────────────────────────────────────────────────
-        //  MiniJson
+        //  MiniJson — unrelated to the ladder, still read by SharqSourceMapWriter
         // ─────────────────────────────────────────────────────────────
 
         [Test]
@@ -93,109 +46,58 @@ namespace Sharq.Core.Editor.Tests
         }
 
         // ─────────────────────────────────────────────────────────────
-        //  DimensionScale — family shape
+        //  RungResolver.TryResolve — the arithmetic, against the real table (D-1)
         // ─────────────────────────────────────────────────────────────
 
         [Test]
-        public void DimensionScale_VariableFamily_HasLadder()
+        public void TryResolve_KnownFamilyAndRung_MatchesTableEntryVerbatim()
         {
-            var scale = Scale();
-            Assert.IsTrue(scale.Families["test-tier"].HasLadder);
-            Assert.AreEqual("--sk-test-xs", scale.Families["test-tier"].TokenNameFor("xs"));
-        }
+            var entries = RungLadder.Table["control-height"];
+            var xs = entries.First(e => e.Rung == "xs");
 
-        [Test]
-        public void DimensionScale_NamedTierFamily_ResolvesTokenFromTokensMap()
-        {
-            var scale = Scale();
-            Assert.AreEqual("--sk-tooltip-max-width", scale.Families["test-named"].TokenNameFor("tooltip"));
-        }
-
-        [Test]
-        public void DimensionScale_InvariantFamily_HasNoLadder()
-        {
-            var scale = Scale();
-            Assert.IsFalse(scale.Families["test-invariant"].HasLadder);
-        }
-
-        // ─────────────────────────────────────────────────────────────
-        //  RungResolver.TryResolve — the arithmetic (D-7)
-        // ─────────────────────────────────────────────────────────────
-
-        [Test]
-        public void TryResolve_VariableFamily_UsesLgDefaultStep()
-        {
-            // bp.lg=1 + dens.default=0 = step 1 -> steps[1] = [11,21,31]; "sm" is rung index 1 -> 21.
-            var ok = RungResolver.TryResolve(Scale(), "test-tier", "sm", out var replacement, out var error);
+            var ok = RungResolver.TryResolve("control-height", "xs", out var replacement, out var error);
 
             Assert.IsTrue(ok, error);
-            Assert.AreEqual("var(--sk-test-sm, 21px)", replacement);
+            Assert.AreEqual($"var({xs.Token}, {xs.Value}px)", replacement);
         }
 
         [Test]
-        public void TryResolve_NamedTierFamily_UsesOwnTokensMap()
+        public void TryResolve_DerivedFamily_PillXs_ResolvesToTablesOwnValue()
         {
-            // step 1 -> steps[1] = [120,60]; "menu" is rung index 1 -> 60.
-            var ok = RungResolver.TryResolve(Scale(), "test-named", "menu", out var replacement, out var error);
+            // "pill" is a `derived` family in the source ladder (half of space's donor step) — the
+            // table already carries the computed number, RungResolver does not re-derive it.
+            var entries = RungLadder.Table["pill"];
+            var xs = entries.First(e => e.Rung == "xs");
+
+            var ok = RungResolver.TryResolve("pill", "xs", out var replacement, out var error);
 
             Assert.IsTrue(ok, error);
-            Assert.AreEqual("var(--sk-menu-min-width, 60px)", replacement);
-        }
-
-        [Test]
-        public void TryResolve_DerivedFamily_Half_RoundsAwayFromZero()
-        {
-            // Donor test-tier step 1 -> [11,21,31]; "md" -> 31; half(31) rounds to 16 (15.5 AwayFromZero).
-            var ok = RungResolver.TryResolve(Scale(), "test-half", "md", out var replacement, out var error);
-
-            Assert.IsTrue(ok, error);
-            Assert.AreEqual("var(--sk-test-half-md, 16px)", replacement);
-        }
-
-        [Test]
-        public void TryResolve_DerivedFamily_Neg_Negates()
-        {
-            // Donor step 1 -> [11,21,31]; "xs" -> 11; neg -> -11.
-            var ok = RungResolver.TryResolve(Scale(), "test-neg", "xs", out var replacement, out var error);
-
-            Assert.IsTrue(ok, error);
-            Assert.AreEqual("var(--sk-test-neg-xs, -11px)", replacement);
+            Assert.AreEqual($"var({xs.Token}, {xs.Value}px)", replacement);
         }
 
         [Test]
         public void TryResolve_UnknownFamily_FailsWithLadderOutError()
         {
-            var ok = RungResolver.TryResolve(Scale(), "does-not-exist", "xs", out _, out var error);
+            var ok = RungResolver.TryResolve("does-not-exist", "xs", out _, out var error);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("is not in the dimension ladder", error);
             StringAssert.Contains("does-not-exist", error);
-        }
-
-        [Test]
-        public void TryResolve_InvariantFamily_TreatedAsOutsideLadder()
-        {
-            // D-7's "family outside the ladder" — an invariant family has no rung concept at all
-            // (no bp/dens/steps by design, plan §0), so rung() on it is the same error class as
-            // a family that doesn't exist in the JSON.
-            var ok = RungResolver.TryResolve(Scale(), "test-invariant", "thin", out _, out var error);
-
-            Assert.IsFalse(ok);
-            StringAssert.Contains("is not in the dimension ladder", error);
+            StringAssert.Contains("control-height", error); // "available: ..." lists real families
         }
 
         [Test]
         public void TryResolve_RungOutsideFamily_Fails()
         {
-            var ok = RungResolver.TryResolve(Scale(), "test-tier", "3xl", out _, out var error);
+            var ok = RungResolver.TryResolve("control-height", "not-a-rung", out _, out var error);
 
             Assert.IsFalse(ok);
             StringAssert.Contains("is not in family", error);
-            StringAssert.Contains("3xl", error);
+            StringAssert.Contains("not-a-rung", error);
         }
 
         // ─────────────────────────────────────────────────────────────
-        //  RungResolver.ResolveAll — text pass, line numbers, passthrough
+        //  RungResolver.ResolveAll — text pass, line numbers, passthrough, D-4 malformed calls
         // ─────────────────────────────────────────────────────────────
 
         [Test]
@@ -203,7 +105,7 @@ namespace Sharq.Core.Editor.Tests
         {
             const string body = ".a { color: red; }";
 
-            var result = RungResolver.ResolveAll(body, scale: null, loadError: "unused", fileLabel: "X.sharq", startLine: 1);
+            var result = RungResolver.ResolveAll(body, fileLabel: "X.sharq", startLine: 1);
 
             Assert.AreSame(body, result); // fast-path: same reference, not just equal text
         }
@@ -211,73 +113,84 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void ResolveAll_ReplacesCallInPlace_KeepsRestOfDeclarationVerbatim()
         {
-            const string body = "min-height: rung(test-tier, sm); color: red;";
+            var icon = RungLadder.Table["icon"].First(e => e.Rung == "md");
+            var body = "min-height: rung(icon, md); color: red;";
 
-            var result = RungResolver.ResolveAll(body, Scale(), loadError: null, fileLabel: "X.sharq", startLine: 1);
+            var result = RungResolver.ResolveAll(body, fileLabel: "X.sharq", startLine: 1);
 
-            Assert.AreEqual("min-height: var(--sk-test-sm, 21px); color: red;", result);
+            Assert.AreEqual($"min-height: var({icon.Token}, {icon.Value}px); color: red;", result);
         }
 
         [Test]
         public void ResolveAll_MultipleCallsOnDifferentLines_ReportBothWithCorrectLines()
         {
             // Line 1 relative to startLine=5 -> file line 5; second call on line 3 relative -> file line 7.
-            const string body = "min-height: rung(test-tier, sm);\n" +
+            const string body = "min-height: rung(icon, md);\n" +
                                  "width: rung(unknown-fam, xs);\n" +
-                                 "height: rung(test-tier, huge);\n";
+                                 "height: rung(icon, huge);\n";
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                RungResolver.ResolveAll(body, Scale(), loadError: null, fileLabel: "SusThing.sharq", startLine: 5));
+                RungResolver.ResolveAll(body, fileLabel: "SusThing.sharq", startLine: 5));
 
             StringAssert.Contains("SusThing.sharq:6:", ex.Message); // "width: rung(unknown-fam" is body line 2 -> 5+1
-            StringAssert.Contains("SusThing.sharq:7:", ex.Message); // "height: rung(test-tier, huge" is body line 3 -> 5+2
+            StringAssert.Contains("SusThing.sharq:7:", ex.Message); // "height: rung(icon, huge" is body line 3 -> 5+2
             StringAssert.Contains("unknown-fam", ex.Message);
             StringAssert.Contains("huge", ex.Message);
         }
 
         [Test]
-        public void ResolveAll_LoadFailure_ReportsLoadErrorPerCall()
+        public void ResolveAll_MalformedArgument_D4_ReportsCallTextAndLine()
         {
-            const string body = "min-height: rung(test-tier, sm);";
+            // T-3675 live defect: an unrelated literal-scan tool rewrote the rung NAME argument
+            // into `var(--sk-space-10, 10)` — the regex never matches this call shape, and the
+            // old resolver shipped it verbatim into the .g.uss. D-4: this is now a compile error.
+            const string body = "padding-left: rung(space, var(--sk-space-10, 10));";
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                RungResolver.ResolveAll(body, scale: null, loadError: "dimension-scale.json not found",
-                    fileLabel: "X.sharq", startLine: 1));
+                RungResolver.ResolveAll(body, fileLabel: "SusThing.sharq", startLine: 3));
 
-            StringAssert.Contains("X.sharq:1:", ex.Message);
-            StringAssert.Contains("dimension-scale.json not found", ex.Message);
+            StringAssert.Contains("SusThing.sharq:3:", ex.Message);
+            StringAssert.Contains("malformed", ex.Message);
+            StringAssert.Contains("rung(space, var(--sk-space-10, 10))", ex.Message);
+        }
+
+        [Test]
+        public void ResolveAll_AfterAllCallsResolved_NoRungSubstringSurvives()
+        {
+            var body = "min-height: rung(icon, md); width: rung(control-height, xs);";
+
+            var result = RungResolver.ResolveAll(body, fileLabel: "X.sharq", startLine: 1);
+
+            StringAssert.DoesNotContain("rung(", result);
         }
 
         // ─────────────────────────────────────────────────────────────
-        //  Integration — real ladder, through SharqFileParser (wiring, not arithmetic)
+        //  Integration — through SharqFileParser, from a .sharq OUTSIDE the monorepo (D-1)
         // ─────────────────────────────────────────────────────────────
 
         [Test]
-        public void Integration_RealLadder_ResolvesThroughSharqFileParser()
+        public void Integration_OutsideMonorepo_ResolvesThroughSharqFileParser()
         {
-            // A real absolute path inside the repo (this project's Assets/..), so RungResolver's
-            // directory walk-up actually finds docs-canon/data/dimension-scale.json — exactly
-            // what happens for a real .sharq compiled inside the monorepo's dev projects.
-            var probePath = Path.Combine(Application.dataPath, "..", "RungIntegrationProbe.sharq");
+            // A path under the OS temp directory, nowhere near this repo's docs-canon — proves
+            // resolution no longer needs a disk walk-up to find a ladder file (D-1's whole point:
+            // the table ships INSIDE the compiled package, not next to the monorepo sources).
+            var probePath = Path.Combine(Path.GetTempPath(), "sus-rung-probe-" + Guid.NewGuid().ToString("N"), "RungIntegrationProbe.sharq");
 
+            var icon = RungLadder.Table["icon"].First(e => e.Rung == "md");
             const string sharq =
                 "<template><ui:VisualElement /></template>\n" +
                 "<style scoped>\n.probe { min-height: rung(icon, md); }\n</style>";
 
             var model = SharqFileParser.Parse(sharq, probePath);
 
-            // icon family, lg×default step: bp.lg=1 + dens.default=0 = step 1 -> steps[1] =
-            // [12,16,20,24,28] (docs-canon/data/dimension-scale.json, rungs xs/sm/md/lg/xl) ->
-            // "md" is rung index 2 -> 20 — cross-checked against the family's own note
-            // ("ladder step 1 == :root (--sk-icon-size 20)").
-            StringAssert.Contains("var(--sk-icon-md, 20px)", model.StyleBody);
+            StringAssert.Contains($"var({icon.Token}, {icon.Value}px)", model.StyleBody);
             StringAssert.DoesNotContain("rung(", model.StyleBody);
         }
 
         [Test]
-        public void Integration_RealLadder_UnknownFamily_ThrowsWithFileAndLine()
+        public void Integration_OutsideMonorepo_UnknownFamily_ThrowsWithFileAndLine()
         {
-            var probePath = Path.Combine(Application.dataPath, "..", "RungIntegrationProbe.sharq");
+            var probePath = Path.Combine(Path.GetTempPath(), "sus-rung-probe-" + Guid.NewGuid().ToString("N"), "RungIntegrationProbe.sharq");
 
             const string sharq =
                 "<template><ui:VisualElement /></template>\n" +

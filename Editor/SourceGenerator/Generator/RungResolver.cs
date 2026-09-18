@@ -1,21 +1,22 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Sharq.Core.Editor
 {
     /// <summary>
     /// Compile-time resolution of <c>rung(&lt;family&gt;, &lt;rung&gt;)</c> — the ONLY arithmetic
-    /// of the Sharq style layer (T-3293, plan §4.1 D-7). A declaration value like
+    /// of the Sharq style layer (T-3293, plan §4.1 D-7; table source T-3674, plan
+    /// `ARCH-20260918-RUNG-LADDER-SHIP.md` D-1). A declaration value like
     /// <c>min-height: rung(control-height, xs);</c> becomes
-    /// <c>min-height: var(--sk-control-h-xs, 28px);</c>: the token NAME comes from the family's
-    /// own <c>token</c>/<c>tokens</c> field in <c>docs-canon/data/dimension-scale.json</c> (never
-    /// invented from the call site — the plan's rule is "the token NAME comes from the family's
-    /// own token field and the fallback comes from the ladder, never from the author's head"),
-    /// and the fallback NUMBER is the family's value at the
-    /// <c>lg</c>×<c>default</c> step (T-3011's "base row" — the same step the sheet's un-suffixed
-    /// <c>.breakpoint-lg</c>/no-density block resolves to).
+    /// <c>min-height: var(--sk-control-h-xs, 28px);</c>: both the token NAME and the fallback
+    /// NUMBER come from <see cref="RungLadder"/>, a table generated INSIDE the package — the
+    /// same arithmetic that builds the shipped kit sheet, read here rather than re-derived by a
+    /// second formula, and present in
+    /// every project that installs `com.sharq-it.sus.core` (`file:`, git pin, registry, a
+    /// Tuanjie project, a folder outside the monorepo) with no disk search required.
     ///
     /// Runs as a pure TEXT pass over the raw <c>&lt;style&gt;</c> body inside
     /// <see cref="SharqFileParser"/>, before <see cref="CssScanner"/> ever sees it — so every
@@ -29,50 +30,48 @@ namespace Sharq.Core.Editor
     /// them (single substring check before the regex even runs), which is what keeps D-13's
     /// zero-diff guarantee true here BY CONSTRUCTION, exactly like T-3291/T-3292's own gates.
     ///
-    /// "family outside the ladder" / "rung outside the family" (card T-3293) are BOTH compile errors, not
-    /// silent passthrough: a `rung()` call that fails to resolve throws, naming the `.sharq` file
-    /// and the 1-based line the call sits on (computed by <see cref="SharqFileParser"/> from the
-    /// real file, not just "somewhere in <style>" — the plan asks for "the file name and the line").
+    /// "family outside the ladder" / "rung outside the family" (card T-3293) are BOTH compile
+    /// errors, not silent passthrough: a <c>rung()</c> call that fails to resolve throws, naming
+    /// the <c>.sharq</c> file and the 1-based line the call sits on (computed by
+    /// <see cref="SharqFileParser"/> from the real file, not just "somewhere in &lt;style&gt;").
+    ///
+    /// D-4 (T-3675 sibling defect): a <c>rung(</c> call whose arguments do NOT match the
+    /// <c>&lt;family&gt;, &lt;rung-name&gt;</c> shape — e.g. an argument mangled into
+    /// <c>var(--sk-space-10, 10)</c> by an unrelated tool — used to fail the regex silently and
+    /// ride the passthrough text straight into the shipped `.g.uss` as an invalid CSS value. Any
+    /// <c>rung(</c> substring left after the well-formed calls are replaced is now a compile
+    /// error of its own, naming the file, the line, and the malformed call text.
     /// </summary>
     internal static class RungResolver
     {
-        public const string DataFileRel = "docs-canon/data/dimension-scale.json";
-
         private static readonly Regex CallRe = new(
             @"rung\(\s*([A-Za-z][\w-]*)\s*,\s*([A-Za-z0-9][\w-]*)\s*\)", RegexOptions.Compiled);
-
-        // Process-wide: the ladder is static data that does not change mid-compile, and every
-        // domain reload (each EditMode test run included) clears this anyway.
-        private static DimensionScale _cachedScale;
-        private static string _cachedFromDir;
 
         /// <summary>
         /// Resolves every <c>rung(...)</c> call in <paramref name="body"/> (the already-trimmed
         /// <c>&lt;style&gt;</c> text). Returns <paramref name="body"/> UNCHANGED (same reference)
         /// when it contains no <c>rung(</c> at all — the corpus/fixture fast path. Throws
         /// <see cref="InvalidOperationException"/> naming file + line for every call that failed
-        /// to resolve (collected, not one-at-a-time, so a file with several bad calls reports all
-        /// of them in one message — same convention <see cref="StyleParser"/> already uses).
+        /// to resolve or was malformed (D-4), collected, not one-at-a-time, so a file with several
+        /// bad calls reports all of them in one message — same convention <see cref="StyleParser"/>
+        /// already uses.
         /// </summary>
         public static string ResolveAll(string body, string sourcePath, string className, int startLine)
         {
             if (string.IsNullOrEmpty(body) || body.IndexOf("rung(", StringComparison.Ordinal) < 0)
                 return body;
 
-            var scale = LoadScale(sourcePath, out var loadError);
             var fileLabel = string.IsNullOrEmpty(className) ? Path.GetFileName(sourcePath) : className + ".sharq";
-            return ResolveAll(body, scale, loadError, fileLabel, startLine);
+            return ResolveAll(body, fileLabel, startLine);
         }
 
         /// <summary>
-        /// Pure overload — no disk access, takes an already-parsed <paramref name="scale"/>
-        /// (null ⇒ every call fails with <paramref name="loadError"/>). Exists so the resolution
-        /// arithmetic (<see cref="TryResolve"/>) is testable against a small synthetic ladder
-        /// without depending on the real, evolving `docs-canon/data/dimension-scale.json` — the
-        /// disk-backed overload above is a thin wrapper around this one.
+        /// Pure overload — no disk access, resolves against the package-shipped
+        /// <see cref="RungLadder"/> table directly. Exists so the resolution arithmetic
+        /// (<see cref="TryResolve"/>) is testable without depending on
+        /// <see cref="SharqFileParser"/>'s file-path plumbing.
         /// </summary>
-        internal static string ResolveAll(string body, DimensionScale scale, string loadError,
-            string fileLabel, int startLine)
+        internal static string ResolveAll(string body, string fileLabel, int startLine)
         {
             if (string.IsNullOrEmpty(body) || body.IndexOf("rung(", StringComparison.Ordinal) < 0)
                 return body;
@@ -82,12 +81,7 @@ namespace Sharq.Core.Editor
             var result = CallRe.Replace(body, m =>
             {
                 var line = startLine + CountNewlines(body, 0, m.Index);
-                if (scale == null)
-                {
-                    errors.Add($"{fileLabel}:{line}: rung({m.Groups[1].Value}, {m.Groups[2].Value}): {loadError}");
-                    return m.Value;
-                }
-                if (!TryResolve(scale, m.Groups[1].Value, m.Groups[2].Value, out var replacement, out var err))
+                if (!TryResolve(m.Groups[1].Value, m.Groups[2].Value, out var replacement, out var err))
                 {
                     errors.Add($"{fileLabel}:{line}: {err}");
                     return m.Value;
@@ -95,159 +89,88 @@ namespace Sharq.Core.Editor
                 return replacement;
             });
 
+            // D-4: a rung( call the regex above did not match at all (malformed arguments, e.g.
+            // an unrelated tool rewrote the rung name into `var(--sk-space-10, 10)`) still leaves
+            // the substring `rung(` in `result` — report each occurrence instead of shipping it.
+            // Scanned against a COMMENT-MASKED copy (`/* ... */` blanked, same length/positions):
+            // the corpus documents dimension-literal exceptions with prose that names `rung()`
+            // by itself inside a trailing comment — that is not a call, and flagging it would
+            // make every such comment a compile error (T-3547's own family of false positive).
+            var masked = MaskComments(result);
+            if (masked.IndexOf("rung(", StringComparison.Ordinal) >= 0)
+            {
+                var searchFrom = 0;
+                while (true)
+                {
+                    var idx = masked.IndexOf("rung(", searchFrom, StringComparison.Ordinal);
+                    if (idx < 0) break;
+                    var line = startLine + CountNewlines(result, 0, idx);
+                    var callText = ExtractCallText(result, idx);
+                    errors.Add($"{fileLabel}:{line}: rung() call is malformed: arguments must be "
+                        + $"`<family>, <rung-name>` — got `{callText}`");
+                    searchFrom = idx + "rung(".Length;
+                }
+            }
+
             if (errors.Count > 0)
                 throw new InvalidOperationException(string.Join(" | ", errors));
 
             return result;
         }
 
-        internal static bool TryResolve(DimensionScale scale, string familyName, string rung,
-            out string replacement, out string error)
+        internal static bool TryResolve(string familyName, string rung, out string replacement, out string error)
         {
             replacement = null;
+            error = null;
 
-            if (!scale.Families.TryGetValue(familyName, out var fam) || !fam.HasLadder)
+            if (!RungLadder.Table.TryGetValue(familyName, out var entries))
             {
-                error = $"rung(): family '{familyName}' is not in the dimension ladder ({DataFileRel}) — "
-                    + $"available: {string.Join(", ", scale.LadderFamilyNames())}";
+                error = $"rung(): family '{familyName}' is not in the dimension ladder — "
+                    + $"available: {string.Join(", ", RungLadder.Families)}";
                 return false;
             }
 
-            if (!fam.Rungs.Contains(rung))
+            RungLadder.Entry entry = default;
+            var found = false;
+            foreach (var e in entries)
+            {
+                if (!string.Equals(e.Rung, rung, StringComparison.Ordinal)) continue;
+                entry = e;
+                found = true;
+                break;
+            }
+
+            if (!found)
             {
                 error = $"rung(): rung '{rung}' is not in family '{familyName}' — "
-                    + $"available rungs: {string.Join(", ", fam.Rungs)}";
+                    + $"available rungs: {string.Join(", ", entries.Select(e => e.Rung))}";
                 return false;
             }
 
-            var tokenName = fam.TokenNameFor(rung);
-            if (string.IsNullOrEmpty(tokenName))
-            {
-                error = $"rung(): family '{familyName}' declares no token name for rung '{rung}' "
-                    + "— that is a defect in the ladder data, not in the call";
-                return false;
-            }
-
-            if (!TryValueAtBaseRow(scale, fam, rung, out var value, out error))
-                return false;
-
-            replacement = $"var({tokenName}, {value}px)";
+            replacement = $"var({entry.Token}, {entry.Value}px)";
             return true;
         }
 
-        /// <summary>Value at the `lg`×`default` step — T-3011's base row (D-7 pins it to "the
-        /// value at the lg × default step"). `derived` families (pill, space-neg) have no ladder of their
-        /// own: the step and the raw number both come from the donor, then <c>DeriveOp</c>
-        /// (half/neg) is applied — the SAME arithmetic <c>dim-scale.mjs</c>'s `valuesOf` uses to
-        /// build the shipped `.g.uss` sheet, read here rather than re-derived by a second formula.</summary>
-        private static bool TryValueAtBaseRow(DimensionScale scale, DimensionFamily fam, string rung,
-            out long value, out string error)
+        /// <summary>Extracts the full <c>rung(...)</c> call text starting at <paramref name="start"/>
+        /// (the index of the 'r' in "rung(") for the error message, matching parens (a malformed
+        /// call's argument can itself contain a nested call, e.g. <c>rung(space, var(--x, 1))</c>).
+        /// Falls back to a short prefix if the parens never balance (truncated/broken source).</summary>
+        private static string ExtractCallText(string s, int start)
         {
-            value = 0;
-            error = null;
+            var open = s.IndexOf('(', start);
+            if (open < 0) return s.Substring(start, Math.Min(60, s.Length - start));
 
-            if (fam.Breakpoint == "derived")
+            var depth = 0;
+            for (var i = open; i < s.Length; i++)
             {
-                if (fam.DeriveFrom == null || !scale.Families.TryGetValue(fam.DeriveFrom, out var donor)
-                    || donor.Steps == null)
+                if (s[i] == '(') depth++;
+                else if (s[i] == ')')
                 {
-                    error = $"rung(): family '{fam.Name}' derives from donor '{fam.DeriveFrom}', "
-                        + $"which {DataFileRel} does not declare as a ladder — a data defect, not a call defect";
-                    return false;
+                    depth--;
+                    if (depth == 0) return s.Substring(start, i - start + 1);
                 }
-
-                var donorRungIndex = donor.Rungs.IndexOf(rung);
-                if (donorRungIndex < 0)
-                {
-                    error = $"rung(): donor '{fam.DeriveFrom}' of family '{fam.Name}' does not carry rung "
-                        + $"'{rung}' — a data defect, not a call defect";
-                    return false;
-                }
-
-                var donorStep = ClampStep(donor);
-                var raw = donor.Steps[donorStep][donorRungIndex];
-                value = fam.DeriveOp == "half"
-                    ? (long)Math.Round(raw / 2.0, MidpointRounding.AwayFromZero)
-                    : fam.DeriveOp == "neg" ? -raw : raw;
-                return true;
             }
-
-            var rungIndex = fam.Rungs.IndexOf(rung);
-            var step = ClampStep(fam);
-            if (fam.Steps == null || step >= fam.Steps.Count || rungIndex >= fam.Steps[step].Count)
-            {
-                error = $"rung(): family '{fam.Name}' carries no value at the lg×default step for "
-                    + $"rung '{rung}' — a defect in the ladder data, not in the call";
-                return false;
-            }
-
-            value = fam.Steps[step][rungIndex];
-            return true;
-        }
-
-        /// <summary>`clamp(bp[lg] + dens[default], 0, len(steps)-1)` — same formula as
-        /// `dim-scale.mjs`'s `stepOf`, evaluated at the fixed `lg`×`default` pair only (D-7 does
-        /// not vary this pair, unlike the shipped sheet, which emits all 15 blocks).</summary>
-        private static int ClampStep(DimensionFamily fam)
-        {
-            var raw = (fam.Bp.TryGetValue("lg", out var b) ? b : 0)
-                + (fam.Dens.TryGetValue("default", out var d) ? d : 0);
-            var len = fam.Steps?.Count ?? 1;
-            return (int)Math.Max(0, Math.Min(len - 1, raw));
-        }
-
-        private static DimensionScale LoadScale(string sourcePath, out string error)
-        {
-            error = null;
-
-            var dir = string.IsNullOrEmpty(sourcePath) ? null : Path.GetDirectoryName(Path.GetFullPath(sourcePath));
-            if (_cachedScale != null && string.Equals(_cachedFromDir, FindRoot(dir), StringComparison.OrdinalIgnoreCase))
-                return _cachedScale;
-
-            var found = FindUpwards(dir, DataFileRel);
-            if (found == null)
-            {
-                error = $"`{DataFileRel}` was not found in any parent directory of `{sourcePath}` "
-                    + "— rung() only resolves inside a tree that ships the dimension ladder next to "
-                    + "the sources (the docs-canon monorepo); a .sharq distributed on its own, "
-                    + "without the ladder, cannot be compiled";
-                return null;
-            }
-
-            try
-            {
-                var json = File.ReadAllText(found);
-                var scale = DimensionScale.Parse(json);
-                _cachedScale = scale;
-                _cachedFromDir = FindRoot(dir);
-                return scale;
-            }
-            catch (Exception ex)
-            {
-                error = $"`{found}` does not read as JSON: {ex.Message}";
-                return null;
-            }
-        }
-
-        private static string FindRoot(string startDir)
-        {
-            var found = FindUpwards(startDir, DataFileRel);
-            return found == null ? null : Path.GetDirectoryName(found);
-        }
-
-        private static string FindUpwards(string startDir, string relPath)
-        {
-            var relNative = relPath.Replace('/', Path.DirectorySeparatorChar);
-            var dir = startDir;
-            for (var depth = 0; depth < 32 && !string.IsNullOrEmpty(dir); depth++)
-            {
-                var candidate = Path.Combine(dir, relNative);
-                if (File.Exists(candidate)) return candidate;
-                var parent = Directory.GetParent(dir);
-                if (parent == null) break;
-                dir = parent.FullName;
-            }
-            return null;
+            return s.Substring(start, Math.Min(60, s.Length - start));
         }
 
         private static int CountNewlines(string s, int from, int to)
@@ -257,6 +180,31 @@ namespace Sharq.Core.Editor
             for (var i = from; i < end; i++)
                 if (s[i] == '\n') n++;
             return n;
+        }
+
+        /// <summary>Blanks every <c>/* ... */</c> comment's content with spaces (newlines kept
+        /// literal) so the D-4 leftover-<c>rung(</c> scan does not mistake documentation prose —
+        /// e.g. a comment that names <c>rung()</c> by itself next to an `sus:dimension-literal`
+        /// marker — for a malformed call. Same length as the input, so indices found in the result stay
+        /// valid offsets into the ORIGINAL (unmasked) string for text/line extraction.</summary>
+        private static string MaskComments(string s)
+        {
+            var chars = s.ToCharArray();
+            var i = 0;
+            while (i < chars.Length - 1)
+            {
+                if (chars[i] == '/' && chars[i + 1] == '*')
+                {
+                    var j = i;
+                    while (j < chars.Length - 1 && !(chars[j] == '*' && chars[j + 1] == '/')) j++;
+                    var end = Math.Min(j + 2, chars.Length);
+                    for (var k = i; k < end; k++)
+                        if (chars[k] != '\n') chars[k] = ' ';
+                    i = end;
+                }
+                else i++;
+            }
+            return new string(chars);
         }
     }
 }

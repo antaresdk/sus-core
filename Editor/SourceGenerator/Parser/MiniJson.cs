@@ -6,18 +6,15 @@ using System.Text;
 namespace Sharq.Core.Editor
 {
     /// <summary>
-    /// Minimal recursive-descent JSON reader (T-3293, plan §4.1/D-16/D-18): the ONE input this
-    /// card's compile-time arithmetic needs to read is `docs-canon/data/dimension-scale.json`,
-    /// and that file's shape (`families` keyed by arbitrary family name, arrays of arrays for
-    /// `steps`) does not fit Unity's <c>JsonUtility</c> (no dictionary support) — the plan's own
-    /// D-1 rationale for choosing an at-rule grammar over a JSON block for AUTHOR-facing recipes
-    /// applies just the same here, one level down: adding Newtonsoft as a dependency of the free
-    /// core package to read one internal data file is the wrong trade. This reader returns a
-    /// plain object graph (<see cref="Dictionary{TKey,TValue}"/> / <see cref="List{T}"/> /
-    /// <c>string</c> / <c>long</c> / <c>double</c> / <c>bool</c> / <c>null</c>) — callers own
-    /// their own typed projection (see <see cref="DimensionScale"/>). It is a READER only: the
-    /// data file is generated and judged elsewhere (R133); this class
-    /// has no writer and no opinion about the schema beyond well-formed JSON.
+    /// Minimal recursive-descent JSON reader (T-3293, plan §4.1/D-16/D-18), still needed by
+    /// <see cref="SharqSourceMapWriter"/> even after the dimension ladder itself moved into the
+    /// compiled <see cref="RungLadder"/> table (T-3674): Unity's <c>JsonUtility</c> has no
+    /// dictionary support, and adding Newtonsoft as a dependency of the free core package to read
+    /// small internal data files is the wrong trade. This reader returns a plain object graph
+    /// (<see cref="Dictionary{TKey,TValue}"/> / <see cref="List{T}"/> / <c>string</c> /
+    /// <c>long</c> / <c>double</c> / <c>bool</c> / <c>null</c>) — callers own their own typed
+    /// projection. It is a READER only and has no writer and no opinion about the schema beyond
+    /// well-formed JSON.
     /// </summary>
     internal static class MiniJson
     {
