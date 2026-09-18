@@ -12,7 +12,7 @@
 | 2 | [`.sharq` and directives](./02-sharq-format.md) | SFC-format, $using, $MainElement, v-if/v-show/v-for/:text/@click/style |
 | 3 | [Reactivity](./03-reactivity.md) | Prop&lt;T&gt;, Computed&lt;T&gt;, Watch&lt;T&gt;, DependencyTracker, P/C helpers |
 | 4 | [Slots](./04-slots.md) | Named slots, default slot, SlotPropMap |
-| 5 | [CSS Scoping](./05-css-scoping.md) | scoped/global, hash classes, Sharq restrictions |
+| 5 | [CSS Scoping](./05-css-scoping.md) | scoped/global, hash classes, `@variants` recipes, Sharq restrictions |
 | 6 | [Adaptive layout](./06-responsive.md) | SusBreakpointService, breakpoint classes, Watch |
 | 7 | [OverlayHost and portals](./07-overlayhost.md) | Portal container, OverlayCategory, z-order |
 | 8 | [Events](./08-events.md) | Emit/On, communication via Prop&lt;T&gt; |
