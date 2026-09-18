@@ -91,6 +91,11 @@ collide across packages.
 
 Optional **`usings`**: a string array of extra C# namespaces emitted as `using` directives in every generated `.g.cs` file (when composing types from another UI package).
 
+Optional **`uss`**: `"resources"` writes generated `.g.uss` only into `resources` - no copy is
+kept under `generated/`. Omitted (default) keeps the previous pair: one `.g.uss` under
+`generated/` plus an identical copy under `resources/`. A downstream UI package whose
+components load styles exclusively via `Resources.Load` at runtime can use this leaner mode.
+
 Infrastructure lives in `sus-core/Editor/Packaging/`:
 
 - **`SusPackageRegistry`** - finds descriptors for all resolved packages; only mutable packages
