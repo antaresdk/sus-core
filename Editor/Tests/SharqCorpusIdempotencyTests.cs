@@ -60,7 +60,7 @@ namespace Sharq.Core.Editor.Tests
                 "no downstream package with a sharq.gen.json descriptor was resolved — " +
                 "package/path resolution is broken (an empty corpus must never read as a green run)");
 
-            var sharqFiles = new List<(string path, string generatedDir, string ns, string[] usings, string pkg)>();
+            var sharqFiles = new List<(string path, string generatedDir, string ussDir, string ns, string[] usings, string pkg)>();
             var perPackageCount = new Dictionary<string, int>();
 
             foreach (var descriptor in descriptors)
@@ -72,7 +72,7 @@ namespace Sharq.Core.Editor.Tests
                     foreach (var file in Directory.GetFiles(srcDir, "*.sharq", SearchOption.AllDirectories)
                                  .OrderBy(f => f, StringComparer.Ordinal))
                     {
-                        sharqFiles.Add((file, descriptor.AbsGeneratedDir, descriptor.@namespace, descriptor.usings, descriptor.PackageName));
+                        sharqFiles.Add((file, descriptor.AbsGeneratedDir, descriptor.AbsUssDir, descriptor.@namespace, descriptor.usings, descriptor.PackageName));
                         count++;
                     }
                 }
@@ -88,7 +88,7 @@ namespace Sharq.Core.Editor.Tests
             var missingTemplate = new List<string>();
             var componentsWithMismatch = new HashSet<string>();
 
-            foreach (var (path, generatedDir, ns, usings, pkg) in sharqFiles)
+            foreach (var (path, generatedDir, ussDir, ns, usings, pkg) in sharqFiles)
             {
                 var content = File.ReadAllText(path);
                 var model = SharqFileParser.Parse(content, path);
@@ -115,17 +115,20 @@ namespace Sharq.Core.Editor.Tests
                 var artifacts = SharqCompilePipeline.Generate(model);
                 var className = model.ClassName;
 
+                // (T-3641, mirrors R50 / T-3592 §5 S1) .g.cs always lands in generatedDir;
+                // .g.uss variants follow the descriptor's uss mode — resources mode writes them
+                // straight into AbsResourcesDir/AbsUssDir with no copy left in generatedDir.
                 var expected = new[]
                 {
-                    new Artifact($"{className}.g.cs", artifacts.Code),
-                    new Artifact($"{className}_scoped.g.uss", artifacts.ScopedUss),
-                    new Artifact($"{className}.g.uss", artifacts.GlobalUss),
-                    new Artifact($"{className}_static.g.uss", artifacts.StaticUss),
+                    (dir: generatedDir, artifact: new Artifact($"{className}.g.cs", artifacts.Code)),
+                    (dir: ussDir, artifact: new Artifact($"{className}_scoped.g.uss", artifacts.ScopedUss)),
+                    (dir: ussDir, artifact: new Artifact($"{className}.g.uss", artifacts.GlobalUss)),
+                    (dir: ussDir, artifact: new Artifact($"{className}_static.g.uss", artifacts.StaticUss)),
                 };
 
-                foreach (var a in expected)
+                foreach (var (dir, a) in expected)
                 {
-                    var diskPath = Path.Combine(generatedDir, a.Suffix);
+                    var diskPath = Path.Combine(dir, a.Suffix);
                     var onDisk = File.Exists(diskPath) ? File.ReadAllText(diskPath) : null;
 
                     if (a.Generated == null && onDisk == null)
