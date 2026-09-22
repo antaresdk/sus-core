@@ -119,10 +119,10 @@ namespace Sharq.Core.Editor.Tests
         [Test]
         public void Writer_EscapesQuotesAndBackslashesInPath()
         {
-            var json = SharqSourceMapWriter.Build(@"C:\projects\sus\SusButton.sharq", "abc", 1,
+            var json = SharqSourceMapWriter.Build(@"C:\work\project\SusButton.sharq", "abc", 1,
                 new List<SharqMapLine>());
             var obj = (Dictionary<string, object>)MiniJson.Deserialize(json);
-            Assert.AreEqual("C:/projects/sus/SusButton.sharq", obj["sharq"], "backslashes normalized to '/'");
+            Assert.AreEqual("C:/work/project/SusButton.sharq", obj["sharq"], "backslashes normalized to '/'");
 
             var withQuote = SharqSourceMapWriter.Build("a\"b.sharq", "abc", 1, new List<SharqMapLine>());
             var obj2 = (Dictionary<string, object>)MiniJson.Deserialize(withQuote);

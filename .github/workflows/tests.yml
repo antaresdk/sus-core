@@ -1,7 +1,7 @@
 name: tests
 # Unity Test Runner for this UPM package via GameCI.
 #
-# REQUIRES setup (see planning/CI-SETUP.md in the umbrella repo):
+# REQUIRES setup:
 #   1. Secrets: UNITY_LICENSE (Personal) OR UNITY_EMAIL+UNITY_PASSWORD+UNITY_SERIAL (Plus/Pro).
 #   2. A package is not a Unity project, so CI scaffolds a minimal host project
 #      and embeds the package via file:. The com.unity.test-framework version may
