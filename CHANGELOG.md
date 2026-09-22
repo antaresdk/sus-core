@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `SusOverlayComponent.DismissSelfFromOverlay` / `SusToastBase.DismissToast`: take a self-teleported overlay out of the tree for good, without the restore into its original parent that `UnmountSelfFromOverlay` / `HideToast` perform. Also detaches an element that was added straight into the `OverlayHost` (no stack entry) and cancels a restore still pending from an earlier unmount.
+
+## [1.1.2] - 2026-09-23
+
+### Changed
+- `rung()` now resolves in any project — the ladder ships inside the package (a generated `RungLadder` table), rather than being searched for on disk next to the monorepo sources. A malformed `rung(...)` call (arguments that don't parse as `<family>, <rung-name>`) is now a compile error instead of being passed through verbatim.
+
 ## [1.1.1] - 2026-09-17
 
 ### Fixed
