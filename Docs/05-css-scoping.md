@@ -118,10 +118,14 @@ selector, so `&.icon-only` becomes `<block>--size-xs.icon-only`, not a descendan
 with no `&` (`.icon-wrap` above) nests as a **descendant** of the value's selector instead.
 
 > **`rung()`.** The compiler also understands a `rung(<family>, <rung>)` call that resolves against
-> SUS's own shared dimension ladder at compile time. It is not usable in this example: the ladder
-> is data that ships inside the SUS source tree, not inside the installed package, so `rung()` in a
-> `.sharq` file outside that tree fails to compile. Use plain values or your own `var(--…, <px>)`
-> tokens instead, as above.
+> SUS's shared dimension ladder at compile time. The ladder ships as a table generated inside
+> `com.sharq-it.sus.core` itself, so the call compiles in any project that installs the package —
+> `file:`, a git pin, the registry, or a folder outside the SUS monorepo — not only inside the SUS
+> source tree. For example, `rung(control-height, xs)` becomes `var(--sk-control-h-xs, 28px)`: both
+> the token name and the fallback number come from the ladder. Without kit installed nothing sets
+> `--sk-control-h-xs`, so the declaration resolves to its px fallback (`28px`); with kit present
+> the kit's theme value wins instead. An unknown family or rung name is a compile error that lists
+> the available ones.
 
 ### Ambient axes — token override, not a class
 
