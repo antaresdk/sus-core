@@ -119,8 +119,8 @@ with no `&` (`.icon-wrap` above) nests as a **descendant** of the value's select
 
 > **`rung()`.** The compiler also understands a `rung(<family>, <rung>)` call that resolves against
 > SUS's shared dimension ladder at compile time. The ladder ships as a table generated inside
-> `com.sharq-it.sus.core` itself, so the call compiles wherever that package is installed — as a
-> GitHub UPM git package or from an Asset Store import — with no extra setup. For example,
+> `com.sharq-it.sus.core` itself, so the call compiles wherever that package is installed as a
+> GitHub UPM git package, with no extra setup. For example,
 > `rung(control-height, xs)` becomes `var(--sk-control-h-xs, 28px)`: both
 > the token name and the fallback number come from the ladder. Without kit installed nothing sets
 > `--sk-control-h-xs`, so the declaration resolves to its px fallback (`28px`); with kit present
