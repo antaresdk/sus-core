@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-23
+
 ### Added
 - `SusOverlayComponent.DismissSelfFromOverlay` / `SusToastBase.DismissToast`: take a self-teleported overlay out of the tree for good, without the restore into its original parent that `UnmountSelfFromOverlay` / `HideToast` perform. Also detaches an element that was added straight into the `OverlayHost` (no stack entry) and cancels a restore still pending from an earlier unmount.
 
