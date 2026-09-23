@@ -93,7 +93,7 @@ Add to `Packages/manifest.json`:
 
 Unity will automatically pick up the package when the editor has focus. It will appear in Package Manager as **"SusCore"**.
 
-> For local development you can use `"file:../sus-core"` next to your project. For production, use the GitHub git URL above, or install the free `.unitypackage` from the Unity Asset Store.
+> For local development you can use `"file:../sus-core"` next to your project. For production, use the GitHub git URL above (pinned to a release tag).
 
 ---
 
