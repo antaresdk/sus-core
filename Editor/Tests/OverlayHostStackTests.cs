@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEngine;
 
@@ -191,6 +192,155 @@ namespace Sharq.Core.Editor.Tests
             // Without dismissOnClickOutside, no dim child should be added
             // Element is inserted directly
             Assert.AreEqual(1, _host.childCount, "Only the element, no dim");
+        }
+    }
+
+    /// <summary>
+    /// T-3801 (plan ARCH-20260923-TUTORIAL-SPOTLIGHT §4/§6): <see cref="OverlayHost.Raise"/>
+    /// reorders <c>_stack</c> and the DOM together WITHOUT detaching the element from the
+    /// panel — proving that needs a REAL panel (a disconnected <see cref="VisualElement"/>
+    /// tree never dispatches <see cref="DetachFromPanelEvent"/>/<see cref="AttachToPanelEvent"/>
+    /// and has no <c>focusController</c> at all, so an assertion against either would pass
+    /// trivially regardless of the implementation). An <see cref="EditorWindow"/> gives one
+    /// without Play — same idiom as <c>SusStorybookHostOverlayTeardownTests</c> (T-3131).
+    /// </summary>
+    public class OverlayHostRaiseTests
+    {
+        EditorWindow _window;
+        OverlayHost _host;
+
+        [SetUp]
+        public void SetUp()
+        {
+            Assume.That(!UnityEngine.Application.isBatchMode,
+                "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
+
+            _window = EditorWindow.CreateInstance<EditorWindow>();
+            _window.Show();
+            _host = new OverlayHost();
+            _window.rootVisualElement.Add(_host);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _host?.ClearAll();
+            _host = null;
+            if (_window != null) _window.Close();
+            _window = null;
+        }
+
+        private static VisualElement MakeEl(string name) => new VisualElement { name = name };
+
+        [Test]
+        public void Raise_MovesElement_ToEndOfOwnCategoryBlock()
+        {
+            var a = MakeEl("a");
+            var b = MakeEl("b");
+            _host.AddToOverlay(a, OverlayCategory.Modal);
+            _host.AddToOverlay(b, OverlayCategory.Modal);
+
+            Assert.IsTrue(_host.Raise(a));
+
+            // _stack order:
+            Assert.AreSame(b, _host.Stack[0].Element);
+            Assert.AreSame(a, _host.Stack[1].Element);
+            // Hierarchy (DOM) order must agree with _stack — last sibling renders on top.
+            Assert.AreEqual(0, _host.IndexOf(b));
+            Assert.AreEqual(1, _host.IndexOf(a));
+        }
+
+        [Test]
+        public void Raise_DoesNotShiftOtherCategoryNeighbours()
+        {
+            var transition = MakeEl("transition");
+            var a = MakeEl("a");
+            var b = MakeEl("b");
+            var tooltip = MakeEl("tooltip");
+
+            _host.AddToOverlay(transition, OverlayCategory.Transition);
+            _host.AddToOverlay(a, OverlayCategory.Modal);
+            _host.AddToOverlay(b, OverlayCategory.Modal);
+            _host.AddToOverlay(tooltip, OverlayCategory.Tooltip);
+
+            Assert.IsTrue(_host.Raise(a));
+
+            var stack = _host.Stack;
+            Assert.AreEqual(4, stack.Count);
+            Assert.AreSame(transition, stack[0].Element);
+            Assert.AreSame(b, stack[1].Element);
+            Assert.AreSame(a, stack[2].Element);
+            Assert.AreSame(tooltip, stack[3].Element);
+
+            Assert.AreEqual(0, _host.IndexOf(transition));
+            Assert.AreEqual(1, _host.IndexOf(b));
+            Assert.AreEqual(2, _host.IndexOf(a));
+            Assert.AreEqual(3, _host.IndexOf(tooltip));
+        }
+
+        [Test]
+        public void Raise_DoesNotDetachFromPanel()
+        {
+            var a = MakeEl("a");
+            var b = MakeEl("b");
+            _host.AddToOverlay(a, OverlayCategory.Modal);
+            _host.AddToOverlay(b, OverlayCategory.Modal);
+
+            bool detached = false;
+            a.RegisterCallback<DetachFromPanelEvent>(_ => detached = true);
+            var panelBefore = a.panel;
+
+            Assert.IsTrue(_host.Raise(a));
+
+            Assert.IsFalse(detached,
+                "Raise must reorder in place — a real AddToOverlay() re-add would detach/reattach and fire this");
+            Assert.AreSame(panelBefore, a.panel, "element must stay on the SAME panel across Raise");
+        }
+
+        [Test]
+        public void Raise_PreservesFocus_OnRaisedElement()
+        {
+            var a = MakeEl("a");
+            a.focusable = true;
+            var b = MakeEl("b");
+            _host.AddToOverlay(a, OverlayCategory.Modal);
+            _host.AddToOverlay(b, OverlayCategory.Modal);
+
+            a.Focus();
+            Assert.AreSame(a, _host.panel.focusController.focusedElement as VisualElement,
+                "precondition: focus is on the element about to be raised");
+
+            Assert.IsTrue(_host.Raise(a));
+
+            Assert.AreSame(a, _host.panel.focusController.focusedElement as VisualElement,
+                "Raise must not steal focus from the element it moves (T-3790 regression: a " +
+                "detach/reattach round-trip through AddToOverlay clears it)");
+        }
+
+        [Test]
+        public void Raise_SingleElementInCategory_IsANoOp_AndReturnsTrue()
+        {
+            var a = MakeEl("a");
+            _host.AddToOverlay(a, OverlayCategory.Modal);
+
+            Assert.IsTrue(_host.Raise(a));
+
+            Assert.AreEqual(1, _host.Stack.Count);
+            Assert.AreSame(a, _host.Stack[0].Element);
+            Assert.AreEqual(0, _host.IndexOf(a));
+        }
+
+        [Test]
+        public void Raise_ReturnsFalse_ForElementNotHostedHere()
+        {
+            var outsider = MakeEl("outsider");
+            Assert.IsFalse(_host.Raise(outsider));
+        }
+
+        [Test]
+        public void Raise_ReturnsFalse_ForNull()
+        {
+            Assert.IsFalse(_host.Raise(null));
         }
     }
 }

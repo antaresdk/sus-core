@@ -230,6 +230,64 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Moves an already-hosted <paramref name="element"/> to the top of its own
+        /// <see cref="OverlayCategory"/> block, in place.
+        ///
+        /// Unlike calling <see cref="AddToOverlay"/> again, this never detaches the element
+        /// from the panel: <c>_stack</c> and the DOM order are reordered together via
+        /// <see cref="VisualElement.PlaceInFront"/>/<see cref="VisualElement.PlaceBehind"/>,
+        /// which only reorder siblings that already share this same parent and never call
+        /// <c>RemoveFromHierarchy</c>. So no <c>DetachFromPanelEvent</c>/<c>AttachToPanelEvent</c>
+        /// fires, focus inside <paramref name="element"/> is preserved, and a self-teleporting
+        /// overlay's <c>Unmounted()</c> (which would otherwise close it, T-3790) never runs.
+        /// Category neighbours are left untouched — only <paramref name="element"/> itself moves.
+        ///
+        /// Returns <c>false</c> without changing anything when <paramref name="element"/> is
+        /// <c>null</c>, not currently tracked in THIS host's stack, or no longer actually
+        /// parented here (detached elsewhere without <see cref="RemoveFromOverlay(VisualElement)"/>).
+        /// </summary>
+        public bool Raise(VisualElement element)
+        {
+            if (element == null) return false;
+            if (element.parent != this) return false;
+
+            int oldIndex = -1;
+            for (int i = 0; i < _stack.Count; i++)
+            {
+                if (_stack[i].Element == element)
+                {
+                    oldIndex = i;
+                    break;
+                }
+            }
+            if (oldIndex < 0) return false;
+
+            var entry = _stack[oldIndex];
+            _stack.RemoveAt(oldIndex);
+
+            // Same placement rule as AddToOverlay: after every remaining entry whose category
+            // is <= ours, i.e. at the END of our own category's block.
+            int insertAt = 0;
+            for (int i = 0; i < _stack.Count; i++)
+            {
+                if (_stack[i].Category <= entry.Category)
+                    insertAt = i + 1;
+                else
+                    break;
+            }
+            _stack.Insert(insertAt, entry);
+
+            // Reflect the single move onto the DOM. Only `element` is repositioned — every
+            // other entry keeps its existing sibling relationship to every other entry.
+            if (insertAt > 0)
+                element.PlaceInFront(_stack[insertAt - 1].Element);
+            else if (_stack.Count > 1)
+                element.PlaceBehind(_stack[1].Element);
+
+            return true;
+        }
+
+        /// <summary>
         /// Drops stack entries that track <paramref name="element"/> without
         /// touching the DOM (caller handles reparent / RemoveFromHierarchy).
         /// </summary>
