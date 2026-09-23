@@ -27,6 +27,7 @@ namespace Sharq.Core.Runtime.Tests
 
             public bool MountInOverlay() => MountSelfInOverlay();
             public void UnmountFromOverlay() => UnmountSelfFromOverlay();
+            public void DismissFromOverlay() => DismissSelfFromOverlay();
 
             protected override void Build()
             {
@@ -91,6 +92,70 @@ namespace Sharq.Core.Runtime.Tests
 
             Assert.AreSame(inlineParent, comp.parent,
                 "a plain close with no remount should still restore to the original parent");
+        }
+
+        [UnityTest]
+        public IEnumerator Dismiss_TrackedEntry_DoesNotRestore()
+        {
+            // A dismissed toast must leave the tree: restoring it to its inline slot left an
+            // invisible (opacity 0) but pickable box that swallowed clicks under it.
+            var host = SusBootstrap.GetOrCreateOverlay(Root);
+            var inlineParent = new VisualElement { name = "inline-parent" };
+            Root.Add(inlineParent);
+
+            var comp = new TestOverlayComp();
+            inlineParent.Add(comp);
+            yield return WaitFrame();
+
+            Assert.IsTrue(comp.MountInOverlay());
+            Assert.AreSame(host, comp.parent);
+
+            comp.DismissFromOverlay();
+            yield return WaitFrame();
+            yield return WaitFrame();
+
+            Assert.IsNull(comp.parent, "a dismissed overlay must not be restored to its original parent");
+            Assert.AreEqual(0, host.Count, "the host stack entry must be gone");
+        }
+
+        [UnityTest]
+        public IEnumerator Dismiss_AddedStraightIntoHost_Detaches()
+        {
+            // An element added directly into the host has no stack entry (MountSelfInOverlay
+            // treats "already on host" as mounted); dismiss must still take it out.
+            var host = SusBootstrap.GetOrCreateOverlay(Root);
+
+            var comp = new TestOverlayComp();
+            host.Add(comp);
+            yield return WaitFrame();
+
+            Assert.IsTrue(comp.MountInOverlay());
+            Assert.AreSame(host, comp.parent);
+
+            comp.DismissFromOverlay();
+            yield return WaitFrame();
+
+            Assert.IsNull(comp.parent, "dismiss must detach an element parented straight to the host");
+        }
+
+        [UnityTest]
+        public IEnumerator Dismiss_AfterUnmount_CancelsPendingRestore()
+        {
+            var host = SusBootstrap.GetOrCreateOverlay(Root);
+            var inlineParent = new VisualElement { name = "inline-parent" };
+            Root.Add(inlineParent);
+
+            var comp = new TestOverlayComp();
+            inlineParent.Add(comp);
+            yield return WaitFrame();
+
+            Assert.IsTrue(comp.MountInOverlay());
+            comp.UnmountFromOverlay();   // schedules a restore for the next frame
+            comp.DismissFromOverlay();   // ...which must now no-op
+            yield return WaitFrame();
+            yield return WaitFrame();
+
+            Assert.IsNull(comp.parent, "a restore scheduled before dismiss must not bring the element back");
         }
     }
 }

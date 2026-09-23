@@ -222,6 +222,36 @@ namespace Sharq.Core
                 }).ExecuteLater(0);
             }
         }
+
+        /// <summary>
+        /// Removes this element from the overlay for good: unlike <see cref="UnmountSelfFromOverlay"/>
+        /// it does NOT go back to the parent it was teleported from. For transient content whose
+        /// close means "gone" (a toast that timed out), not "hide until next time" (a modal).
+        ///
+        /// Restoring such content puts it back where it was declared still wearing its fade-out
+        /// classes: opacity 0, but display/visibility/pickingMode untouched, so an invisible box
+        /// keeps swallowing clicks meant for the UI beneath it. The same holds for an element
+        /// that was added straight into the host (it has no stack entry, so
+        /// <see cref="UnmountSelfFromOverlay"/> leaves it where it is): it is detached here too.
+        /// Also cancels a restore an earlier unmount may still have pending.
+        /// </summary>
+        protected void DismissSelfFromOverlay()
+        {
+            _selfOriginalParent = null;
+            _overlayMountToken++;
+            if (_selfEntry != null && _selfHost != null)
+            {
+                var entry = _selfEntry;
+                _selfEntry = null;
+                // A real removal, not a relocation: IsRelocatingToOverlay stays false so the
+                // subclass's Unmounted() and the binding teardown run as for any detach.
+                _selfHost.RemoveFromOverlay(entry);
+            }
+            else if (parent is OverlayHost)
+            {
+                RemoveFromHierarchy();
+            }
+        }
     }
 
     /// <summary>
@@ -605,5 +635,11 @@ namespace Sharq.Core
 
         /// <summary>Hides the toast, restoring it to its original parent.</summary>
         protected void HideToast() => UnmountSelfFromOverlay();
+
+        /// <summary>
+        /// Removes the toast from the overlay without restoring it to its original parent —
+        /// see <see cref="SusOverlayComponent.DismissSelfFromOverlay"/>.
+        /// </summary>
+        protected void DismissToast() => DismissSelfFromOverlay();
     }
 }
