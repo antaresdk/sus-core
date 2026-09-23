@@ -469,4 +469,101 @@ namespace Sharq.Core.Editor.Tests
         {
         }
     }
+
+    // ── the declared host, card T-3905 (plan ARCH-20260923-STORY-SUBJECT-HOST) ──────────────
+
+    /// <summary>Host/slot scaffold the T-3905 fixtures build, so a test can find both by class.</summary>
+    public static class CoreHostScaffold
+    {
+        public const string HostClass = "sus-demo-host";
+        public const string SlotClass = "sus-demo-host__slot";
+
+        /// <summary>A host with one child slot inside it — the shape D2 asks for.</summary>
+        public static VisualElement Build(out VisualElement slot)
+        {
+            var host = new VisualElement();
+            host.AddToClassList(HostClass);
+            slot = new VisualElement();
+            slot.AddToClassList(SlotClass);
+            host.Add(slot);
+            return host;
+        }
+    }
+
+    // Group reused on purpose ("overlay", not a new "host" group and not "primitives"): the
+    // registry/shell tests hard-code the group header list, the exact SLUGS of "primitives"
+    // (SusStorybookRegistryTests) and a "swatch" name filter (SusStorybookShellTests, T-3033) —
+    // a new group, a primitives addition or a stray "swatch" in a story NAME would each break one
+    // of those for a reason that has nothing to do with this card.
+    [SusStory("enginetests/overlay/hosted",
+        Name = "Hosted",
+        Component = typeof(CoreCounterDemo),
+        Purpose = "T-3905: the instance is mounted into a host/slot the story declares through " +
+                  "ctx.SetHost, instead of straight onto the canvas")]
+    public sealed class CoreHostedStory : ISusStory
+    {
+        public SusComponent Create() => new CoreCounterDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            var host = CoreHostScaffold.Build(out var slot);
+            ctx.SetHost(host, slot);
+        }
+    }
+
+    /// <summary>Same host shape as <see cref="CoreHostedStory"/>, plus a closed axis, so the matrix
+    /// (not just the stage) has something to build cells for.</summary>
+    [SusStory("enginetests/overlay/hosted-axis",
+        Name = "Hosted axis",
+        Component = typeof(CoreSwatchDemo),
+        Purpose = "T-3905/T-3906: matrix cells wrap the declared host around the instance")]
+    public sealed class CoreHostedSwatchStory : ISusStory
+    {
+        public SusComponent Create() => new CoreSwatchDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            var host = CoreHostScaffold.Build(out var slot);
+            ctx.SetHost(host, slot);
+        }
+    }
+
+    /// <summary>Host declared TOGETHER with scenery (card T-3168) — proves D3: AddSibling lands
+    /// beside the host that now occupies the instance's place, not beside the buried instance.</summary>
+    [SusStory("enginetests/overlay/hosted-scenery",
+        Name = "Hosted scenery",
+        Component = typeof(CoreCounterDemo),
+        Purpose = "T-3905: ctx.AddSibling lands beside the declared host, not beside the instance " +
+                  "buried inside it")]
+    public sealed class CoreHostedSceneryStory : ISusStory
+    {
+        public SusComponent Create() => new CoreCounterDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            var host = CoreHostScaffold.Build(out var slot);
+            ctx.SetHost(host, slot);
+            ctx.AddSibling(CoreScenery.Trigger());
+        }
+    }
+
+    /// <summary>T-3905 regression fixture: the self-teleporting modal of T-3160, mounted into a
+    /// declared host instead of straight onto the canvas — proves the host does not become a
+    /// second "original parent" a scheduled restore can find after the story switches away.</summary>
+    [SusStory("enginetests/overlay/hosted-modal",
+        Name = "Hosted modal",
+        Component = typeof(CoreMatrixModalDemo),
+        Purpose = "T-3905 regression: a self-teleporting instance mounted into a declared host " +
+                  "must not restore into that host after the story switches away")]
+    public sealed class CoreHostedModalStory : ISusStory
+    {
+        public SusComponent Create() => new CoreMatrixModalDemo();
+
+        public void Configure(SusStoryContext ctx)
+        {
+            var host = CoreHostScaffold.Build(out var slot);
+            ctx.SetHost(host, slot);
+            ((CoreMatrixModalDemo)ctx.Component).Model.Value = true;
+        }
+    }
 }

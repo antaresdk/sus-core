@@ -206,7 +206,9 @@ namespace Sharq.Core.Storybook.UI
         int _revisions;
         string _switcherState;
         int _created;
-        SusComponent _probeInstance;
+        // Card T-3905: what is actually MEASURED — the probe itself, or, when the story declared a
+        // host, that host (plan D3 "the measuring box's natural size is the host's box").
+        VisualElement _probeMeasureTarget;
 
         /// <summary>One cell, kept by reference so the measuring pass never re-queries the tree.</summary>
         sealed class CellRef
@@ -486,9 +488,10 @@ namespace Sharq.Core.Storybook.UI
             RemoveFromClassList("sb-hidden");
 
             SusComponent probe = null;
+            SusStoryContext probeCtx = null;
             try
             {
-                entry.Instantiate(null, out probe);
+                probeCtx = entry.Instantiate(null, out probe);
                 if (probe != null) _created++;
             }
             catch (Exception e)
@@ -517,7 +520,7 @@ namespace Sharq.Core.Storybook.UI
             // counts must not have to spin a panel to see a cell.
             if (panel != null && probe != null)
             {
-                BeginMeasure(probe);
+                BeginMeasure(probe, probeCtx?.Host, probeCtx?.Slot);
                 return;
             }
 
@@ -533,13 +536,23 @@ namespace Sharq.Core.Storybook.UI
         /// a grid of twenty-four modals and folding it away afterwards costs exactly as much as
         /// keeping it.
         /// </summary>
-        void BeginMeasure(SusComponent probe)
+        void BeginMeasure(SusComponent probe, VisualElement host, VisualElement slot)
         {
             _measurePending = true;
-            _probeInstance = probe;
+            // Card T-3905: a declared host takes the probe's place in the box, the probe becomes
+            // its slot's last child — same placement rule Mount() uses on the stage (plan D3).
+            _probeMeasureTarget = host ?? (VisualElement)probe;
             _revisions = 0;
-            probe.RegisterCallback<GeometryChangedEvent>(OnProbeGeometry);
-            _measure.Add(probe);
+            _probeMeasureTarget.RegisterCallback<GeometryChangedEvent>(OnProbeGeometry);
+            if (host != null)
+            {
+                slot.Add(probe);
+                _measure.Add(host);
+            }
+            else
+            {
+                _measure.Add(probe);
+            }
 
             // Two doors, and they are not redundant - between them they cover the two rigs this
             // code has to work in. In Play the scheduler ticks every frame and the layout events
@@ -552,7 +565,7 @@ namespace Sharq.Core.Storybook.UI
             _measureTick = _measure.schedule.Execute(() =>
             {
                 if (!_measurePending) { _measureTick?.Pause(); return; }
-                if (!Laid(_probeInstance) && ++frames < SettleFrames) return;
+                if (!Laid(_probeMeasureTarget) && ++frames < SettleFrames) return;
                 FinishMeasure();
             }).Every(0);
         }
@@ -591,8 +604,10 @@ namespace Sharq.Core.Storybook.UI
 
             // The instance BY REFERENCE and not by index: a story that opened itself is no longer
             // a child of the measuring box at all, it is in the box's overlay host - and what it
-            // measures there (a full overlay) is the honest answer for it.
-            var size = BoxOf(_probeInstance);
+            // measures there (a full overlay) is the honest answer for it. _probeMeasureTarget is
+            // that same instance UNLESS the story declared a host (card T-3905), in which case the
+            // host is the honest box - the instance living inside its slot never opens itself.
+            var size = BoxOf(_probeMeasureTarget);
             Decide(size, size != Vector2.zero);
             SetOpen(CollapseReason == null);
         }
@@ -608,7 +623,7 @@ namespace Sharq.Core.Storybook.UI
         void Revise()
         {
             if (_entry == null || _silent != null || _revisions >= MaxRevisions) return;
-            var size = BoxOf(_probeInstance);
+            var size = BoxOf(_probeMeasureTarget);
             if (size == Vector2.zero) return;
             bool wasOversize = _oversize;
             Decide(size, true);
@@ -664,12 +679,12 @@ namespace Sharq.Core.Storybook.UI
         void ClearMeasure()
         {
             _measureTick?.Pause();
-            _probeInstance?.UnregisterCallback<GeometryChangedEvent>(OnProbeGeometry);
+            _probeMeasureTarget?.UnregisterCallback<GeometryChangedEvent>(OnProbeGeometry);
             _measureHost.ClearAll();
             for (int i = _measure.childCount - 1; i >= 0; i--)
                 if (!ReferenceEquals(_measure[i], _measureHost))
                     _measure.RemoveAt(i);
-            _probeInstance = null;
+            _probeMeasureTarget = null;
         }
 
         void Reset()
@@ -982,9 +997,10 @@ namespace Sharq.Core.Storybook.UI
             solo.Clear();
 
             SusComponent item = null;
+            SusStoryContext itemCtx = null;
             try
             {
-                _entry.Instantiate(null, out item);
+                itemCtx = _entry.Instantiate(null, out item);
                 if (item != null) _created++;
             }
             catch (Exception e)
@@ -1005,7 +1021,7 @@ namespace Sharq.Core.Storybook.UI
                 box.AddToClassList("sb-matrix__item");
                 box.pickingMode = PickingMode.Ignore;
                 item.pickingMode = PickingMode.Ignore;
-                box.Add(item);
+                PlaceInBox(box, itemCtx, item);
                 solo.Add(box);
             }
             solo.Add(new OverlayHost { name = CellOverlayName });
@@ -1070,9 +1086,10 @@ namespace Sharq.Core.Storybook.UI
             cell.pickingMode = PickingMode.Ignore;
 
             SusComponent item = null;
+            SusStoryContext itemCtx = null;
             try
             {
-                _entry.Instantiate(null, out item);
+                itemCtx = _entry.Instantiate(null, out item);
                 if (item != null) _created++;
             }
             catch (Exception e)
@@ -1102,7 +1119,7 @@ namespace Sharq.Core.Storybook.UI
             box.AddToClassList("sb-matrix__item");
             box.pickingMode = PickingMode.Ignore;
             item.pickingMode = PickingMode.Ignore;
-            box.Add(item);
+            PlaceInBox(box, itemCtx, item);
             cell.Add(box);
             // The cell's OWN host, added after the instance so the back-to-front scan of
             // SusBootstrap.FindOverlayHost meets it first (card T-3189). A cell that opens itself
@@ -1116,6 +1133,26 @@ namespace Sharq.Core.Storybook.UI
                 Row = rowValue, State = state, Column = column, Line = line, Cell = cell, Item = box,
             });
             return cell;
+        }
+
+        /// <summary>
+        /// Puts the instance into its measured wrapper box: directly, or — when the story declared
+        /// a host (<see cref="SusStoryContext.SetHost"/>, card T-3905) — the host into the box and
+        /// the instance last inside the host's slot, so the box's own natural size is the host's
+        /// (plan D3). The box (<c>sb-matrix__item</c>) itself is unchanged either way — a story
+        /// with no host places byte-for-byte as before (plan D6).
+        /// </summary>
+        static void PlaceInBox(VisualElement box, SusStoryContext ctx, SusComponent item)
+        {
+            if (ctx?.Host != null)
+            {
+                ctx.Slot.Add(item);
+                box.Add(ctx.Host);
+            }
+            else
+            {
+                box.Add(item);
+            }
         }
 
         void SetAxis(SusComponent item, string value)

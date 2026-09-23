@@ -191,6 +191,66 @@ namespace Sharq.Core.Storybook
             if (Route == null || key == null) return null;
             return Route.Query.TryGetValue(key, out var v) ? v : null;
         }
+
+        /// <summary>
+        /// Declares the element the live instance is mounted INTO instead of the engine's default
+        /// root (card T-3905, plan ARCH-20260923-STORY-SUBJECT-HOST §4). The engine puts
+        /// <paramref name="host"/> wherever the instance would otherwise have gone — the stage, a
+        /// matrix cell, the switcher, the measuring box — and parents the instance as the LAST
+        /// child of <paramref name="slot"/>. Scenery that must sit under the instance goes into
+        /// <paramref name="slot"/> before this call; scenery that must sit over it goes into
+        /// <paramref name="host"/> after <paramref name="slot"/> (layering: under…, slot, over…).
+        ///
+        /// Voluntary and additive, like <see cref="AddSibling"/>: a story that never calls this
+        /// mounts exactly as it always has, a direct child of the stage's canvas (plan D6). The
+        /// engine — never the story — parents the instance; a story that inserts
+        /// <see cref="SusStoryContext.Component"/> itself is a parenting bug the engine's Mount
+        /// silently overrides (plan D7).
+        /// </summary>
+        /// <param name="host">
+        /// The element that takes the instance's place. A null host is ignored, the same rule
+        /// <see cref="AddSibling"/> uses, so a story built from data that conditionally skips this
+        /// call need not guard it.
+        /// </param>
+        /// <param name="slot">
+        /// Where the instance itself is parented, as its last child. Defaults to
+        /// <paramref name="host"/>; when given explicitly it must be <paramref name="host"/> itself
+        /// or one of its descendants.
+        /// </param>
+        /// <exception cref="ArgumentException">
+        /// <paramref name="slot"/> is neither <paramref name="host"/> nor a descendant of it.
+        /// </exception>
+        /// <exception cref="InvalidOperationException">
+        /// A host was already declared for this context — one host per instance.
+        /// </exception>
+        public void SetHost(VisualElement host, VisualElement slot = null)
+        {
+            if (host == null) return;
+            if (Host != null)
+                throw new InvalidOperationException(
+                    "SetHost was already called for this story context; only one host per instance is allowed.");
+            if (slot != null && slot != host && !IsDescendant(slot, host))
+                throw new ArgumentException("slot must be the host itself or one of its descendants.", nameof(slot));
+
+            Host = host;
+            Slot = slot ?? host;
+        }
+
+        /// <summary>The element declared through <see cref="SetHost"/>, or null when the story declared none.</summary>
+        public VisualElement Host { get; private set; }
+
+        /// <summary>
+        /// Where the instance is parented — <see cref="Host"/> itself, or the descendant given to
+        /// <see cref="SetHost"/>. Null when the story declared no host.
+        /// </summary>
+        public VisualElement Slot { get; private set; }
+
+        static bool IsDescendant(VisualElement element, VisualElement ancestor)
+        {
+            for (var cur = element?.parent; cur != null; cur = cur.parent)
+                if (cur == ancestor) return true;
+            return false;
+        }
     }
 
     /// <summary>

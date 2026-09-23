@@ -96,6 +96,10 @@ namespace Sharq.Core.Storybook
         IVisualElementScheduledItem _probeTick;      // card T-3358: zone E, its own slower tick
         bool _overlayOpen;
         SusComponent _current;
+        // The element the CURRENT story declared through SusStoryContext.SetHost (card T-3905), or
+        // null when it declared none — the stage's own reference to what Unmount must take back
+        // by reference, same reasoning as _scene above.
+        VisualElement _currentHost;
         bool _disposed;
 
         public SusStorybookHost(StyleSheet styleSheet = null)
@@ -273,6 +277,13 @@ namespace Sharq.Core.Storybook
         /// Name preserved from the pre-engine shell.
         /// </summary>
         public VisualElement QaCanvas => _canvas;
+
+        /// <summary>
+        /// The element the current story declared through <see cref="SusStoryContext.SetHost"/>
+        /// (card T-3905), or null when the mounted story declared none. QA's ready-made hook onto
+        /// the engine-placed host — same purpose as <see cref="QaCanvas"/>, one level narrower.
+        /// </summary>
+        public VisualElement QaSubjectHost => _currentHost;
 
         /// <summary>Ids of every registered story, in zone A order. Name preserved.</summary>
         public IReadOnlyList<string> LastRegisteredStoryIds => SusStoryRegistry.LastRegisteredStoryIds;
@@ -506,8 +517,20 @@ namespace Sharq.Core.Storybook
             }
 
             _current = component;
-            _canvas.Add(component);
-            MountScene(story, component);
+            // Card T-3905: a story that declared a host gets the HOST in the place the instance
+            // would otherwise have taken, with the instance parented last inside the host's slot;
+            // a story that declared none mounts byte-for-byte as before (plan D6).
+            if (story.Host != null)
+            {
+                _currentHost = story.Host;
+                story.Slot.Add(component);
+                _canvas.Add(story.Host);
+            }
+            else
+            {
+                _canvas.Add(component);
+            }
+            MountScene(story, story.Host ?? component);
 
             // The story's popups belong to the canvas, not to the panel root (T-3032).
             _canvasOverlay = SusBootstrap.GetOrCreateOverlay(_canvas);
@@ -555,8 +578,13 @@ namespace Sharq.Core.Storybook
         /// again every time the component re-attaches — including when it teleports into an
         /// <see cref="OverlayHost"/> to open. Each of those re-fires inserted another copy, in a
         /// place the story never meant and no teardown could reach.
+        ///
+        /// <paramref name="anchor"/> is the element actually sitting in <c>_canvas</c> — the
+        /// instance itself, or, when the story declared a host (card T-3905), that host: the
+        /// scenery goes beside whatever occupies the instance's place in the canvas, not beside an
+        /// instance buried inside a host it does not sit in (plan D3).
         /// </summary>
-        void MountScene(SusStoryContext story, SusComponent component)
+        void MountScene(SusStoryContext story, VisualElement anchor)
         {
             var scene = story?.Scene;
             if (scene == null) return;
@@ -566,7 +594,7 @@ namespace Sharq.Core.Storybook
                 var piece = scene[i];
                 if (piece?.Element == null) continue;
 
-                int at = _canvas.IndexOf(component);
+                int at = _canvas.IndexOf(anchor);
                 if (at < 0) at = _canvas.childCount;
                 else if (piece.After) at += 1;
 
@@ -740,6 +768,16 @@ namespace Sharq.Core.Storybook
             {
                 _current.RemoveFromHierarchy();
                 _current = null;
+            }
+            // Card T-3905: the host comes off LAST of "its own", by reference — after the instance
+            // it was carrying, same reasoning as the instance coming off after the hosts above (a
+            // self-teleporting instance still targets the host as its ORIGINAL parent while
+            // IsClearing is unset). _canvas.Clear() below is the belt-and-suspenders sweep for a
+            // story with no host at all, and for anything this reference-based teardown missed.
+            if (_currentHost != null)
+            {
+                _currentHost.RemoveFromHierarchy();
+                _currentHost = null;
             }
             _canvas.Clear();
             _canvasOverlay = null;
