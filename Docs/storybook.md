@@ -33,11 +33,15 @@ follows from that:
 - **Product, no stories declared** — the package still gets a tab, with a plate that says so,
   rather than vanishing silently, so "I imported the wrong sample" and "this package has no
   stories" read as two different things. This is where the plate earns its place: stories that
-  arrive by hand-importing a `Samples~` folder (kit, game, a skin package).
-- **A test bench** (an assembly whose marker declares itself a fixture, not a product) gets no
-  tab and no plate at all — its stories exist only to be reached by direct address from a suite,
-  never to be browsed.
-- **No marker at all** — no tab, same as today.
+  arrive by hand-importing a `Samples~` folder (kit, game, a skin package). A project can also ask
+  for this same tab and plate before the package ships any story at all, without any marker, via
+  `SusStoryRegistry.DeclarePackage(key, packageId, version)`.
+- **A test bench** (`Kind = SusStoryPackageKind.Fixture`) gets no tab and no plate by default —
+  its stories exist to be reached by direct address from a suite. Hidden by default is not the
+  same as gone: the `Window/SUS/Storybook/Show Engine Fixtures` menu lists every fixture package
+  on that machine, and opening an address carrying `?fixtures=1` lists it too, so a link shared
+  with someone whose menu toggle is off still opens on the bench tab.
+- **No marker, and no `DeclarePackage` call for that key** — no tab.
 
 ## Writing your own story
 
@@ -71,8 +75,10 @@ assembly that opts in with `[assembly: SusStoryAssembly]` (once per assembly, in
 `SusStoryAssembly` also carries `Kind`, defaulting to `SusStoryPackageKind.Product`. Leave it
 alone for a package a buyer imports — that default is what earns the assembly its tab (and its
 empty-package plate, above). A test bench that only exists to give a suite addressable stories
-sets `Kind = SusStoryPackageKind.Fixture` instead, and drops out of the tab list, the tree and the
-sweep entirely; its stories still resolve by direct address, they are just never browsed.
+sets `Kind = SusStoryPackageKind.Fixture` instead: it drops out of the tab list, the tree and the
+sweep by default, and its stories always resolve by direct address regardless — but "by default"
+is not "never": the same menu toggle and `?fixtures=1` address described above put it back in the
+listing.
 
 The address `<package>/<group>/<slug>` is the story's permanent id — it is what deep links and
 screenshots key on, so treat renaming it like renaming a public API. The registry finds stories by
