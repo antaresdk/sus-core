@@ -95,8 +95,11 @@ namespace Sharq.Core
         /// parent this element was teleported from, one frame later (it cannot reparent
         /// synchronously — see the comments there). Answering a TEARDOWN the same way puts the
         /// content back on screen a frame after the caller was told the host is empty, and it comes
-        /// back live: re-parented means re-attached, re-attached means <c>Mounted()</c>, and a modal
-        /// whose open prop is still true re-opens itself. That is how the previous Storybook story's
+        /// back live: re-parented means re-attached, and re-attached fires <c>Attached()</c> (and,
+        /// on the FIRST attach only, <c>Mounted()</c> — see card T-3998, it does not fire again on a
+        /// later re-attach). Nothing then re-asserts the closed visual state (no display:none, no
+        /// <c>sus-hidden</c> class re-added), so a modal whose open prop is still true is simply
+        /// visible again — it looks exactly like it re-opened itself. That is how the previous Storybook story's
         /// modal ended up in four kit frames of the 2026-09-09 sweep (showcase-3) even though
         /// <c>SusStorybookHost.Unmount</c> had cleared every host it can reach (T-3131). A cleared
         /// host means gone: the element stays detached, and reopening it is the owner's call.

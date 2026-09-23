@@ -369,6 +369,11 @@ namespace Sharq.Core
             // Prop invalidations before Add() queued actions but schedule was a no-op.
             FlushPendingBindUpdatesOnAttach();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevConsole.ShouldTrace(GetType(), "Attached", "");
+#endif
+            Attached();
+
             // Wire breakpoint service to geometry changes
             BreakpointService?.UpdateFromElement(this);
             RegisterCallback<GeometryChangedEvent>(OnGeometryChangedForBreakpoint);
@@ -415,6 +420,13 @@ namespace Sharq.Core
             _pendingBindActions.Clear();
             _bindScheduleItem = null;
             UnregisterCallback<GeometryChangedEvent>(OnGeometryChangedForBreakpoint);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            DevConsole.ShouldTrace(GetType(), "Detached", "");
+#endif
+            // No IsRelocating exemption here (unlike DisposeAllBindings above): Detached() is
+            // paired with Attached(), which fires unconditionally on every attach too, so a
+            // same-panel teleport (overlay self-mount) still runs both ends symmetrically.
+            Detached();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             DevConsole.ShouldTrace(GetType(), "Unmounted", "");
 #endif
