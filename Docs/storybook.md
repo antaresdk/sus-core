@@ -27,9 +27,17 @@ package's stories are imported and reference it — the cost is opt-in, per proj
 3. Every such package's stories arrive the same way — the sample is opt-in per package, and a
    project only pays for the ones it imports.
 
-A package with no stories declared still gets a tab — with a plate that says so, rather than
-vanishing silently, so "I imported the wrong sample" and "this package has no stories" read as
-two different things.
+A package's `SusStoryAssembly` marker also says what the assembly is *for* (below), and the tab
+follows from that:
+
+- **Product, no stories declared** — the package still gets a tab, with a plate that says so,
+  rather than vanishing silently, so "I imported the wrong sample" and "this package has no
+  stories" read as two different things. This is where the plate earns its place: stories that
+  arrive by hand-importing a `Samples~` folder (kit, game, a skin package).
+- **A test bench** (an assembly whose marker declares itself a fixture, not a product) gets no
+  tab and no plate at all — its stories exist only to be reached by direct address from a suite,
+  never to be browsed.
+- **No marker at all** — no tab, same as today.
 
 ## Writing your own story
 
@@ -59,6 +67,12 @@ assembly that opts in with `[assembly: SusStoryAssembly]` (once per assembly, in
 ```csharp
 [assembly: Sharq.Core.Storybook.SusStoryAssembly(Package = "myapp")]
 ```
+
+`SusStoryAssembly` also carries `Kind`, defaulting to `SusStoryPackageKind.Product`. Leave it
+alone for a package a buyer imports — that default is what earns the assembly its tab (and its
+empty-package plate, above). A test bench that only exists to give a suite addressable stories
+sets `Kind = SusStoryPackageKind.Fixture` instead, and drops out of the tab list, the tree and the
+sweep entirely; its stories still resolve by direct address, they are just never browsed.
 
 The address `<package>/<group>/<slug>` is the story's permanent id — it is what deep links and
 screenshots key on, so treat renaming it like renaming a public API. The registry finds stories by
