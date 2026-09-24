@@ -119,7 +119,7 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(SceneryInPanel(), Is.Zero,
                 "T-3168: demount takes back exactly what the engine parented — found at: " + Where());
-            Assert.That(_host.QaCanvas.childCount, Is.GreaterThan(0), "the new story did mount");
+            Assert.That(_host.QaSubjectRoot.childCount, Is.GreaterThan(0), "the new story did mount");
         }
 
         [UnityTest]

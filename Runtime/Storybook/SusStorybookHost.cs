@@ -58,21 +58,17 @@ namespace Sharq.Core.Storybook
         readonly VisualElement _zonePanel = new();
         readonly VisualElement _zoneProbe = new();
         readonly SusStoryProbe _probe = new();   // zone E, card T-3040
-        // Zone C scrolls on BOTH axes (card T-3389, plan ARCH-20260911-STORYBOOK-SHELL.md §4.7).
-        // The default ScrollView mode is Vertical, and with it the horizontal scroller carries
-        // display:None, so a subject wider than the stage was not clipped but UNREACHABLE:
-        // measured in Play on 2026-09-11, an element 1760px wide inside an 880px canvas ended at
-        // x=1783 with the stage content stuck at 880 and no way to reach the last 903px.
-        // With both axes the same element gives contentWidth 1806 against viewport 880 and a
-        // scroll range of 926 — the whole subject is reachable.
-        // The price is named rather than hidden: the canvas is max-width:100%, and a percentage
-        // maximum against a content container of automatic width resolves to nothing, so for
-        // such a subject the canvas box grows sideways with it (880 -> 1806 in the same
-        // measurement). Its HEIGHT is untouched — D18 pins that with a token and it stayed 350 —
-        // and the width is still a function of the address alone, so two frames of one address
-        // stay comparable. The sideways growth is the open half of §4.7 and is carried by its own
-        // card; leaving the axis off is worse, because then the subject cannot be seen at all.
-        readonly ScrollView _stage = new(ScrollViewMode.VerticalAndHorizontal);
+        // Zone C scrolls VERTICALLY only (card T-3708, plan ARCH-20260922-STORYBOOK-CANVAS-
+        // VIEWPORT.md, decision D1). It scrolled on both axes for one wave (card T-3389, plan
+        // ARCH-20260911-STORYBOOK-SHELL.md §4.7) so a subject wider than the canvas would be
+        // reachable at all, but that made the CANVAS itself the thing that scrolled sideways, and
+        // a canvas that is max-width:100% against a content container of automatic width grows
+        // with it instead of staying put (measured 880 -> 1806 for a 1760px-wide element,
+        // T-3389). D1 moves the horizontal scroll to a viewport INSIDE the canvas
+        // (<see cref="_canvasViewport"/>): the stage itself never needs to reach sideways again,
+        // so it is back to the one axis its own content (crumbs, title, matrix, canvas) actually
+        // uses.
+        readonly ScrollView _stage = new(ScrollViewMode.Vertical);
         // Zone C (card T-3038).
         readonly Label _stageCrumbs = new();
         readonly Label _stageTitle = new();
@@ -81,6 +77,10 @@ namespace Sharq.Core.Storybook
         readonly SusStoryMatrix _matrix = new();
         readonly Label _liveHint = new();
         readonly VisualElement _canvas = new();
+        // The canvas's own two-axis viewport (card T-3708, decision D1): first in-flow child of
+        // _canvas, holds the subject and any scene pieces a story declared. _canvas itself keeps
+        // ONE declared box (D18) and never scrolls or grows; this is what scrolls in its place.
+        readonly ScrollView _canvasViewport = new(ScrollViewMode.VerticalAndHorizontal);
         readonly SusStorySizes _sizes = new();
         readonly VisualElement _stageEmpty = new();
         readonly Label _stageEmptyTitle = new();
@@ -184,6 +184,16 @@ namespace Sharq.Core.Storybook
             // inside the canvas, not only for the chip that was measured.
             SusThemeService.MarkScopedCascadeRoot(_canvas);
 
+            // Card T-3708, decision D1: the canvas's own two-axis viewport, first in-flow child
+            // of the canvas. contentContainer gets its own class (AddToClassList, not a style-API
+            // write — R53/R120) so a subject without its own width still stretches to the
+            // canvas's width (plan §6 risk row) exactly as it did when the canvas held it
+            // directly.
+            _canvasViewport.name = "sus-storybook-canvas-viewport";
+            _canvasViewport.AddToClassList("sb-stage__viewport");
+            _canvasViewport.contentContainer.AddToClassList("sb-stage__viewport-content");
+            _canvas.Add(_canvasViewport);
+
             _stageEmpty.AddToClassList("sb-stage__empty");
             _stageEmptyTitle.AddToClassList("sb-stage__empty-title");
             _stageEmptyText.AddToClassList("sb-stage__empty-text");
@@ -200,15 +210,17 @@ namespace Sharq.Core.Storybook
             _stage.Add(_sizes);
             _stage.Add(_stageEmpty);
 
-            // Card T-3389: what the size line compares against, so that a stage reaching past
-            // what the reader can see is SAID and not left to be noticed. Two questions, two
-            // witnesses. Downwards it is the subject against the canvas, which keeps one declared
-            // height (D18). Sideways it is the whole of zone C against the viewport: at a narrow
-            // window zone C's own furniture sticks out before any subject does — measured in Play,
-            // content 615px against a viewport of 272px at a 320px window.
+            // Card T-3708 (was card T-3389): what the size line compares against, so that a
+            // subject reaching past what the reader can see is SAID and not left to be noticed.
+            // Two questions, two witnesses, and since D1 both are asked of the CANVAS, not the
+            // stage: downwards the subject against the canvas, which keeps one declared height
+            // (D18); sideways the subject's own content against the canvas viewport it scrolls
+            // inside of (decision D1) — the canvas viewport's content container is, in practice,
+            // sized to the mounted subject, the same relationship StageContent/StageViewport used
+            // to have with the whole of zone C before the viewport moved inside the canvas.
             _sizes.Canvas = _canvas;
-            _sizes.StageContent = _stage.contentContainer;
-            _sizes.StageViewport = _stage.contentViewport;
+            _sizes.StageContent = _canvasViewport.contentContainer;
+            _sizes.StageViewport = _canvasViewport.contentViewport;
 
             center.Add(_zoneEnv);
             center.Add(_stage);
@@ -277,6 +289,14 @@ namespace Sharq.Core.Storybook
         /// Name preserved from the pre-engine shell.
         /// </summary>
         public VisualElement QaCanvas => _canvas;
+
+        /// <summary>
+        /// Where a story's subject and scene actually mount (card T-3708, decision D1): the
+        /// content container of <see cref="_canvasViewport"/>, the canvas's own two-axis viewport.
+        /// <see cref="QaCanvas"/> stays the fixed box a compare judges; this is one level narrower
+        /// — what <c>QaCanvas.Children()</c> used to answer before the viewport existed.
+        /// </summary>
+        public VisualElement QaSubjectRoot => _canvasViewport.contentContainer;
 
         /// <summary>
         /// The element the current story declared through <see cref="SusStoryContext.SetHost"/>
@@ -520,19 +540,24 @@ namespace Sharq.Core.Storybook
             // Card T-3905: a story that declared a host gets the HOST in the place the instance
             // would otherwise have taken, with the instance parented last inside the host's slot;
             // a story that declared none mounts byte-for-byte as before (plan D6).
+            // Card T-3708, decision D1: the subject mounts into the canvas's OWN viewport, not
+            // the canvas directly — the canvas stays the fixed box; the viewport is what scrolls.
             if (story.Host != null)
             {
                 _currentHost = story.Host;
                 story.Slot.Add(component);
-                _canvas.Add(story.Host);
+                _canvasViewport.Add(story.Host);
             }
             else
             {
-                _canvas.Add(component);
+                _canvasViewport.Add(component);
             }
             MountScene(story, story.Host ?? component);
 
-            // The story's popups belong to the canvas, not to the panel root (T-3032).
+            // The story's popups belong to the canvas, not to the panel root (T-3032), and stay
+            // on the canvas rather than the viewport (decision D2): a host parked on a ScrollView
+            // must sit BESIDE the scrolled content so it is never scrolled away or wiped by a
+            // ClearContent, which is what SusBootstrap.FindOverlayHost already assumes.
             _canvasOverlay = SusBootstrap.GetOrCreateOverlay(_canvas);
 
             // Zone D is derived from the mounted instance and from nothing else (card T-3034).
@@ -579,10 +604,13 @@ namespace Sharq.Core.Storybook
         /// <see cref="OverlayHost"/> to open. Each of those re-fires inserted another copy, in a
         /// place the story never meant and no teardown could reach.
         ///
-        /// <paramref name="anchor"/> is the element actually sitting in <c>_canvas</c> — the
-        /// instance itself, or, when the story declared a host (card T-3905), that host: the
-        /// scenery goes beside whatever occupies the instance's place in the canvas, not beside an
-        /// instance buried inside a host it does not sit in (plan D3).
+        /// <paramref name="anchor"/> is the element actually sitting in
+        /// <see cref="_canvasViewport"/> (card T-3708, decision D1) — the instance itself, or,
+        /// when the story declared a host (card T-3905), that host: the scenery goes beside
+        /// whatever occupies the instance's place in the viewport, not beside an instance buried
+        /// inside a host it does not sit in (plan D3). <c>Insert</c>/<c>IndexOf</c>/<c>childCount</c>
+        /// on a ScrollView route to its content container the same way <c>Add</c> already does, so
+        /// no extra indirection is needed here.
         /// </summary>
         void MountScene(SusStoryContext story, VisualElement anchor)
         {
@@ -594,12 +622,12 @@ namespace Sharq.Core.Storybook
                 var piece = scene[i];
                 if (piece?.Element == null) continue;
 
-                int at = _canvas.IndexOf(anchor);
-                if (at < 0) at = _canvas.childCount;
+                int at = _canvasViewport.IndexOf(anchor);
+                if (at < 0) at = _canvasViewport.childCount;
                 else if (piece.After) at += 1;
 
-                if (at > _canvas.childCount) at = _canvas.childCount;
-                _canvas.Insert(at, piece.Element);
+                if (at > _canvasViewport.childCount) at = _canvasViewport.childCount;
+                _canvasViewport.Insert(at, piece.Element);
                 _scene.Add(piece.Element);
             }
         }
@@ -772,14 +800,22 @@ namespace Sharq.Core.Storybook
             // Card T-3905: the host comes off LAST of "its own", by reference — after the instance
             // it was carrying, same reasoning as the instance coming off after the hosts above (a
             // self-teleporting instance still targets the host as its ORIGINAL parent while
-            // IsClearing is unset). _canvas.Clear() below is the belt-and-suspenders sweep for a
-            // story with no host at all, and for anything this reference-based teardown missed.
+            // IsClearing is unset). The sweep below is the belt-and-suspenders catch-all for a
+            // story with no host at all, and for anything this reference-based teardown missed —
+            // same job the old unconditional `_canvas.Clear()` did, before the canvas held a
+            // permanent viewport of its own (card T-3708, decision D1) that a blanket Clear()
+            // would have taken down along with the story.
             if (_currentHost != null)
             {
                 _currentHost.RemoveFromHierarchy();
                 _currentHost = null;
             }
-            _canvas.Clear();
+            _canvasViewport.contentContainer.Clear();
+            for (int i = _canvas.hierarchy.childCount - 1; i >= 0; i--)
+            {
+                var child = _canvas.hierarchy.ElementAt(i);
+                if (!ReferenceEquals(child, _canvasViewport)) child.RemoveFromHierarchy();
+            }
             _canvasOverlay = null;
         }
 

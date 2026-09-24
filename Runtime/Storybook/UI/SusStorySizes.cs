@@ -25,18 +25,22 @@ namespace Sharq.Core.Storybook.UI
         public const string OverlayNote = "overlay — in the stage OverlayHost, inside the frame";
 
         /// <summary>
-        /// Note shown while zone C reaches past the part of it the reader can see (card T-3389,
-        /// plan §4.7: the fact of scrolling is SAID, it does not stay silent). Without it the
-        /// reader sees a cut-off stage and no reason to suspect there is more of it.
+        /// Note shown while the subject reaches past the canvas sideways (card T-3708, decision
+        /// D1: the fact of scrolling is SAID, it does not stay silent). Wider than the canvas is
+        /// no longer unreachable or clipped — it scrolls, inside the canvas's own viewport — but
+        /// without the note the reader sees a cut-off subject and no reason to suspect there is
+        /// more of it just off to the side.
         /// </summary>
-        public const string WideNote = "wider than the window — scroll sideways for the rest";
+        public const string WideNote = "wider than the canvas — scroll inside the canvas";
 
         /// <summary>
-        /// Note shown while the canvas cuts the subject off at the bottom. The canvas keeps ONE
+        /// Note shown while the subject reaches past the canvas downwards. The canvas keeps ONE
         /// declared height (decision D18) so that two frames of one address stay comparable, and
-        /// that height is not negotiable by the subject — so the cut has to be said out loud.
+        /// that height is not negotiable by the subject — since card T-3708 (decision D3) the
+        /// rest is not clipped but reachable, scrolled to inside the same viewport as the
+        /// sideways case, and that has to be said out loud too.
         /// </summary>
-        public const string ClipNote = "taller than the canvas — one declared height, the rest is clipped";
+        public const string ClipNote = "taller than the canvas — scroll inside the canvas";
 
         readonly Label _sizes = new();
         readonly Label _overlay = new();
@@ -78,17 +82,20 @@ namespace Sharq.Core.Storybook.UI
         public VisualElement Canvas { get; set; }
 
         /// <summary>
-        /// Everything zone C holds (the stage ScrollView content container), which is what the
-        /// horizontal question is asked of. Not the subject: at a narrow window it is zone C's own
-        /// furniture that sticks out first — measured in Play on 2026-09-11, the stage content is
-        /// 615px wide at every window from 320 to 560, against a viewport of 272 to 512. Asking the
-        /// subject would stay silent through all of it while a third of the stage sat out of reach.
+        /// The canvas viewport's content container (card T-3708, decision D1) — what the
+        /// horizontal question is asked of. Its width tracks the mounted subject in practice (the
+        /// viewport holds nothing else), so comparing it against <see cref="StageViewport"/> is
+        /// the same "does the content stick out of what is visible" question the vertical half
+        /// already asks with <see cref="Tracked"/> against <see cref="Canvas"/>. Named for the
+        /// question it used to answer about the whole of zone C before the viewport moved inside
+        /// the canvas (card T-3389); the name outlived the wiring, the property did not move.
         /// </summary>
         public VisualElement StageContent { get; set; }
 
         /// <summary>
-        /// The part of zone C the reader actually sees without scrolling (the stage ScrollView
-        /// viewport). Null in a test with no panel, and then the note simply never fires.
+        /// The part of the canvas the reader actually sees without scrolling sideways (the canvas
+        /// viewport's own content viewport, card T-3708, decision D1). Null in a test with no
+        /// panel, and then the note simply never fires.
         /// </summary>
         public VisualElement StageViewport { get; set; }
 
@@ -174,8 +181,9 @@ namespace Sharq.Core.Storybook.UI
         }
 
         /// <summary>
-        /// What zone C says about a subject that does not fit. Reads the SAME resolvedStyle pass as
-        /// the metrics line above, so saying it costs no extra layout (card T-3362, decision D16).
+        /// What the canvas says about a subject that does not fit it (card T-3708, decision D1).
+        /// Reads the SAME resolvedStyle pass as the metrics line above, so saying it costs no
+        /// extra layout (card T-3362, decision D16).
         /// </summary>
         string FitNote()
         {
@@ -186,11 +194,13 @@ namespace Sharq.Core.Storybook.UI
         }
 
         /// <summary>
-        /// The note for a zone C <paramref name="contentWidth"/> wide inside a viewport
-        /// <paramref name="viewportWidth"/> wide, holding a subject <paramref name="subjectHeight"/>
-        /// tall in a canvas <paramref name="canvasHeight"/> tall. The two questions have two
-        /// different witnesses on purpose: sideways it is the whole stage that runs out of window,
-        /// downwards it is the subject that runs out of canvas.
+        /// The note for a subject whose mounted content is <paramref name="contentWidth"/> wide
+        /// inside a canvas viewport <paramref name="viewportWidth"/> wide, and
+        /// <paramref name="subjectHeight"/> tall in a canvas <paramref name="canvasHeight"/> tall.
+        /// The two questions have the same witness now (the canvas, card T-3708, decision D1) —
+        /// sideways it is the viewport's content that runs out of what is visible, downwards it is
+        /// the subject that runs out of the canvas's one declared height (D18); both scroll rather
+        /// than clip (decision D3), and the note says so.
         ///
         /// Pure arithmetic, so the sentence the reader gets is judged by a test with numbers in it
         /// and not by a screenshot (card T-3389).

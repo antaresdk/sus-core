@@ -787,14 +787,36 @@
        not clipped but UNREACHABLE (the stage scrolls vertically only).
        The fix is one number, declared here before the first layout pass: the canvas never
        resizes, for any story or any popover, which is also what makes two screenshots of the same
-       address comparable between runs. A subject bigger than the canvas is clipped visibly and
-       scrolled to — it does not push the canvas open. */
+       address comparable between runs. A subject bigger than the canvas scrolls INSIDE the
+       canvas's own viewport (card T-3708, plan ARCH-20260922-STORYBOOK-CANVAS-VIEWPORT.md, decision
+       D1) — it does not push the canvas open. */
     height: var(--sb-canvas-h);
     min-height: var(--sb-canvas-h);
     max-height: var(--sb-canvas-h);
     min-width: var(--sb-canvas-min-w);
     max-width: 100%;
     overflow: hidden;
+}
+
+/* Card T-3708, decision D1: the canvas's own two-axis viewport. The FIRST in-flow child of
+ * `.sb-stage__canvas`, filling the canvas's padding box (`flex-grow: 1`) — the subject and any
+ * scene pieces a story declared mount INTO it (`SusStorybookHost.Mount`/`MountScene`), while the
+ * overlay host stays a sibling of this element, last child of the canvas (decision D2), so a
+ * popup is never scrolled away with the subject.
+ *
+ * `min-width: 100%` on the content container (below) is what keeps a subject with no width of its
+ * own stretched to the canvas's width, same as it was when the canvas itself held the subject
+ * directly (plan §6 risk row, D18 of the shell plan). */
+.sb-stage__viewport {
+    flex-grow: 1;
+}
+
+/* The content container gets ITS OWN class (`AddToClassList` in SusStorybookHost, not a style-API
+ * write — R53/R120) rather than one of Unity's own `unity-content-container` selectors: those are
+ * an implementation detail of ScrollView with no contract across Unity versions, unlike a shell
+ * class this file already owns. */
+.sb-stage__viewport-content {
+    min-width: 100%;
 }
 
 /* Card T-3359 (RETURN, ux-reviewer report 2026-09-24-ux-reviewer-3). The ground above still
@@ -1866,7 +1888,9 @@
 .sb-nav__list > .unity-scroller,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sb-stage > .unity-scroller,
+.sb-stage__viewport > .unity-scroller,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sb-env__chips > .unity-scroller,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller,
 .sb-matrix__scroll > .unity-scroller,
@@ -1885,7 +1909,9 @@
 .sb-nav__list > .unity-scroller--vertical,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sb-stage > .unity-scroller--vertical,
+.sb-stage__viewport > .unity-scroller--vertical,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sb-env__chips > .unity-scroller--vertical,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical,
 .sb-matrix__scroll > .unity-scroller--vertical,
@@ -1900,6 +1926,7 @@
 
 .sb-nav__list > .unity-scroller--horizontal,
 .sb-stage > .unity-scroller--horizontal,
+.sb-stage__viewport > .unity-scroller--horizontal,
 .sb-env__chips > .unity-scroller--horizontal,
 .sb-matrix__scroll > .unity-scroller--horizontal,
 .sb-ctlpanel__groups > .unity-scroller--horizontal,
@@ -1913,7 +1940,9 @@
 .sb-nav__list > .unity-scroller .unity-scroller__low-button,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sb-stage > .unity-scroller .unity-scroller__low-button,
+.sb-stage__viewport > .unity-scroller .unity-scroller__low-button,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sb-env__chips > .unity-scroller .unity-scroller__low-button,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__low-button,
 .sb-matrix__scroll > .unity-scroller .unity-scroller__low-button,
@@ -1925,7 +1954,9 @@
 .sb-nav__list > .unity-scroller .unity-scroller__high-button,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sb-stage > .unity-scroller .unity-scroller__high-button,
+.sb-stage__viewport > .unity-scroller .unity-scroller__high-button,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sb-env__chips > .unity-scroller .unity-scroller__high-button,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__high-button,
 .sb-matrix__scroll > .unity-scroller .unity-scroller__high-button,
@@ -1942,7 +1973,9 @@
 .sb-nav__list > .unity-scroller .unity-scroller__slider,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sb-stage > .unity-scroller .unity-scroller__slider,
+.sb-stage__viewport > .unity-scroller .unity-scroller__slider,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sb-env__chips > .unity-scroller .unity-scroller__slider,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-scroller__slider,
 .sb-matrix__scroll > .unity-scroller .unity-scroller__slider,
@@ -1959,7 +1992,9 @@
 .sb-nav__list > .unity-scroller .unity-base-slider__tracker,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sb-stage > .unity-scroller .unity-base-slider__tracker,
+.sb-stage__viewport > .unity-scroller .unity-base-slider__tracker,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sb-env__chips > .unity-scroller .unity-base-slider__tracker,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__tracker,
 .sb-matrix__scroll > .unity-scroller .unity-base-slider__tracker,
@@ -1985,7 +2020,9 @@
 .sb-nav__list > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-stage > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-stage__viewport > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-env__chips > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
 .sb-matrix__scroll > .unity-scroller--vertical .unity-base-slider__tracker,
@@ -2000,6 +2037,7 @@
 
 .sb-nav__list > .unity-scroller--horizontal .unity-base-slider__tracker,
 .sb-stage > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-stage__viewport > .unity-scroller--horizontal .unity-base-slider__tracker,
 .sb-env__chips > .unity-scroller--horizontal .unity-base-slider__tracker,
 .sb-matrix__scroll > .unity-scroller--horizontal .unity-base-slider__tracker,
 .sb-ctlpanel__groups > .unity-scroller--horizontal .unity-base-slider__tracker,
@@ -2011,7 +2049,9 @@
 .sb-nav__list > .unity-scroller .unity-base-slider__dragger,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sb-stage > .unity-scroller .unity-base-slider__dragger,
+.sb-stage__viewport > .unity-scroller .unity-base-slider__dragger,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sb-env__chips > .unity-scroller .unity-base-slider__dragger,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger,
@@ -2031,7 +2071,9 @@
 .sb-nav__list > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-stage > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-stage__viewport > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-env__chips > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
 .sb-matrix__scroll > .unity-scroller--vertical .unity-base-slider__dragger,
@@ -2046,6 +2088,7 @@
 
 .sb-nav__list > .unity-scroller--horizontal .unity-base-slider__dragger,
 .sb-stage > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-stage__viewport > .unity-scroller--horizontal .unity-base-slider__dragger,
 .sb-env__chips > .unity-scroller--horizontal .unity-base-slider__dragger,
 .sb-matrix__scroll > .unity-scroller--horizontal .unity-base-slider__dragger,
 .sb-ctlpanel__groups > .unity-scroller--horizontal .unity-base-slider__dragger,
@@ -2057,7 +2100,9 @@
 .sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-stage > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-stage__viewport > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-env__chips > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger:hover,
 .sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger:hover,
@@ -2072,7 +2117,9 @@
 .sb-nav__list > .unity-scroller .unity-base-slider__dragger-border,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sb-stage > .unity-scroller .unity-base-slider__dragger-border,
+.sb-stage__viewport > .unity-scroller .unity-base-slider__dragger-border,
 .sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
+.sb-stage__viewport > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sb-env__chips > .unity-scroller .unity-base-slider__dragger-border,
 .sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger-border,
 .sb-matrix__scroll > .unity-scroller .unity-base-slider__dragger-border,

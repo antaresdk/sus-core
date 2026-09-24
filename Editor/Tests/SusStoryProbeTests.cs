@@ -488,7 +488,7 @@ namespace Sharq.Core.Editor.Tests
 
                 host.ShowStoryById(Counter);
 
-                var story = host.QaCanvas.Children().OfType<SusComponent>().First();
+                var story = host.QaSubjectRoot.Children().OfType<SusComponent>().First();
                 for (int i = 0; i < 60 && !story.IsMounted; i++) yield return null;
 
                 Assert.IsTrue(story.IsMounted, "the story reaches Mounted() within 60 frames of a real panel");
@@ -563,7 +563,7 @@ namespace Sharq.Core.Editor.Tests
             using var host = new SusStorybookHost();
 
             host.ShowStoryById(Counter);
-            var story = (CoreCounterDemo)host.QaCanvas.Children().OfType<SusComponent>().First();
+            var story = (CoreCounterDemo)host.QaSubjectRoot.Children().OfType<SusComponent>().First();
 
             Assert.That(host.ZoneProbe.Children().Contains(host.Probe), Is.True, "zone E is filled");
             Assert.That(host.Probe.Events.Declared, Is.EquivalentTo(new[] { "OnCount" }));
@@ -603,7 +603,7 @@ namespace Sharq.Core.Editor.Tests
         {
             using var host = new SusStorybookHost();
             host.ShowStoryById(Counter);
-            var story = (CoreCounterDemo)host.QaCanvas.Children().OfType<SusComponent>().First();
+            var story = (CoreCounterDemo)host.QaSubjectRoot.Children().OfType<SusComponent>().First();
             story.OnCount?.Invoke(1);
             Assert.That(host.Probe.Chips, Is.Not.Empty);
 

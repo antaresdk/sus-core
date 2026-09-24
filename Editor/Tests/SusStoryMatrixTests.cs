@@ -526,7 +526,7 @@ namespace Sharq.Core.Editor.Tests
             using var host = new SusStorybookHost();
 
             host.ShowStoryById(Floating);
-            var story = host.QaCanvas.Children().OfType<SusComponent>().First();
+            var story = host.QaSubjectRoot.Children().OfType<SusComponent>().First();
 
             Assert.That(host.CanvasOverlay, Is.Not.Null);
             Assert.That(SusBootstrap.ResolveOverlayHost(story), Is.SameAs(host.CanvasOverlay),

@@ -40,7 +40,7 @@ namespace Sharq.Core.Editor.Tests
             using var host = new SusStorybookHost();
             host.ShowStoryById(Counter);
 
-            var story = host.QaCanvas.Children().OfType<SusComponent>().FirstOrDefault();
+            var story = host.QaSubjectRoot.Children().OfType<SusComponent>().FirstOrDefault();
             Assert.That(story, Is.Not.Null, "the story is on the canvas");
             Assert.That(story.IsMounted, Is.False, "a detached host never reaches Mounted()");
             Assert.That(host.Controls, Is.Null,

@@ -186,7 +186,7 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(host.CurrentStory, Is.Not.Null);
             Assert.That(host.LastRegisteredStoryIds, Is.EqualTo(SusStoryRegistry.LastRegisteredStoryIds));
-            Assert.That(host.QaCanvas.childCount, Is.GreaterThan(0), "the story is on the stage");
+            Assert.That(host.QaSubjectRoot.childCount, Is.GreaterThan(0), "the story is on the stage");
         }
 
         [Test]
@@ -223,7 +223,7 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/primitives/swatch"));
             Assert.That(host.Nav.ActiveStoryId, Is.EqualTo("enginetests/primitives/swatch"));
-            Assert.That(host.QaCanvas.childCount, Is.GreaterThan(0));
+            Assert.That(host.QaSubjectRoot.childCount, Is.GreaterThan(0));
         }
 
         [Test]
