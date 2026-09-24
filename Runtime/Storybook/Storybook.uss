@@ -770,6 +770,29 @@
     overflow: hidden;
 }
 
+/* Card T-3359 (RETURN, ux-reviewer report 2026-09-24-ux-reviewer-3). The ground above still
+   followed `--sb-bg`, which is the SHELL's own theme chip (D4, ShellThemeAxis on .sb-shell) — but
+   everything painted ON this element follows a DIFFERENT chip: "theme" binds straight to THIS
+   element (previewRoot == QaCanvas, SusBuiltinEnvAxes.cs, D27), adding `.theme-dark` /
+   `.theme-light` here directly, and every subject on the canvas resolves its own ink and tonal
+   fill against that class. When the two chips disagree (e.g. shell-theme stayed dark while theme
+   went light), the ground stayed shell-dark under a subject painting itself light, and the tonal
+   alert measured 1.26:1 against it (matching pairs measured 12.16 / 15.19, report table).
+   The fix reads no product token (D2 still holds: SUBJECT is not touched, only this element's OWN
+   ground) — it just answers the class the SUBJECT's own axis already put here, with the shell's
+   OWN two values (the same 13-name dark/light pair the shell chip already owns, §4.2), instead of
+   with a value gated by the unrelated shell-theme chip. Specificity (.sb-stage__canvas.theme-dark
+   beats .sb-stage__canvas) makes this win regardless of source order. */
+.sb-stage__canvas.theme-dark {
+    background-color: #18181a;
+    color: #ebeae6;
+}
+
+.sb-stage__canvas.theme-light {
+    background-color: #f3f2ee;
+    color: #1c1c1a;
+}
+
 .sb-stage__crumbs {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
