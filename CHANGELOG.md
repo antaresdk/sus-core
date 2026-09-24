@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-09-25
+
+### Added
+- `SusMotion.Reduce`: a static `Prop<bool>` reduce-motion flag, off by default. While it is on, `Play()` of a finite motion writes the end values and calls `onComplete` at once, with no ticks and no delay; a motion with a forever group (`Repeat <= 0`) does not start and leaves its target untouched. Turning the flag on stops every forever motion already playing, with its restore mode. Own loops can watch the flag to follow it. With the flag off every `Play` behaves as before. The play-mode reset hook turns the flag off (T-4202).
+
 ## [1.3.2] - 2026-09-24
 
 ### Added
