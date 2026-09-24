@@ -583,12 +583,23 @@ namespace Sharq.Core.Diagnostics
             {
                 _overflowProbed = true;
                 _overflowProp = typeof(IResolvedStyle).GetProperty("overflow");
+                // Unity 6000.3 has no `overflow` on IResolvedStyle (measured 2026-09-24, T-4149), so
+                // every overflow:hidden crop — SusRating's half-star fill clip — was named
+                // out-of-bounds. VisualElement.ShouldClip() is the engine's own answer to the same
+                // question (internal, read once reflectively, no allocation per call).
+                if (_overflowProp == null)
+                    _shouldClip = typeof(VisualElement).GetMethod("ShouldClip",
+                        BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
+                        null, System.Type.EmptyTypes, null);
             }
-            if (_overflowProp == null) return false;
             try
             {
-                var v = _overflowProp.GetValue(el.resolvedStyle);
-                return v != null && string.Equals(v.ToString(), "Hidden", System.StringComparison.Ordinal);
+                if (_overflowProp != null)
+                {
+                    var v = _overflowProp.GetValue(el.resolvedStyle);
+                    return v != null && string.Equals(v.ToString(), "Hidden", System.StringComparison.Ordinal);
+                }
+                return _shouldClip != null && (bool)_shouldClip.Invoke(el, null);
             }
             catch
             {
@@ -598,6 +609,7 @@ namespace Sharq.Core.Diagnostics
 
         static bool _overflowProbed;
         static PropertyInfo _overflowProp;
+        static MethodInfo _shouldClip;
 
         /// <summary>How far <paramref name="inner"/> escapes <paramref name="outer"/>, and where.</summary>
         static float EscapeOf(Rect inner, Rect outer, out string side)
