@@ -142,7 +142,16 @@ namespace Sharq.Core.Storybook
             _zoneEnv.AddToClassList("sb-zone");
             _zoneEnv.AddToClassList("sb-env");
 
-            _env = new SusStoryEnvBar(this, _canvas);
+            // T-4101: previewRoot is the STAGE subtree (D27, plan ARCH-20260911-STORYBOOK-SHELL.md:
+            // "the environment axis applies to the STAGE SUBTREE, not the shell root"), not the
+            // canvas alone. The matrix
+            // (_matrix, zone C) is a SIBLING of the canvas under _stage, not a descendant of it —
+            // binding previewRoot to _canvas left every matrix cell outside every axis's reach: a
+            // live measurement (ux-reviewer 2026-09-24) found the "theme" chip reading "light"
+            // while all 14 matrix cells stayed on the dark background var() resolves to above the
+            // stage. _stage is the element the mock-up actually means by "the stage" — matrix and
+            // canvas both live under it, so an axis bound there reaches both.
+            _env = new SusStoryEnvBar(this, _stage);
             _env.Changed += RefreshAddress;
             // An environment axis (breakpoint, density, theme, scale, input) re-lays out the
             // stage, so it is one of D17's named occasions for zone E (card T-3358).
@@ -167,6 +176,16 @@ namespace Sharq.Core.Storybook
             // dotted canvas, live measurements.
             _stage.name = "sus-storybook-zone-c";
             _stage.AddToClassList("sb-stage");
+            // The STAGE is the cascade root of its own (card T-3400, plan D27; corrected T-4101 —
+            // see the comment on _env above for why _canvas alone was the wrong element). Without
+            // the declaration SusThemeService.ResolveCascadeRoot answers with
+            // SusBootstrap.TokenCascadeRoot — in the live storybook the UIDocument root, ABOVE the
+            // shell — so every service routed through it (theme here, and anything else that
+            // resolves a root from inside the stage) painted the whole instrument instead of the
+            // subject on display. Declared here rather than only in the axis, so it holds for
+            // every caller that resolves a root from inside the stage, not only for the chip that
+            // was measured.
+            SusThemeService.MarkScopedCascadeRoot(_stage);
             _stageCrumbs.AddToClassList("sb-stage__crumbs");
             _stageTitle.AddToClassList("sb-stage__title");
             _stagePurpose.AddToClassList("sb-stage__purpose");
@@ -174,15 +193,6 @@ namespace Sharq.Core.Storybook
             _liveHint.AddToClassList("sb-stage__live-hint");
             _canvas.name = "sus-storybook-canvas";
             _canvas.AddToClassList("sb-stage__canvas");
-            // The canvas is a cascade root of its own (card T-3400, plan D27): the stage axes must
-            // be able to say "this element" and be believed. Without the declaration
-            // SusThemeService.ResolveCascadeRoot answers with SusBootstrap.TokenCascadeRoot — in
-            // the live storybook the UIDocument root, ABOVE the shell — so every service routed
-            // through it (theme here, and anything else that resolves a root from inside the
-            // stage) painted the whole instrument instead of the subject on display. Declared here
-            // rather than in the axis, so it holds for every caller that resolves a root from
-            // inside the canvas, not only for the chip that was measured.
-            SusThemeService.MarkScopedCascadeRoot(_canvas);
 
             // Card T-3708, decision D1: the canvas's own two-axis viewport, first in-flow child
             // of the canvas. contentContainer gets its own class (AddToClassList, not a style-API

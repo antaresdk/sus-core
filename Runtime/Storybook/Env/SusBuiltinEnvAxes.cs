@@ -13,10 +13,15 @@ namespace Sharq.Core.Storybook.Env
     /// a story's rendering is meant to react exactly as it would in a shipped app, not to a
     /// storybook-only stand-in.
     ///
-    /// EVERY axis that changes the SUBJECT binds to <c>previewRoot</c> (the stage canvas, card
-    /// T-3033's <c>QaCanvas</c>): breakpoint, density, scale — and, since card T-3371, theme too.
-    /// "Binds" has to mean the element itself: card T-3394 found theme still leaving the stage
-    /// through <c>SusThemeService</c>'s cascade-root resolution — see <see cref="ThemeAxis.Apply"/>.
+    /// EVERY axis that changes the SUBJECT binds to <c>previewRoot</c> — the STAGE subtree (plan
+    /// D27, "the stage" meaning zone C's <c>_stage</c>, not only its canvas child): breakpoint,
+    /// density, scale — and, since card T-3371, theme too. "Binds" has to mean the element itself:
+    /// card T-3394 found theme still leaving the stage through <c>SusThemeService</c>'s
+    /// cascade-root resolution — see <see cref="ThemeAxis.Apply"/>. Card T-4101 found the binding
+    /// narrowed to <see cref="SusStorybookHost.QaCanvas"/> alone had drifted away from D27 again:
+    /// the state matrix (zone C) is a SIBLING of the canvas under the stage, not a descendant of
+    /// it, so a canvas-only scope left every matrix cell out of reach of any axis — the live
+    /// witness was the "theme" chip reading "light" while 14 of 14 matrix cells stayed dark.
     ///
     /// Theme used to bind to <c>shellRoot</c>, which is card T-3371's defect and decision D27 of
     /// plan ARCH-20260911-STORYBOOK-SHELL.md. One click on the "theme" chip repainted the whole
