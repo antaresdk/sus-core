@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-09-24
+
+### Added
+- `SusComponent.SetTrailingSheets(scope, sheets)` / `ClearTrailingSheets(scope)` / `GetTrailingSheets(scope)` and the `TrailingSheets` instance property: style sheets registered for a scope element are appended after the own sheets of every attached styled component under it, so an override wins ties at equal specificity. Components attached later pick the tail up on attach; the tail stays last after companion load, reload and hot reload; overlay copies (`OverlayHost.CopyAncestorStyleSheets`, `SusThemeService.CopyStyleSheets`) follow their source component. The nearest scope wins (T-4159).
+- `SusEditorWindowTestHost` (Editor test support): one off-screen `EditorWindow` per fixture that does not steal OS focus, replacing per-test floating windows in EditMode fixtures (T-4145).
+
+### Changed
+- Storybook canvas stage gets its own two-axis viewport, and the stage scrolls vertically again (T-3708).
+- Storybook environment axis is scoped to the stage subtree instead of the canvas alone (T-4101).
+
+### Fixed
+- `SusUiProbe` detects `overflow: hidden` through `VisualElement` clipping when `IResolvedStyle` exposes no overflow (Unity 6000.3, T-4149).
+
 ## [1.3.1] - 2026-09-24
 
 ### Fixed
