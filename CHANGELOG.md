@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-09-24
+
+### Fixed
+- Storybook canvas ink and its background now follow the subject's own theme axis instead of the shell's, so a light subject under a dark shell (or vice versa) reads with proper contrast (WCAG contrast ratio up from ~1.0-1.3 to 12.16-15.19 across all four theme combinations, T-3359).
+- Env chips strip: the horizontal scroller no longer clips the chip row by 8px or spawns a phantom vertical scroller when it appears; the `ScrollView` viewport now matches the chip height and stays inside its bar at every width (T-3364).
+
 ## [1.3.0] - 2026-09-24
 
 ### Added
