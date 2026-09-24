@@ -312,6 +312,35 @@ public static class SusBootstrap
 }
 ```
 
+## SusMotion.Reduce — reduce motion
+
+`SusMotion.Reduce` is an application-wide `Prop<bool>` for the "reduce motion" accessibility
+setting. It is off by default, and with `false` every `SusMotion.Play` behaves exactly as before.
+
+```csharp
+// Settings screen: the player asked for less motion.
+SusMotion.Reduce.Value = true;
+```
+
+While the flag is on:
+
+- a **finite** `SusMotion` play writes its end values at once and calls `onComplete`
+  synchronously, with no ticks and no delay;
+- a play with a **forever** group (`Repeat <= 0`) does not start and leaves the target untouched;
+- switching the flag from `false` to `true` stops every forever play that is already running,
+  applying its restore mode. Finite plays that are already running are left to finish.
+
+Components with their own loops (scheduled tickers outside `SusMotion`) should watch the flag and
+pause, the same way they watch any other `Prop<T>`:
+
+```csharp
+SusMotion.Reduce.Changed += (_, reduce) => SetPaused(reduce);
+SetPaused(SusMotion.Reduce.Peek());
+```
+
+Subscribe while the element is attached and unsubscribe on detach: the flag outlives every panel.
+USS transitions are not affected; the flag covers continuous and scripted motion.
+
 ## What replaces (v1 → v2)
 
 | Old (v1) | New (v2) |
