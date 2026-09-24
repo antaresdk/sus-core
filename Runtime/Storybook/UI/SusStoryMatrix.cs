@@ -876,7 +876,17 @@ namespace Sharq.Core.Storybook.UI
             for (int i = 0; i < _refs.Count; i++)
             {
                 var r = _refs[i];
-                if (Mathf.Abs(r.AppliedW - colW[r.Column]) > 0.01f)
+                // T-3355: AppliedW/AppliedH start at float.NaN (card T-3481) so the FIRST pass
+                // can tell "never applied" from "applied and unchanged". Mathf.Abs(NaN - x) is
+                // itself NaN, and every comparison against NaN is false in C# - so the old
+                // `Mathf.Abs(...) > 0.01f` alone was false on pass 1 no matter what colW/lineH
+                // held, "changed" stayed false, and SizeColumns() returned before ever writing
+                // colhead.style.minWidth (line ~903). Cells still ended up sized because
+                // BoxOf()/overflow:hidden on .sb-matrix__cell bound the ITEM to the cell
+                // regardless; only the head labels, which are written solely in this block,
+                // stayed at their unsized default width and drifted out from under their column
+                // (worst case 785px on game/hud/buff-tray). float.IsNaN() makes pass 1 explicit.
+                if (float.IsNaN(r.AppliedW) || Mathf.Abs(r.AppliedW - colW[r.Column]) > 0.01f)
                 {
                     r.AppliedW = colW[r.Column];
                     changed = true;
@@ -886,7 +896,7 @@ namespace Sharq.Core.Storybook.UI
                     // sus:uss-impossible measured size of live instances, computed from this layout pass
                     r.Cell.style.minWidth = colW[r.Column];
                 }
-                if (Mathf.Abs(r.AppliedH - lineH[r.Line]) > 0.01f)
+                if (float.IsNaN(r.AppliedH) || Mathf.Abs(r.AppliedH - lineH[r.Line]) > 0.01f)
                 {
                     r.AppliedH = lineH[r.Line];
                     changed = true;

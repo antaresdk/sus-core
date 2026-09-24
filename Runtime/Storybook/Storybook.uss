@@ -834,6 +834,14 @@
 .sb-matrix__colhead {
     min-width: var(--sb-matrix-cell-w);
     flex-shrink: 0;
+    /* T-3355 RETURN: Unity's default Label carries its own margin (measured 2px left / 4px
+       right on this build) — irrelevant on a lone label, but here it is laid out in the SAME
+       row as its sibling colheads, so that margin adds to each one's box and the row drifts by
+       margin-left+margin-right per column (measured 6px/column, 18px by the 4th head on this
+       story - the mechanism behind the up-to-785px drift on wider grids). `.sb-matrix__cell`
+       right below carries no such margin, so the fix is here: zero it so a head's box is
+       exactly its measured width, same as its cell. */
+    margin: 0;
     -unity-text-align: middle-center;
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);
@@ -1902,6 +1910,41 @@
     margin: 0;
 }
 
+/* T-3354 RETURN: the band container above is 8px (--sb-scrollbar), but the tracker/dragger
+ * INSIDE a Unity BaseSlider carry their own cross-axis size from Unity's default control style
+ * (measured 24px tracker / 18px dragger, left offset 3px) — a size the 8px band never
+ * constrained, because tracker/dragger are the slider's absolute-positioned children, not a
+ * percentage of the parent box. Left unset, the dragger just overflows the band (measured 18px
+ * wide crossing 6px into the next zone on kit-shell-1440 nav). Cross-axis width/height is fixed
+ * here explicitly, per orientation, same as the band itself two rules up; the scroll-axis size
+ * (how tall/wide the dragger is along the direction you drag) stays Unity's own, set from the
+ * content ratio, and is untouched. */
+.sb-nav__list > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-stage > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-env__chips > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-matrix__scroll > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-ctlpanel__groups > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-iconpicker__scroll > .unity-scroller--vertical .unity-base-slider__tracker,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__tracker {
+    width: var(--sb-scrollbar);
+    left: 0;
+}
+
+.sb-nav__list > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-stage > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-env__chips > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-matrix__scroll > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-ctlpanel__groups > .unity-scroller--horizontal .unity-base-slider__tracker,
+.sb-iconpicker__scroll > .unity-scroller--horizontal .unity-base-slider__tracker {
+    height: var(--sb-scrollbar);
+    top: 0;
+}
+
 .sb-nav__list > .unity-scroller .unity-base-slider__dragger,
 .sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller .unity-base-slider__dragger,
 .sb-stage > .unity-scroller .unity-base-slider__dragger,
@@ -1918,6 +1961,34 @@
     border-width: 0;
     border-radius: var(--sb-r-sm);
     margin: 0;
+}
+
+/* T-3354 RETURN: same cross-axis fix as the tracker above, for the dragger itself — this is the
+ * part actually measured 18px wide on the returned frames. */
+.sb-nav__list > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-nav__list > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-stage > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-stage > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-env__chips > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-matrix__scroll > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-matrix__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-ctlpanel__groups > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-ctlpanel__groups > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-iconpicker__scroll > .unity-scroller--vertical .unity-base-slider__dragger,
+.sb-iconpicker__scroll > .unity-scroll-view__content-and-vertical-scroll-container > .unity-scroller--vertical .unity-base-slider__dragger {
+    width: var(--sb-scrollbar);
+    left: 0;
+}
+
+.sb-nav__list > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-stage > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-env__chips > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-matrix__scroll > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-ctlpanel__groups > .unity-scroller--horizontal .unity-base-slider__dragger,
+.sb-iconpicker__scroll > .unity-scroller--horizontal .unity-base-slider__dragger {
+    height: var(--sb-scrollbar);
+    top: 0;
 }
 
 .sb-nav__list > .unity-scroller .unity-base-slider__dragger:hover,
