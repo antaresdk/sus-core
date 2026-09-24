@@ -698,7 +698,13 @@ namespace Sharq.Core.Runtime.Tests
             CollectionAssert.IsEmpty(early,
                 "fixture sanity: the scheduled child must not exist yet on the very next tick");
 
-            yield return WaitUntilFrames(() => row.Q("deferred-glyph") != null, maxFrames: 90);
+            // T-4014: schedule.StartingIn(ms) fires on WALL-CLOCK time, not frame count -- under
+            // -nographics batchmode frames run uncapped (this whole test took ~28ms end to end in
+            // that environment), so a frame-count wait (WaitUntilFrames, maxFrames: 90) exhausted
+            // its budget before 80ms of real time had elapsed and the scheduled child never
+            // appeared. WaitUntil polls on realtimeSinceStartup (same idiom as
+            // UpdatedOnceTests.cs), so it waits the actual 80ms regardless of how fast frames tick.
+            yield return WaitUntil(() => row.Q("deferred-glyph") != null, timeoutSeconds: 1f);
             yield return WaitFrames(2);
 
             var late = SusUiProbe.GetAnomalies(Root);
