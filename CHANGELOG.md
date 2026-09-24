@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-24
+
+### Added
+- `SusComponent.Attached()` / `Detached()` lifecycle hooks: fire on EVERY attach/detach to a panel (including the first attach and a same-panel teleport such as an overlay self-mount), unlike `Mounted()`/`Unmounted()`, which fire once per instance. Use `Attached`/`Detached` for a subscription to a source that lives outside the component (a model, a service, a sibling) — it survives a teleport/relocate/reopen cycle that would otherwise leave `Mounted()`'s one-shot subscription dead (T-3998).
+
 ## [1.2.0] - 2026-09-23
 
 ### Added
