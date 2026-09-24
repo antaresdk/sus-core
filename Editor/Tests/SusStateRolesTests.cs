@@ -25,7 +25,7 @@ namespace Sharq.Core.Editor.Tests
         public void TearDown() => SusStateRoles.Reset();
 
         [Test]
-        public void Every_kit_component_carries_exactly_one_role_and_the_seven_add_up_to_eighty()
+        public void Every_kit_component_carries_exactly_one_role_and_the_seven_add_up_to_eighty_one()
         {
             Assert.That(SusStateRoles.NamesOf(SusStateRoles.Control).Count, Is.EqualTo(9));
             Assert.That(SusStateRoles.NamesOf(SusStateRoles.Input).Count, Is.EqualTo(9));
@@ -33,36 +33,37 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(SusStateRoles.NamesOf(SusStateRoles.Surface).Count, Is.EqualTo(8));
             Assert.That(SusStateRoles.NamesOf(SusStateRoles.Overlay).Count, Is.EqualTo(8));
             Assert.That(SusStateRoles.NamesOf(SusStateRoles.Feedback).Count, Is.EqualTo(11));
-            Assert.That(SusStateRoles.NamesOf(SusStateRoles.Display).Count, Is.EqualTo(17));
+            Assert.That(SusStateRoles.NamesOf(SusStateRoles.Display).Count, Is.EqualTo(18));
 
             var all = SusStateRoles.Names.ToList();
-            Assert.That(all.Count, Is.EqualTo(80), "the kit corpus of the plan, component by component");
-            Assert.That(all.Distinct().Count(), Is.EqualTo(80), "a component has one role, not two");
+            Assert.That(all.Count, Is.EqualTo(81), "the kit corpus of the plan, component by component");
+            Assert.That(all.Distinct().Count(), Is.EqualTo(81), "a component has one role, not two");
             Assert.That(SusStateRoles.AllRoles.Sum(r => SusStateRoles.NamesOf(r).Count),
-                Is.EqualTo(80), "and no component sits outside the seven roles");
+                Is.EqualTo(81), "and no component sits outside the seven roles");
         }
 
         /// <summary>
-        /// §4.6: the matrix stops being drawn for 36 of the 80 — 17 display, 11 feedback, 8
-        /// overlay. This is the number card T-3431 is measured by.
+        /// §4.6: the matrix stops being drawn for 37 of the 81 — 18 display, 11 feedback, 8
+        /// overlay. This is the number card T-3431 is measured by (T-4082 adds SusCorners to
+        /// display, moving 80/36 to 81/37).
         /// </summary>
         [Test]
-        public void Thirty_six_components_have_no_state_to_show_and_forty_four_do()
+        public void Thirty_seven_components_have_no_state_to_show_and_forty_four_do()
         {
             var silent = SusStateRoles.Names
                 .Where(n => !SusStateRoles.States.Any(s =>
                     SusStateRoles.DutyOfName(n, s) != SusStateDuty.No))
                 .ToList();
 
-            Assert.That(silent.Count, Is.EqualTo(36),
-                "17 display + 11 feedback + 8 overlay: a column over any of them is a forgery (D14)");
+            Assert.That(silent.Count, Is.EqualTo(37),
+                "18 display + 11 feedback + 8 overlay: a column over any of them is a forgery (D14)");
             Assert.That(silent.Count(n => SusStateRoles.RoleOfName(n) == SusStateRoles.Display),
-                Is.EqualTo(17));
+                Is.EqualTo(18));
             Assert.That(silent.Count(n => SusStateRoles.RoleOfName(n) == SusStateRoles.Feedback),
                 Is.EqualTo(11));
             Assert.That(silent.Count(n => SusStateRoles.RoleOfName(n) == SusStateRoles.Overlay),
                 Is.EqualTo(8));
-            Assert.That(80 - silent.Count, Is.EqualTo(44),
+            Assert.That(81 - silent.Count, Is.EqualTo(44),
                 "9 control + 9 input + 18 group + 8 surface keep a meaningful matrix");
         }
 

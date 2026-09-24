@@ -108,7 +108,7 @@ namespace Sharq.Core.Storybook
             "feedback | SusAlert SusBadge SusBanner SusLoadingScreen SusProgressCircular " +
             "SusProgressLinear SusSkeletonLoader SusSnackbar SusSnackbarQueue SusSpinner SusTooltip",
 
-            "display  | SusAvatar SusAvatarGroup SusCellBar SusCooldownWipe SusDivider " +
+            "display  | SusAvatar SusAvatarGroup SusCellBar SusCooldownWipe SusCorners SusDivider " +
             "SusFloatingDamage SusHealthBar SusIcon SusImg SusNameplate SusParallaxStack " +
             "SusPieChart SusSpeechBubble SusStatBar SusTextFx SusTimeline SusUnitNameplate",
         };
