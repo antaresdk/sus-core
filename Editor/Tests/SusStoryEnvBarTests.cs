@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
 using Sharq.Core.Storybook.Env;
@@ -381,6 +383,109 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.That(SusThemeService.Current.Value, Is.EqualTo(SusTheme.Light));
             Assert.That(host.CurrentStory.Id, Is.EqualTo("enginetests/primitives/counter"));
+        }
+    }
+
+    /// <summary>
+    /// Card T-3364, RETURN ux-reviewer-4 (2026-09-24): the chip strip's horizontal scroller
+    /// (<see cref="SusStoryEnvBar"/> sets <c>horizontalScrollerVisibility = Auto</c>) needs a
+    /// REAL panel to reproduce — a detached <see cref="SusStorybookHost"/> never lays out, so
+    /// <c>resolvedStyle</c> on its chips stays zero and the defect these tests guard against is
+    /// invisible in a bare <c>NewBar</c> fixture. Same technique as
+    /// <see cref="SusStorybookHostOverlayTeardownTests"/> — an <see cref="EditorWindow"/> gives a
+    /// panel without Play — plus the reflection call to the window's own private
+    /// <c>RepaintImmediately</c> that both the builder harness and the ux-reviewer's own
+    /// measurement (report 2026-09-24-ux-reviewer-4) used to force a synchronous layout pass:
+    /// EditMode's own update tick is not enough to read a geometry change back the same call.
+    ///
+    /// Found live: at a chip-strip width that overflows (900 / 480 with the six built-in chips),
+    /// the ScrollView's measure pass — squeezed at the time into <c>.sb-env__bar</c>'s then-fixed
+    /// <c>height: 30px</c> — read its own shrunk viewport as VERTICAL overflow too and drew a
+    /// second, vertical scroller nobody asked for, eating another 8px and clipping every chip's
+    /// bottom 8px. The fix is two lines: <c>verticalScrollerVisibility = Hidden</c> on the
+    /// ScrollView (<see cref="SusStoryEnvBar"/>) and <c>min-height</c> instead of a hard
+    /// <c>height</c> on <c>.sb-env__bar</c> (<c>Storybook.uss</c>), so the bar can grow to fit a
+    /// showing horizontal scroller instead of squeezing its content into a ceiling.
+    /// </summary>
+    public class SusStoryEnvBarChipsScrollGeometryTests
+    {
+        const string CoreSheet = "Packages/com.sharq-it.sus.core/Runtime/Storybook/Storybook.uss";
+
+        EditorWindow _window;
+        SusStorybookHost _host;
+        System.Reflection.MethodInfo _repaintImmediate;
+
+        [SetUp]
+        public void SetUp()
+        {
+            Assume.That(!UnityEngine.Application.isBatchMode,
+                "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
+
+            SusStoryRegistry.ClearDeclaredPackages();
+            SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
+
+            var sheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(CoreSheet);
+            Assert.That(sheet, Is.Not.Null, "the sheet under test must be imported: " + CoreSheet);
+
+            _window = EditorWindow.CreateInstance<EditorWindow>();
+            _window.Show();
+            SusBootstrap.LoadTokenCascade(_window.rootVisualElement);
+            _host = new SusStorybookHost(sheet);
+            _window.rootVisualElement.Add(_host);
+            _host.style.flexGrow = 1;
+            _host.ShowStoryById("enginetests/primitives/counter");
+
+            _repaintImmediate = typeof(EditorWindow).GetMethod("RepaintImmediately",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _host?.Dispose();
+            _host = null;
+            if (_window != null) _window.Close();
+            _window = null;
+
+            SusStoryRegistry.ClearDeclaredPackages();
+            SusStoryRegistry.Invalidate();
+        }
+
+        void SetWidth(float width)
+        {
+            _window.position = new Rect(50, 50, width, 500);
+            // Twice: the first pass is what discovers the overflow and shows the horizontal
+            // scroller, the second is what the ScrollView's own measure re-runs against a panel
+            // that now HAS that scroller in its tree (same two-call shape the builder harness
+            // and ux-reviewer used; one call under-reports the squeeze this test exists to catch).
+            _repaintImmediate?.Invoke(_window, null);
+            _repaintImmediate?.Invoke(_window, null);
+        }
+
+        ScrollView Chips() => _host.Q<ScrollView>(className: "sb-env__chips");
+
+        [TestCase(900f)]
+        [TestCase(480f)]
+        public void Overflow_width_keeps_the_viewport_at_least_a_chip_tall_and_the_vertical_scroller_hidden(float width)
+        {
+            SetWidth(width);
+            var chips = Chips();
+            Assert.That(chips, Is.Not.Null);
+
+            // Sanity: this width must actually reproduce the overflow the defect needs, or the
+            // rest of the assertions would pass for the wrong reason (no scroller shown at all).
+            Assert.That(chips.horizontalScroller.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                "sanity: width " + width + " must overflow the strip for this test to mean anything");
+
+            var chip = chips.Q<VisualElement>(className: "sb-env__chip");
+            Assert.That(chip, Is.Not.Null);
+
+            Assert.That(chips.contentViewport.resolvedStyle.height, Is.GreaterThanOrEqualTo(chip.resolvedStyle.height),
+                "a visible chip must not be clipped by a viewport shorter than itself (DoD, T-3364 RETURN)");
+            Assert.That(chips.verticalScroller.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                "the strip only ever scrolls sideways — a vertical scroller here has nothing to scroll");
+            Assert.That(chips.resolvedStyle.height, Is.LessThanOrEqualTo(_host.Q<VisualElement>(className: "sb-env__bar").resolvedStyle.height + 0.5f),
+                "the ScrollView must stay within sb-env__bar, not spill past it (DoD, T-3364 RETURN)");
         }
     }
 }

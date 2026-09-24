@@ -56,6 +56,14 @@ namespace Sharq.Core.Storybook.UI
             // about. Auto keeps the strip's own USS treatment (mock-up: narrow mode scrolls the
             // whole chip group as one strip) and only draws the bar when content overflows it.
             _chips.horizontalScrollerVisibility = ScrollerVisibility.Auto;
+            // Card T-3364 RETURN (ux-reviewer-4): the strip only ever scrolls sideways — Unity's
+            // own default for verticalScrollerVisibility is Auto, and once the horizontal band
+            // showed up the ScrollView's own measure pass (squeezed into .sb-env__bar's fixed
+            // height, see the USS comment on .sb-env__bar) read the shrunk viewport as vertical
+            // overflow and drew a second, vertical band nobody asked for — 8px of width gone to a
+            // scroller with nothing to scroll. Pin it Hidden so the strip never grows a second
+            // scrollbar no matter how the bar's height measures.
+            _chips.verticalScrollerVisibility = ScrollerVisibility.Hidden;
             Add(_chips);
 
             // Card T-3377, decision D25 — the entry into zone D on a narrow shell. Below 800px the

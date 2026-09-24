@@ -597,11 +597,18 @@
     border-bottom-color: var(--sb-line);
 }
 
+/* Card T-3364 RETURN (ux-reviewer-4): `height: 30px` used to be a hard cap. With overflow hidden
+ * on a fixed-height cross axis, Yoga measures the ScrollView child against that 30px ceiling even
+ * though nothing here clips visually while the child fits — but once the horizontal scroller band
+ * (8px) joined the 28px chip row, the ScrollView's own measure pass had to fit BOTH inside 30px,
+ * so it squeezed the content viewport down to 20px instead of letting the bar grow. `min-height`
+ * keeps the same 30px at rest (chips are 28px, so the floor still wins) but lets the bar grow to
+ * whatever the ScrollView actually needs once a horizontal scroller is showing. */
 .sb-env__bar {
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
-    height: 30px;
+    min-height: 30px;
     flex-direction: row;
     align-items: center;
     border-width: 1px;
@@ -623,6 +630,18 @@
  * what turned it into a decoration nobody could drag). */
 .sb-env__chips {
     flex-grow: 1;
+}
+
+/* Card T-3364 RETURN: `.unity-scroll-view__content-and-vertical-scroll-container` is the column's
+ * OTHER stacked child, next to the horizontal scroller band (D20-safe reach, direct-child form,
+ * same reasoning as the "== ScrollView: an 8px band ==" section below). Once the horizontal band
+ * joined the column, Yoga's split between these two children measured the viewport 1px short of
+ * a chip's own 28px (27px) — a rounding remainder with nowhere named to go. A floor here is what
+ * the live measurement (T-3364 builder harness) found closes it exactly to 28; `.sb-env__chips`
+ * itself carrying the same min-height does nothing, because the split is decided one level down,
+ * not at the ScrollView's own outer box. */
+.sb-env__chips > .unity-scroll-view__content-and-vertical-scroll-container {
+    min-height: 28px;
 }
 
 .sb-env__chips > #unity-content-container {
