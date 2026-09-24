@@ -29,6 +29,7 @@ namespace Sharq.Core.Runtime.Tests
         [TearDown]
         public void TearDown()
         {
+            SusMotion.Reduce.Value = false;
             if (_go != null)
                 Object.DestroyImmediate(_go);
             _go = null;
@@ -261,6 +262,194 @@ namespace Sharq.Core.Runtime.Tests
             Assert.AreEqual(0, active.Count,
                 "ResetStatics() must clear ActiveByTarget so it doesn't hold VisualElements " +
                 "from a previous Play session (T-1103, Domain Reload disabled scenario)");
+        }
+
+        // Reduce motion (SusMotion.Reduce)
+
+        [Test]
+        public void Reduce_IsOffByDefault()
+        {
+            Assert.IsFalse(SusMotion.Reduce.Peek(),
+                "reduce motion must be opt-in: existing applications keep their motion unchanged");
+        }
+
+        [Test]
+        public void Reduce_Off_FinitePlayStillTicks()
+        {
+            var el = new VisualElement { name = "reduce-off" };
+            _root.Add(el);
+
+            bool completed = false;
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.08f, SusEase.Linear)
+                .Restore(SusRestoreMode.Keep);
+            var handle = motion.Play(() => completed = true);
+
+            Assert.IsTrue(handle.IsPlaying, "with Reduce off a finite play is scheduled as before");
+            Assert.IsFalse(completed, "no synchronous completion with Reduce off");
+            Assert.AreEqual(0f, el.style.opacity.value, 0.01f, "seed frame, not the end value");
+
+            Advance(motion, 6);
+            Assert.IsTrue(completed);
+            Assert.AreEqual(1f, el.style.opacity.value, 0.05f);
+        }
+
+        [Test]
+        public void Reduce_On_FinitePlaySnapsToEndAndCompletesWithoutTicks()
+        {
+            SusMotion.Reduce.Value = true;
+            var el = new VisualElement { name = "reduce-finite" };
+            _root.Add(el);
+
+            int completions = 0;
+            var handle = SusMotion.On(el)
+                .FromOpacity(0f)
+                .FromTranslate(new Vector2(0f, 40f))
+                .Opacity(1f, 0.3f, SusEase.QuadOut)
+                .Together()
+                .Translate(Vector2.zero, 0.3f, SusEase.QuadOut)
+                .Sequence()
+                .Scale(1.2f, 0.2f)
+                .Delay(0.5f)
+                .Restore(SusRestoreMode.Keep)
+                .Play(() => completions++);
+
+            Assert.AreEqual(1, completions, "onComplete runs synchronously, exactly once");
+            Assert.IsFalse(handle.IsPlaying, "nothing is left scheduled");
+            Assert.AreEqual(1f, el.style.opacity.value, 0.0001f);
+            Assert.AreEqual(0f, el.style.translate.value.y.value, 0.0001f);
+            Assert.AreEqual(1.2f, el.style.scale.value.value.x, 0.0001f);
+            Assert.AreEqual(0, GetActiveByTarget().Count, "a snapped play does not stay registered");
+        }
+
+        [Test]
+        public void Reduce_On_FinitePlayStillAppliesRestoreMode()
+        {
+            SusMotion.Reduce.Value = true;
+            var el = new VisualElement { name = "reduce-restore" };
+            _root.Add(el);
+
+            bool completed = false;
+            SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.2f, SusEase.Linear)
+                .Restore(SusRestoreMode.KeywordNull)
+                .Play(() => completed = true);
+
+            Assert.IsTrue(completed);
+            Assert.AreEqual(StyleKeyword.Null, el.style.opacity.keyword,
+                "the restore mode of the motion applies on snap exactly as on a normal finish");
+        }
+
+        [Test]
+        public void Reduce_On_ForeverPlayDoesNotStartAndLeavesTargetUntouched()
+        {
+            SusMotion.Reduce.Value = true;
+            var el = new VisualElement { name = "reduce-forever" };
+            _root.Add(el);
+            el.style.opacity = 0.5f;
+
+            bool completed = false;
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.5f, SusEase.Linear)
+                .Repeat(0)
+                .Restore(SusRestoreMode.KeywordNull);
+            var handle = motion.Play(() => completed = true);
+
+            Assert.IsFalse(handle.IsPlaying, "a forever motion does not start under reduce motion");
+            Assert.IsFalse(completed, "a skipped forever motion does not report completion");
+            Assert.AreEqual(0.5f, el.style.opacity.value, 0.0001f, "the seed was not written");
+            Assert.AreEqual(0, GetActiveByTarget().Count);
+
+            Advance(motion, 5);
+            Assert.AreEqual(0.5f, el.style.opacity.value, 0.0001f, "no tick moves the target");
+        }
+
+        [Test]
+        public void Reduce_SwitchedOn_StopsActiveForeverPlayWithRestore()
+        {
+            var el = new VisualElement { name = "reduce-switch-forever" };
+            _root.Add(el);
+
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.5f, SusEase.Linear)
+                .Repeat(0)
+                .Restore(SusRestoreMode.KeywordNull);
+            var handle = motion.Play();
+            Advance(motion, 3);
+            Assert.IsTrue(handle.IsPlaying, "sanity: forever motion runs while Reduce is off");
+
+            SusMotion.Reduce.Value = true;
+
+            Assert.IsFalse(handle.IsPlaying, "switching Reduce on stops a running forever motion");
+            Assert.AreEqual(StyleKeyword.Null, el.style.opacity.keyword, "its restore mode was applied");
+            Assert.AreEqual(0, GetActiveByTarget().Count);
+        }
+
+        [Test]
+        public void Reduce_SwitchedOn_LeavesRunningFinitePlayToFinish()
+        {
+            var el = new VisualElement { name = "reduce-switch-finite" };
+            _root.Add(el);
+
+            bool completed = false;
+            var motion = SusMotion.On(el)
+                .FromOpacity(0f)
+                .Opacity(1f, 0.08f, SusEase.Linear)
+                .Restore(SusRestoreMode.Keep);
+            var handle = motion.Play(() => completed = true);
+            Advance(motion, 1);
+
+            SusMotion.Reduce.Value = true;
+
+            Assert.IsTrue(handle.IsPlaying, "a finite motion already in flight is not cut short");
+            Advance(motion, 6);
+            Assert.IsTrue(completed);
+            Assert.AreEqual(1f, el.style.opacity.value, 0.05f);
+        }
+
+        [Test]
+        public void Reduce_On_StaggerCompletesAllChildrenAtOnce()
+        {
+            SusMotion.Reduce.Value = true;
+            var parent = new VisualElement { name = "reduce-stagger" };
+            _root.Add(parent);
+            for (int i = 0; i < 3; i++)
+                parent.Add(new VisualElement { name = "c" + i });
+
+            var handle = SusMotionStagger.Children(
+                parent,
+                child => SusMotion.On(child).FromOpacity(0f).Opacity(1f, 0.1f, SusEase.Linear),
+                delayStepS: 0.05f,
+                restore: SusRestoreMode.Keep);
+
+            Assert.IsFalse(handle.IsPlaying, "every child snapped, so the stagger is already done");
+            foreach (var child in parent.Children())
+                Assert.AreEqual(1f, child.style.opacity.value, 0.0001f, child.name);
+        }
+
+        [Test]
+        public void Reduce_ResetStatics_TurnsFlagOffAndKeepsStopOnEnable()
+        {
+            SusMotion.Reduce.Value = true;
+            var resetMethod = typeof(SusMotion).GetMethod("ResetStatics",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.IsNotNull(resetMethod);
+            resetMethod.Invoke(null, null);
+            Assert.IsFalse(SusMotion.Reduce.Peek(), "a new Play session starts with Reduce off");
+
+            var el = new VisualElement { name = "reduce-after-reset" };
+            _root.Add(el);
+            var motion = SusMotion.On(el).Opacity(0.2f, 0.5f, SusEase.Linear).Repeat(0);
+            var handle = motion.Play();
+            Assert.IsTrue(handle.IsPlaying);
+
+            SusMotion.Reduce.Value = true;
+            Assert.IsFalse(handle.IsPlaying,
+                "the stop-on-enable handler survives the reset of the flag's subscribers");
         }
 
         private static IDictionary GetActiveByTarget()

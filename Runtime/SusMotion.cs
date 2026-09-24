@@ -49,6 +49,8 @@ namespace Sharq.Core
     /// <remarks>
     /// Distinct from <see cref="SusTransition"/> (USS enter/leave phases). Color animates
     /// <c>style.backgroundColor</c> only.
+    /// While <see cref="Reduce"/> is on, a finite Play snaps to its end values without ticks and a
+    /// forever Play (Repeat &lt;= 0) does not start.
     /// </remarks>
     public sealed class SusMotion
     {
@@ -110,8 +112,68 @@ namespace Sharq.Core
         static void ResetStatics()
         {
             ActiveByTarget.Clear();
+            // Same reset as SusThemeService.Current: handlers of the previous session close over
+            // elements of a destroyed panel. The flag itself goes back to its default (off), and
+            // the internal stop-on-enable handler is attached again.
+            Reduce.ClearSubscribers();
+            Reduce.Value = false;
+            Reduce.Changed += OnReduceChanged;
         }
 #endif
+
+        /// <summary>
+        /// Reduce-motion mode for the whole application (the "reduce motion" accessibility setting).
+        /// Off by default: with <c>false</c> every Play behaves exactly as before.
+        /// <para>
+        /// While <c>true</c>, <see cref="Play"/> of a finite motion writes the end values at once and
+        /// invokes <c>onComplete</c> synchronously, with no ticks and no delay; a motion with a forever
+        /// group (<see cref="Repeat"/> &lt;= 0) does not start and leaves the target untouched.
+        /// Switching the flag from <c>false</c> to <c>true</c> stops every forever motion that is
+        /// already playing, applying its restore mode. Motions that are already running and finite
+        /// are left to finish.
+        /// </para>
+        /// <para>
+        /// Components with their own loops (scheduled tickers outside <see cref="SusMotion"/>) can
+        /// <c>Watch()</c> this prop to pause them. A settings screen writes it:
+        /// <c>SusMotion.Reduce.Value = true;</c>
+        /// </para>
+        /// </summary>
+        public static Prop<bool> Reduce { get; } = CreateReduceProp();
+
+        static Prop<bool> CreateReduceProp()
+        {
+            var prop = new Prop<bool>(false);
+            prop.Changed += OnReduceChanged;
+            return prop;
+        }
+
+        static void OnReduceChanged(bool previous, bool next)
+        {
+            if (previous || !next) return;
+            StopActiveForeverMotions();
+        }
+
+        static void StopActiveForeverMotions()
+        {
+            if (ActiveByTarget.Count == 0) return;
+            // Stop() removes the entry from ActiveByTarget, so iterate over a copy.
+            var active = new List<SusMotion>(ActiveByTarget.Values);
+            foreach (var motion in active)
+            {
+                if (motion._playing && motion._forever)
+                    motion.Stop(applyRestore: true);
+            }
+        }
+
+        bool HasForeverGroup()
+        {
+            foreach (var g in _groups)
+            {
+                if (g.Steps.Count > 0 && g.Repeat <= 0)
+                    return true;
+            }
+            return false;
+        }
 
         readonly VisualElement _target;
         readonly List<Group> _groups = new List<Group>(4);
@@ -307,6 +369,16 @@ namespace Sharq.Core
             if (_current != null && _current.Steps.Count == 0 && _groups.Count > 1)
                 _groups.RemoveAt(_groups.Count - 1);
 
+            // Peek, not Value: Play is often called from inside a reactive effect, and reading the
+            // flag must not make that effect depend on it.
+            bool reduce = Reduce.Peek();
+            if (reduce && HasForeverGroup())
+            {
+                // Reduce motion: a forever motion does not start; the target keeps its current look.
+                SusLog.Verbose("[SusMotion] reduce motion — forever play skipped");
+                return new SusMotionHandle(this);
+            }
+
             CaptureSnapshot();
             ApplySeeds();
             ResolveFromValues();
@@ -338,6 +410,14 @@ namespace Sharq.Core
 
             _playing = true;
             ActiveByTarget[_target] = this;
+
+            if (reduce)
+            {
+                // Reduce motion: snap to the end values and complete now — no ticks, no delay.
+                ApplyAllEnds();
+                CompleteInternal();
+                return new SusMotionHandle(this);
+            }
 
             // a target that detaches mid-play (element removed/pooled) must not keep a
             // forever-Repeat motion ticking forever on it — stop and unregister on detach.
@@ -392,6 +472,14 @@ namespace Sharq.Core
         void Tick()
         {
             if (!_playing || _target == null) return;
+
+            // Backstop for the stop-on-enable handler (a caller may have cleared the flag's
+            // subscribers): a forever motion does not keep ticking under reduce motion.
+            if (_forever && Reduce.Peek())
+            {
+                Stop(applyRestore: true);
+                return;
+            }
 
             _elapsed += 0.016f;
             ApplyAtTime(_elapsed);
