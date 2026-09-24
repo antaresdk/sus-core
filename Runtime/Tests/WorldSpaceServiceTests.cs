@@ -61,7 +61,7 @@ namespace Sharq.Core.Runtime.Tests
             _svc.Bind(el, targetGo.transform);
             Assert.AreEqual(1, _svc.Count);
 
-            yield return new WaitForEndOfFrame();
+            yield return null;
             _svc.TickPositions();
 
             // Position was set — left/top should be finite numbers, not NaN
@@ -91,7 +91,7 @@ namespace Sharq.Core.Runtime.Tests
             _svc.Bind(el2, t2.transform);
             Assert.AreEqual(2, _svc.Count);
 
-            yield return new WaitForEndOfFrame();
+            yield return null;
             _svc.TickPositions();
 
             Assert.AreEqual(2, _svc.Count);
@@ -119,7 +119,7 @@ namespace Sharq.Core.Runtime.Tests
 
             _svc.Bind(el, targetGo.transform);
 
-            yield return new WaitForEndOfFrame();
+            yield return null;
             _svc.TickPositions();
 
             // T-3129: the service hides with the `sus-hidden` class (T-2749/R120) — the
