@@ -49,7 +49,13 @@ namespace Sharq.Core.Storybook.UI
             AddToClassList("sb-env__bar");
 
             _chips.AddToClassList("sb-env__chips");
-            _chips.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            // Card T-3364: Hidden meant a chip past the edge of the bar had no scroller and no
+            // wrap — reachable only while five axes happened to fit. The registry already grew
+            // past that count (Order above lists eight, "skin" and "locale" providers pending),
+            // so the row can overflow today, not just "on the sixth axis" the card once warned
+            // about. Auto keeps the strip's own USS treatment (mock-up: narrow mode scrolls the
+            // whole chip group as one strip) and only draws the bar when content overflows it.
+            _chips.horizontalScrollerVisibility = ScrollerVisibility.Auto;
             Add(_chips);
 
             // Card T-3377, decision D25 — the entry into zone D on a narrow shell. Below 800px the
