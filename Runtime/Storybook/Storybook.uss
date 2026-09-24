@@ -611,9 +611,17 @@
     overflow: hidden;
 }
 
-/* Mock-up: narrow mode scrolls the whole chip group as one horizontal strip. */
+/* Mock-up: narrow mode scrolls the whole chip group as one horizontal strip. The chips themselves
+ * get their row layout from #unity-content-container below (D20-safe: that selector never leaves
+ * this ScrollView) — this rule must NOT also set flex-direction: row, because THIS is the
+ * ScrollView's own root, and a ScrollView's internal structure needs its root in Unity's default
+ * COLUMN direction: the content-and-vertical-scroll-container sits above the horizontal scroller,
+ * stretched to the full width by the column's default align-items: stretch. Card T-3364 (RETURN,
+ * ux-reviewer report 2026-09-24-ux-reviewer-3): with flex-direction: row on this element the two
+ * became row-siblings instead, so the horizontal scroller shrank to its content size — an 8x8
+ * square pinned to the right edge (Auto correctly decided a scroller was needed; the row rule is
+ * what turned it into a decoration nobody could drag). */
 .sb-env__chips {
-    flex-direction: row;
     flex-grow: 1;
 }
 
