@@ -49,6 +49,20 @@ namespace Sharq.Core.Editor.Tests
 
         static SusStoryEntry Entry(string id) => SusStoryRegistry.Find(id);
 
+        /// <summary>The canvas's own viewport (card T-3708, decision D1) — the ScrollView an
+        /// element added via <c>_canvasViewport.Add(...)</c> reports as its LOGICAL
+        /// <see cref="VisualElement.parent"/> (Unity resolves a container's content redirection
+        /// there, so a mounted subject's <c>.parent</c> is the ScrollView itself, never its
+        /// <c>contentContainer</c> — <see cref="SusStorybookHost.QaSubjectRoot"/> is one level
+        /// too deep for a <c>.parent</c> comparison, same pattern as
+        /// <see cref="SusStoryStageScrollTests"/> and <see cref="SusStoryCanvasViewportGeometryTests"/>).</summary>
+        static ScrollView ViewportOf(SusStorybookHost host)
+        {
+            VisualElement e = host.QaSubjectRoot;
+            while (e != null && !(e is ScrollView)) e = e.parent;
+            return e as ScrollView;
+        }
+
         // ── SetHost itself: D2's contract, no mounting involved ──────────────
 
         [Test]
@@ -119,9 +133,9 @@ namespace Sharq.Core.Editor.Tests
             // The canvas also carries its own OverlayHost sibling (SusBootstrap.GetOrCreateOverlay,
             // T-3032) — a fixture of the shell, not part of what this card places — so the check is
             // "the host is a DIRECT child of the canvas", not an exact child count.
-            Assert.That(host.QaCanvas.Children().Count(c => c.ClassListContains(CoreHostScaffold.HostClass)),
+            Assert.That(host.QaSubjectRoot.Children().Count(c => c.ClassListContains(CoreHostScaffold.HostClass)),
                 Is.EqualTo(1), "the HOST takes the instance's place, directly under the canvas");
-            var mountedHost = host.QaCanvas.Children().First(c => c.ClassListContains(CoreHostScaffold.HostClass));
+            var mountedHost = host.QaSubjectRoot.Children().First(c => c.ClassListContains(CoreHostScaffold.HostClass));
             Assert.That(host.QaSubjectHost, Is.SameAs(mountedHost));
 
             var slot = mountedHost.Q<VisualElement>(className: CoreHostScaffold.SlotClass);
@@ -138,11 +152,11 @@ namespace Sharq.Core.Editor.Tests
 
             Assert.IsTrue(host.ShowStoryById(Counter));
 
-            var instances = host.QaCanvas.Children().OfType<CoreCounterDemo>().ToList();
+            var instances = host.QaSubjectRoot.Children().OfType<CoreCounterDemo>().ToList();
             Assert.That(instances, Has.Count.EqualTo(1));
-            Assert.That(instances[0].parent, Is.SameAs(host.QaCanvas),
+            Assert.That(instances[0].parent, Is.SameAs(ViewportOf(host)),
                 "regression (plan D6): a story that never calls SetHost mounts byte-for-byte as before " +
-                "- a direct child of the canvas, no host in between");
+                "- a direct child of the canvas's own viewport (card T-3708, decision D1), no host in between");
             Assert.That(host.QaSubjectHost, Is.Null);
         }
 
@@ -157,7 +171,7 @@ namespace Sharq.Core.Editor.Tests
             // where AddSibling's own canvas-index math would never find it (plan D3). The canvas
             // overlay host (T-3032) is a third sibling this card does not place, so the check is
             // relative order between the two markers, not an exact child count.
-            var children = host.QaCanvas.Children().ToList();
+            var children = host.QaSubjectRoot.Children().ToList();
             int triggerAt = children.FindIndex(c => c.ClassListContains(CoreScenery.MarkerClass));
             int hostAt = children.FindIndex(c => c.ClassListContains(CoreHostScaffold.HostClass));
             Assert.That(triggerAt, Is.GreaterThanOrEqualTo(0));
@@ -176,7 +190,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(host.QaSubjectHost, Is.Null);
             Assert.That(host.QaCanvas.Query<VisualElement>(className: CoreHostScaffold.HostClass)
                 .ToList(), Is.Empty, "no stray host anywhere under the canvas");
-            var instances = host.QaCanvas.Children().OfType<CoreCounterDemo>().ToList();
+            var instances = host.QaSubjectRoot.Children().OfType<CoreCounterDemo>().ToList();
             Assert.That(instances, Has.Count.EqualTo(1), "the new story did mount");
         }
 
