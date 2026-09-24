@@ -189,6 +189,10 @@ namespace Sharq.Core
                 if (!to.styleSheets.Contains(sheet))
                     to.styleSheets.Add(sheet);
             }
+
+            // Trailing sheets of a source component stay last on the copy and follow the
+            // source when its scope changes or is cleared (SusComponent.SetTrailingSheets).
+            SusComponent.TrackTrailingCopy(from, to);
         }
 
         /// <summary>

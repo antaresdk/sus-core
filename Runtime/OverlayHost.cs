@@ -725,6 +725,10 @@ namespace Sharq.Core
                 if (!element.styleSheets.Contains(s))
                     element.styleSheets.Add(s);
             }
+
+            // The copy includes the source's trailing sheets (SusComponent.SetTrailingSheets):
+            // keep them last on the element and remove them from it when the scope is cleared.
+            SusComponent.TrackTrailingCopy(comp, element);
         }
 
         /// <summary>

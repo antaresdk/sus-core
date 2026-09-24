@@ -76,6 +76,13 @@ namespace Sharq.Core
         /// </summary>
         private void LoadCompanionStyleSheets(ICollection<string> onlySuffixes)
         {
+            LoadCompanionStyleSheetsCore(onlySuffixes);
+            // A (re)load appends companion sheets at the end — keep trailing sheets after them.
+            OnOwnStyleSheetsChanged();
+        }
+
+        private void LoadCompanionStyleSheetsCore(ICollection<string> onlySuffixes)
+        {
             var mostDerived = GetType();
 
             // Fast path for the full load (the hot path — every construction): reuse the owner
@@ -193,6 +200,8 @@ namespace Sharq.Core
 
                 styleSheets.Remove(sheet);
             }
+
+            OnOwnStyleSheetsChanged();
         }
 
         /// <summary>
@@ -214,6 +223,7 @@ namespace Sharq.Core
             }
 
             styleSheets.Add(sheet);
+            OnOwnStyleSheetsChanged();
             MarkDirtyRepaint();
         }
 #endif

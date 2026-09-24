@@ -366,6 +366,9 @@ namespace Sharq.Core
 
             ScheduleReactiveUpdates();
 
+            // Trailing style sheets of the nearest registered scope (SusComponent.TrailingSheets.cs).
+            OnTrailingAttach();
+
             // Prop invalidations before Add() queued actions but schedule was a no-op.
             FlushPendingBindUpdatesOnAttach();
 
@@ -412,6 +415,7 @@ namespace Sharq.Core
 #endif
             BeforeUnmounted();
             _updateItem?.Pause();
+            OnTrailingDetach();
             // skip during a same-panel relocation (see IsRelocating) — this detach is not
             // a real unmount, and disposing bindings here would permanently kill Watch()/WatchEffect()
             // set up once in Created() (e.g. SusModal's Model watcher stops reacting after first open).
