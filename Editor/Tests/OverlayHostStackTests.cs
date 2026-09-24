@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine.UIElements;
 using UnityEngine;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -206,28 +207,40 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class OverlayHostRaiseTests
     {
-        EditorWindow _window;
+        // T-4145: ONE window for the whole fixture (was one per test — see
+        // SusEditorWindowTestHost's doc for why that flickered the owner's desktop).
+        static EditorWindow s_window;
         OverlayHost _host;
 
-        [SetUp]
-        public void SetUp()
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
         {
             Assume.That(!UnityEngine.Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.Show();
+            s_window = SusEditorWindowTestHost.CreateAndShow();
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (s_window != null) s_window.Close();
+            s_window = null;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             _host = new OverlayHost();
-            _window.rootVisualElement.Add(_host);
+            s_window.rootVisualElement.Add(_host);
         }
 
         [TearDown]
         public void TearDown()
         {
             _host?.ClearAll();
+            _host?.RemoveFromHierarchy();
             _host = null;
-            if (_window != null) _window.Close();
-            _window = null;
         }
 
         private static VisualElement MakeEl(string name) => new VisualElement { name = name };

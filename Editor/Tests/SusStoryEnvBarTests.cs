@@ -8,6 +8,7 @@ using Sharq.Core.Storybook;
 using Sharq.Core.Storybook.Env;
 using Sharq.Core.Storybook.Nav;
 using Sharq.Core.Storybook.UI;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -411,41 +412,52 @@ namespace Sharq.Core.Editor.Tests
     {
         const string CoreSheet = "Packages/com.sharq-it.sus.core/Runtime/Storybook/Storybook.uss";
 
-        EditorWindow _window;
+        // T-4145: ONE window for the whole fixture (was one per test — see
+        // SusEditorWindowTestHost's doc for why that flickered the owner's desktop).
+        static EditorWindow s_window;
+        static System.Reflection.MethodInfo s_repaintImmediate;
         SusStorybookHost _host;
-        System.Reflection.MethodInfo _repaintImmediate;
 
-        [SetUp]
-        public void SetUp()
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
         {
             Assume.That(!UnityEngine.Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
+            s_window = SusEditorWindowTestHost.CreateAndShow();
+            s_repaintImmediate = typeof(EditorWindow).GetMethod("RepaintImmediately",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (s_window != null) s_window.Close();
+            s_window = null;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
             var sheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(CoreSheet);
             Assert.That(sheet, Is.Not.Null, "the sheet under test must be imported: " + CoreSheet);
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.Show();
-            SusBootstrap.LoadTokenCascade(_window.rootVisualElement);
+            SusBootstrap.LoadTokenCascade(s_window.rootVisualElement);
             _host = new SusStorybookHost(sheet);
-            _window.rootVisualElement.Add(_host);
+            s_window.rootVisualElement.Add(_host);
             _host.style.flexGrow = 1;
             _host.ShowStoryById("enginetests/primitives/counter");
-
-            _repaintImmediate = typeof(EditorWindow).GetMethod("RepaintImmediately",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         }
 
         [TearDown]
         public void TearDown()
         {
             _host?.Dispose();
+            _host?.RemoveFromHierarchy();
             _host = null;
-            if (_window != null) _window.Close();
-            _window = null;
 
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
@@ -453,13 +465,13 @@ namespace Sharq.Core.Editor.Tests
 
         void SetWidth(float width)
         {
-            _window.position = new Rect(50, 50, width, 500);
+            s_window.position = SusEditorWindowTestHost.OffscreenRect(width, 500f);
             // Twice: the first pass is what discovers the overflow and shows the horizontal
             // scroller, the second is what the ScrollView's own measure re-runs against a panel
             // that now HAS that scroller in its tree (same two-call shape the builder harness
             // and ux-reviewer used; one call under-reports the squeeze this test exists to catch).
-            _repaintImmediate?.Invoke(_window, null);
-            _repaintImmediate?.Invoke(_window, null);
+            s_repaintImmediate?.Invoke(s_window, null);
+            s_repaintImmediate?.Invoke(s_window, null);
         }
 
         ScrollView Chips() => _host.Q<ScrollView>(className: "sb-env__chips");

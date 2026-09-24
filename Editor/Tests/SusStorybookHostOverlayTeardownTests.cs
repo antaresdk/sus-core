@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -25,31 +26,43 @@ namespace Sharq.Core.Editor.Tests
     /// </summary>
     public class SusStorybookHostOverlayTeardownTests
     {
-        EditorWindow _window;
+        // T-4145: ONE window for the whole fixture (was one per test — see
+        // SusEditorWindowTestHost's doc for why that flickered the owner's desktop).
+        static EditorWindow s_window;
         SusStorybookHost _host;
 
-        [SetUp]
-        public void SetUp()
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
         {
             Assume.That(!Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
+            s_window = SusEditorWindowTestHost.CreateAndShow();
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (s_window != null) s_window.Close();
+            s_window = null;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.Show();
             _host = new SusStorybookHost();
-            _window.rootVisualElement.Add(_host);
+            s_window.rootVisualElement.Add(_host);
         }
 
         [TearDown]
         public void TearDown()
         {
             _host?.Dispose();
+            _host?.RemoveFromHierarchy();
             _host = null;
-            if (_window != null) _window.Close();
-            _window = null;
 
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();

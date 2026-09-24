@@ -8,6 +8,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
 using Sharq.Core.Storybook.UI;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -236,8 +237,9 @@ namespace Sharq.Core.Editor.Tests
             Assume.That(!Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.Show();
+            // T-4145: shared factory instead of CreateInstance<EditorWindow>() + Show() straight
+            // here — off-screen, focus handed back (SusEditorWindowTestHost's doc).
+            _window = SusEditorWindowTestHost.CreateAndShow();
             _liveHost = new SusStorybookHost();
             _window.rootVisualElement.Add(_liveHost);
             var appOverlay = SusBootstrap.GetOrCreateOverlay(_window.rootVisualElement);

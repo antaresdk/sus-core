@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -31,41 +32,53 @@ namespace Sharq.Core.Editor.Tests
         const string Counter = "enginetests/primitives/counter";
         const string CoreSheet = "Packages/com.sharq-it.sus.core/Runtime/Storybook/Storybook.uss";
 
-        EditorWindow _window;
+        // T-4145: ONE window for the whole fixture (was one per test — see
+        // SusEditorWindowTestHost's doc for why that flickered the owner's desktop). Fixed
+        // 1400x900 size is the same every test in this fixture used, so it is a fixture-level
+        // concern now, set once instead of re-set every test.
+        static EditorWindow s_window;
+        static System.Reflection.MethodInfo s_repaintImmediate;
         SusStorybookHost _host;
-        System.Reflection.MethodInfo _repaintImmediate;
 
-        [SetUp]
-        public void SetUp()
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
         {
             Assume.That(!Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
+            s_window = SusEditorWindowTestHost.CreateAndShow(1400f, 900f);
+            SusBootstrap.LoadTokenCascade(s_window.rootVisualElement);
+            s_repaintImmediate = typeof(EditorWindow).GetMethod("RepaintImmediately",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (s_window != null) s_window.Close();
+            s_window = null;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
             var sheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(CoreSheet);
             Assert.That(sheet, Is.Not.Null, "the sheet under test must be imported: " + CoreSheet);
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.position = new Rect(0, 0, 1400, 900);
-            _window.Show();
-            SusBootstrap.LoadTokenCascade(_window.rootVisualElement);
             _host = new SusStorybookHost(sheet);
             _host.style.flexGrow = 1;
-            _window.rootVisualElement.Add(_host);
-
-            _repaintImmediate = typeof(EditorWindow).GetMethod("RepaintImmediately",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            s_window.rootVisualElement.Add(_host);
         }
 
         [TearDown]
         public void TearDown()
         {
             _host?.Dispose();
+            _host?.RemoveFromHierarchy();
             _host = null;
-            if (_window != null) _window.Close();
-            _window = null;
 
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
@@ -76,8 +89,8 @@ namespace Sharq.Core.Editor.Tests
         /// re-run against the now-updated tree settles on.</summary>
         void Repaint()
         {
-            _repaintImmediate?.Invoke(_window, null);
-            _repaintImmediate?.Invoke(_window, null);
+            s_repaintImmediate?.Invoke(s_window, null);
+            s_repaintImmediate?.Invoke(s_window, null);
         }
 
         /// <summary>The canvas's own viewport (card T-3708, decision D1), found the way the shell

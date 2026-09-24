@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
+using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
 {
@@ -42,33 +43,53 @@ namespace Sharq.Core.Editor.Tests
         const string Diy = "enginetests/overlay/scenery-diy";
         const string Counter = "enginetests/primitives/counter";
 
-        EditorWindow _window;
+        // T-4145: ONE window for the whole fixture (was one per test — see
+        // SusEditorWindowTestHost's doc for why that flickered the owner's desktop). `_window`
+        // stays a forwarding property so the rest of this file's Query helpers, written against a
+        // per-test instance field, need no other change.
+        static EditorWindow s_window;
+        EditorWindow _window => s_window;
         SusStorybookHost _host;
         OverlayHost _appOverlay;
 
-        [SetUp]
-        public void SetUp()
+        [OneTimeSetUp]
+        public void OneTimeSetUp()
         {
             Assume.That(!Application.isBatchMode,
                 "needs a real graphics device to init an EditorWindow view (T-1731 pattern)");
 
+            s_window = SusEditorWindowTestHost.CreateAndShow();
+        }
+
+        [OneTimeTearDown]
+        public void OneTimeTearDown()
+        {
+            if (s_window != null) s_window.Close();
+            s_window = null;
+        }
+
+        [SetUp]
+        public void SetUp()
+        {
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
-            _window = EditorWindow.CreateInstance<EditorWindow>();
-            _window.Show();
             _host = new SusStorybookHost();
             _window.rootVisualElement.Add(_host);
+            // GetOrCreateOverlay is idempotent (Runtime/SusBootstrap.cs) — with the window shared
+            // across the fixture this finds the SAME instance every test, so it must be cleared
+            // (not just left to a torn-down window) in TearDown or content leaks between tests.
             _appOverlay = SusBootstrap.GetOrCreateOverlay(_window.rootVisualElement);
         }
 
         [TearDown]
         public void TearDown()
         {
+            _appOverlay?.ClearAll();
+            _appOverlay = null;
             _host?.Dispose();
+            _host?.RemoveFromHierarchy();
             _host = null;
-            if (_window != null) _window.Close();
-            _window = null;
 
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
