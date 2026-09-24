@@ -726,6 +726,19 @@
     border-color: var(--sb-line);
     border-radius: var(--sb-r-md);
     background-color: var(--sb-bg);
+    /* Card T-3359. The canvas used to leave `color` to inheritance, and inheritance is exactly
+       what does NOT repaint reliably here: toggling the shell's own light/dark chip (the
+       "shell-theme" axis, D4) swaps `--sb-bg` and `--sb-ink` together on .sb-shell, and the
+       explicit `background-color: var(--sb-bg)` above picks that up on the next layout pass —
+       but the INHERITED `color` a descendant with no rule of its own carries stayed pinned to
+       whatever value it first resolved to. Measured live on sus-dev before this line existed:
+       shell-theme cycled dark -> light, canvas backgroundColor moved to RGBA(0.953, 0.949,
+       0.933) (correct, --sb-bg light) while color stayed at RGBA(0.941, 0.941, 0.941) — the
+       dark set's near-white ink, frozen — for a contrast ratio of about 1:1 against the now
+       light ground. The fix is the same token pair as the background, stated directly instead
+       of left to inheritance, so it re-resolves on the same pass as the background it has to
+       stay readable against. */
+    color: var(--sb-ink);
     background-image: url("canvas-dot.png");
     background-repeat: repeat;
     /* Card T-3444. The size is STATED at the tile's own 16x16, and stating it is what keeps the
