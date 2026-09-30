@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-09-30
+
+### Fixed
+- Set Doctor (`SusSetDoctor`) no longer reports a `.g.` file as stale generated output when it was emitted by a non-Sharq generator. Such a file starts with the `/* sus:gen <name> */` marker on its first line (for example a token sheet generated from a JSON scale) and has no `.sharq` source by design. Unmarked orphans are still reported (T-4328).
+
+### Changed
+- Comment-only edits in the Storybook engine sources and the editor test host; no behaviour change (T-4328).
+
 ## [1.3.3] - 2026-09-25
 
 ### Added
