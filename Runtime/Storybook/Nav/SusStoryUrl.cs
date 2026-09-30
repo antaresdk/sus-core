@@ -56,7 +56,7 @@ namespace Sharq.Core.Storybook.Nav
         /// <summary>
         /// The route the page was opened with, or null. Kept under this name from the pre-engine
         /// shell (plan D11) — <see cref="ParseStoryIdFromAbsoluteUrl"/> is the string-only form
-        /// that 85 driver call sites in <c>sus-dev</c> already use.
+        /// that 85 driver call sites in the dev project already use.
         /// </summary>
         public static SusStoryRoute ParseRouteFromAbsoluteUrl()
         {

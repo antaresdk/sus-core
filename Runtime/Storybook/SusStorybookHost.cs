@@ -20,7 +20,7 @@ namespace Sharq.Core.Storybook
     /// core services, no story-specific state and no reset of D's controls on a click (plan §4.4).
     ///
     /// Names kept from the pre-engine shell (plan D11) so the 85 driver call sites in
-    /// <c>sus-dev</c> keep compiling while stories migrate: <see cref="ShowStoryById"/>,
+    /// the dev project keep compiling while stories migrate: <see cref="ShowStoryById"/>,
     /// <see cref="QaCanvas"/>, <see cref="LastRegisteredStoryIds"/>,
     /// <see cref="ParseStoryIdFromAbsoluteUrl"/>.
     /// </summary>

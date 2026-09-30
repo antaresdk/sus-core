@@ -32,7 +32,7 @@ namespace Sharq.Core.Editor.TestSupport
     ///    instant <c>Show()</c> returns, THIS process is the foreground process (the call just
     ///    fired from its own main thread), which is the one precondition <c>SetForegroundWindow</c>
     ///    enforces — no AttachThreadInput dance needed (same precondition
-    ///    sus-dev/Assets/Editor/SusFocusGuard.cs relies on for the Play-mode steal-back case).
+    ///    the dev project's editor focus guard relies on for the Play-mode steal-back case).
     ///
     /// Callers that need ONE window shared by every test in a fixture create it once in
     /// <c>[OneTimeSetUp]</c> and close it in <c>[OneTimeTearDown]</c> instead of per-test

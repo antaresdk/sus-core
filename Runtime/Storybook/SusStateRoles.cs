@@ -22,7 +22,7 @@ namespace Sharq.Core.Storybook
 
     /// <summary>
     /// The role registry of the state contract (plan
-    /// <c>docs-canon/plans/impl/ARCH-20260911-KIT-STATE-CONTRACT.md</c> §4.1–§4.2, decisions
+    /// <c>ARCH-20260911-KIT-STATE-CONTRACT</c> §4.1–§4.2, decisions
     /// D1 <c>d:a2fe59</c>, D2 <c>d:44b2b4</c>, D5 <c>d:2fead6</c>, D13 <c>d:f5da73</c>,
     /// D14 <c>d:5ea31f</c>, D17 <c>d:083c3c</c>; cards T-3427 and T-3431).
     ///

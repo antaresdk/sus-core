@@ -160,7 +160,7 @@ namespace Sharq.Core.Storybook
 
         /// <summary>
         /// Ids of every registered PRODUCT story, in display order. Name kept from the pre-engine
-        /// shell (plan D11): 85 driver call sites in <c>sus-dev</c> read this list.
+        /// shell (plan D11): 85 driver call sites in the dev project read this list.
         /// </summary>
         public static IReadOnlyList<string> LastRegisteredStoryIds
         {

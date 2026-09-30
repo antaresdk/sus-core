@@ -758,7 +758,7 @@
        "shell-theme" axis, D4) swaps `--sb-bg` and `--sb-ink` together on .sb-shell, and the
        explicit `background-color: var(--sb-bg)` above picks that up on the next layout pass —
        but the INHERITED `color` a descendant with no rule of its own carries stayed pinned to
-       whatever value it first resolved to. Measured live on sus-dev before this line existed:
+       whatever value it first resolved to. Measured live in the dev project before this line existed:
        shell-theme cycled dark -> light, canvas backgroundColor moved to RGBA(0.953, 0.949,
        0.933) (correct, --sb-bg light) while color stayed at RGBA(0.941, 0.941, 0.941) — the
        dark set's near-white ink, frozen — for a contrast ratio of about 1:1 against the now
@@ -2134,7 +2134,7 @@
 
 /* -- Shell text colour is DECLARED, never borrowed (D27, card T-3400) --------
  *
- * Measured 2026-09-11 (sus-dev, Play, resolvedStyle of 541 shell elements outside the stage
+ * Measured 2026-09-11 (dev project, Play, resolvedStyle of 541 shell elements outside the stage
  * canvas, before and after ONE flip of the stage theme chip): background changed on 0 of them and
  * geometry on 0, but COLOUR changed on 107 — .sb-nav__row-name x95, .sb-ctl__text x5,
  * .sb-ctl__switch x3, .sb-ctl__knob x3, .sb-env__share-label x1. Two of the four chip

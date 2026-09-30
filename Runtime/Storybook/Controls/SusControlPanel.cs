@@ -165,7 +165,7 @@ namespace Sharq.Core.Storybook.Controls
         /// the QA sinks; <see cref="Dispose"/> empties <see cref="Controls"/>, so every report
         /// but the last one of a session named ZERO controls for a panel that had built them all.
         /// Measured on the live sweep of 2026-09-09
-        /// (<c>sus-dev/docs/qa/reports/storybook-session.json</c>): 96 stories, 88 with props,
+        /// (an internal storybook-session report): 96 stories, 88 with props,
         /// exactly ONE (the last, never unmounted) with a non-empty <c>controls</c> — and R134
         /// layer 1 read that as 86 stories whose props have no control. The panel was fine; the
         /// list was gone. A report about what the buyer just saw must not depend on whether the

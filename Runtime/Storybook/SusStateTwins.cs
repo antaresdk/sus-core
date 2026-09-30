@@ -117,7 +117,7 @@ namespace Sharq.Core.Storybook
         //                              plus the two chain heads `firstRootSelector` and
         //                              `firstWildCardSelector`; selectors sharing a bucket are
         //                              chained through `nextInTable`.
-        // Verified live on 6000.3.17f1 (project sus-dev): the m_Tables walk of SusButton.g.uss
+        // Verified live on 6000.3.17f1 (dev project): the m_Tables walk of SusButton.g.uss
         // yields 186 complex selectors and 38 class names -- exactly the set of class tokens in
         // the file -- while `m_ComplexSelectors` does not exist on that version at all. That
         // missing field is what made the scan answer "no twin" for EVERY class, which in turn hid
