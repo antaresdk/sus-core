@@ -1032,6 +1032,28 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void DetectStaleGenerated_ForeignGeneratorMarker_NeverFlagged()
+        {
+            // A .g.uss emitted by a non-Sharq generator (first line "/* sus:gen <name> */", real case:
+            // a token sheet generated from a JSON scale) has no .sharq source by design. It must not
+            // be reported as stale, while an unmarked orphan next to it still is.
+            var kit = MakeModule("kit", "Kit", "1.0.16");
+            WriteSharqGenDescriptor("Kit");
+            WriteFile("Sharq/Kit/Components/SusAlert.sharq");
+            WriteFile("Sharq/Kit/Runtime/Generated/SusAlert.g.cs");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/SusAlert.g.uss");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/kit-dimensions.g.uss", "/* sus:gen dim-scale */\n.breakpoint-sm { }\n");
+            WriteFile("Sharq/Kit/Runtime/Resources/SusRuntime/Gone.g.uss", ".x { }\n");
+
+            var info = SusSharqGenManifest.ResolveModuleGenInfo(_root, Root, new[] { kit });
+            var issues = SusSetDoctor.DetectStaleGenerated(_root, info);
+
+            Assert.AreEqual(1, issues.Count);
+            StringAssert.Contains("Gone.g.uss", issues[0].Message);
+            StringAssert.DoesNotContain("kit-dimensions.g.uss", issues[0].Message);
+        }
+
+        [Test]
         public void DetectStaleGenerated_CompanionUssInResourcesZone_AlsoFlagged()
         {
             // T-1526's explicit DoD note: the companion .g.uss copy in the resources zone is
