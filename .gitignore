@@ -42,3 +42,9 @@ Editor/obj.meta
 # Internal planning (not part of the public package surface)
 /roadmap/
 
+
+# Secrets (R159): never commit credentials
+.env*
+!.env*.example
+*.pem
+*.key
