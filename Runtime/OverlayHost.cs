@@ -631,6 +631,30 @@ namespace Sharq.Core
         }
 
         /// <summary>
+        /// Where a dropdown's top-left corner goes, in WORLD space (card T-3374). Below the anchor
+        /// when the list fits there; above it when it does not and there is room above; otherwise
+        /// slid back inside <paramref name="root"/> on both axes, so a list taller than either side
+        /// is still reachable instead of hanging off the window. A size of 0 or NaN (no layout
+        /// yet) leaves the corner at the anchor's bottom-left.
+        /// </summary>
+        internal static Vector2 PlaceDropdownWorld(Rect anchor, Vector2 contentSize, Rect root)
+        {
+            var left = anchor.x;
+            var top = anchor.yMax;
+
+            // Flip above if not enough space below
+            if (anchor.yMax + contentSize.y > root.height && anchor.y > contentSize.y)
+                top = anchor.y - contentSize.y;
+
+            if (contentSize.y > 0 && top + contentSize.y > root.yMax)
+                top = Mathf.Max(root.y, root.yMax - contentSize.y);
+            if (contentSize.x > 0 && left + contentSize.x > root.xMax)
+                left = Mathf.Max(root.x, root.xMax - contentSize.x);
+
+            return new Vector2(left, top);
+        }
+
+        /// <summary>
         /// Shows a dropdown menu positioned below an anchor element.
         /// Auto-flips above if there's not enough space below.
         /// </summary>
@@ -641,25 +665,34 @@ namespace Sharq.Core
             // sus:uss-impossible width measured from anchor worldBound
             content.style.minWidth = anchor.worldBound.width;
 
-            anchor.schedule.Execute(() =>
+            // Placement is a function of the anchor, the content size and the root bounds. The
+            // content has no size yet when the first pass runs (it was added a moment ago), so the
+            // pass is repeated ONCE when its first layout arrives (card T-3374): a list taller than
+            // the room below used to be measured as 0 high, never flipped and ran off the bottom
+            // edge of the window.
+            void Place()
             {
                 var anchorWorld = anchor.worldBound;
                 var contentWorld = content.worldBound;
 
-                var worldTop = anchorWorld.yMax;
-
-                // Flip above if not enough space below
-                var rootHeight = panel?.visualTree?.worldBound.height ?? Screen.height;
-                if (anchorWorld.yMax + contentWorld.height > rootHeight && anchorWorld.y > contentWorld.height)
-                {
-                    worldTop = anchorWorld.y - contentWorld.height;
-                }
+                var rootBounds = panel?.visualTree?.worldBound ?? new Rect(0, 0, Screen.width, Screen.height);
+                var world = PlaceDropdownWorld(anchorWorld, new Vector2(contentWorld.width, contentWorld.height), rootBounds);
 
                 // Host space, not world space - identity for a root host (T-3032).
-                var dropLocal = ToHostLocal(this, new Vector2(anchorWorld.x, worldTop));
+                var dropLocal = ToHostLocal(this, world);
                 content.style.top = dropLocal.y;   // sus:uss-impossible coordinate measured from anchor worldBound
                 content.style.left = dropLocal.x;  // sus:uss-impossible coordinate measured from anchor worldBound
-            }).ExecuteLater(0);
+            }
+
+            anchor.schedule.Execute(Place).ExecuteLater(0);
+
+            EventCallback<GeometryChangedEvent> onFirstLayout = null;
+            onFirstLayout = _ =>
+            {
+                content.UnregisterCallback(onFirstLayout);
+                Place();
+            };
+            content.RegisterCallback(onFirstLayout);
 
             // After AddToOverlay — see the note in ShowTooltip.
             var entry = AddToOverlay(content, OverlayCategory.Dropdown,

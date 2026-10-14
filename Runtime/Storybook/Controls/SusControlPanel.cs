@@ -68,6 +68,7 @@ namespace Sharq.Core.Storybook.Controls
         readonly Label _uncoveredLine = new();
         readonly Label _deadLine = new();
         readonly Label _excludedLine = new();
+        readonly OverlayHost _overlay;
 
         bool _disposed;
 
@@ -140,10 +141,26 @@ namespace Sharq.Core.Storybook.Controls
             Add(_empty);
             Add(_foot);
 
+            // Card T-3374 (U-032): the panel owns its overlay host, as the stage owns one. Without
+            // it the icon picker asked for "the nearest host above me", found none (zone D sits
+            // beside the stage, not inside it) and fell back to a host on the PANEL ROOT: outside
+            // the shell subtree, so outside the shell sheet (bare white Unity widgets, no
+            // `--sb-*` tokens) and below the bottom edge of the window. Parked here it lives
+            // inside the shell, is dressed by Storybook.uss and is measured against zone D.
+            // Last child on purpose: last sibling paints on top (OverlayHost class doc).
+            _overlay = new OverlayHost { name = OverlayHost.OverlayHostName };
+            Add(_overlay);
+
             BuildControls(story);
             ApplyRoute(route);
             RefreshFooter();
         }
+
+        /// <summary>
+        /// The overlay host the panel's controls open their popups in (the icon picker's glyph
+        /// grid). Owned by the panel so a popup stays inside zone D, under the shell stylesheet.
+        /// </summary>
+        public OverlayHost Overlay => _overlay;
 
         /// <summary>The component the controls drive.</summary>
         public SusComponent Component { get; }
