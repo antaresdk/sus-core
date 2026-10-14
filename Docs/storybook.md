@@ -98,10 +98,12 @@ control for each prop from its declared type:
 | Prop shape | Control |
 |---|---|
 | `Prop<bool>` | toggle |
-| `Prop<string>` with an allowed set (`UseAllowed`) | segmented buttons (≤ 5 values) or a dropdown |
+| `Prop<string>` / `Prop<int>` with an allowed set (`UseAllowed`) | segmented buttons (≤ 5 values and ≤ 32 characters of labels in total), otherwise a dropdown; a prop named `Color` or ending in `Color` is always a dropdown; values that differ only by case are shown once |
 | `Prop<string>` whose name ends in `Icon` | icon picker (grid of glyphs, searchable) |
 | `Prop<string>`, anything else | text field |
-| `Prop<int>` / `Prop<float>` | slider + numeric field, range from `[SusRange]` (0…100 if absent) |
+| `Prop<int>` / `Prop<float>` with `[SusRange]` | slider + numeric field; the slider snaps to the step, the field takes the exact value within the range |
+| `Prop<int>` / `Prop<float>` without `[SusRange]` | numeric field only — no slider, no clamping |
+| a numeric prop with `[SusSpecial]` | chips for the special values (e.g. `auto`) in front of the slider and field |
 | `Prop<Color>` | swatch, skin tokens first, arbitrary color second |
 | `Prop<List<T>>` | row-count editor with expand |
 | anything read-only / a plain object | value display only, updates live from events |
@@ -111,18 +113,43 @@ The footer always shows **props N · controls M**. `M` below `N` without a match
 `ctx.Exclude(...)` reason is a story defect, not a cosmetic gap — the panel names it
 (`dead props:`, `uncovered:`) instead of staying quiet about it.
 
-### Ranges and dependencies
+### Ranges, special values and dependencies
 
 ```csharp
 [SusRange(0, 5, 0.5)]                      public Prop<float> Rating = new(0);
 [SusRange(0, 100, "%")]                    public Prop<int>   Progress = new(0);
+[SusRange(0, 600, 10, Unit = "px")]
+[SusSpecial(-1, "auto")]                   public Prop<float> Width = new(-1f);
+[SusRange(0, 5, 0.5)]
+[SusRangeFrom(MaxProp = nameof(Max))]      public Prop<float> Value = new(0);
 [SusDependsOn(nameof(ContentMode), "icon")] public Prop<string> Icon = new("");
 [SusDependsOn(nameof(Clearable))]           public Prop<string> ClearIcon = new("x");
 ```
 
-`[SusRange]` gives the slider real bounds instead of a guessed 0…100. `[SusDependsOn]` disables a
-control and names the reason ("visible when ContentMode = icon") instead of rendering a control
-that silently does nothing — several attributes on one field are combined with AND.
+The panel follows what the prop declares and never guesses a range from a name or a type:
+
+- **`[SusRange]`** gives the slider its bounds, step and unit. Dragging the slider snaps to the
+  step (a step of `0` means whole numbers step by 1 and fractions by a hundredth of the span); the
+  numeric field takes the exact value you type and clamps it to the range.
+- **No `[SusRange]`** means a plain numeric field: no slider, and nothing you type is clamped or
+  moved into a made-up range. The dev-only caption says `range not declared` (a buyer-facing
+  build turns the diagnostic captions off).
+- **`[SusSpecial(value, "label")]`** adds one chip per attribute (repeatable) for a value with its
+  own meaning — `-1` = `auto`. The chip writes the value exactly as declared, even when it lies
+  outside `[SusRange]`; while it is active the slider and field are dimmed, and dragging the slider
+  or typing a number switches the chip off.
+- **`[SusRangeFrom(MinProp = ..., MaxProp = ..., StepProp = ...)]`** takes the bounds (or the
+  step) from neighbour props of the same component, so a `Rating` slider ends at the current `Max`.
+  The static `[SusRange]` on the same prop supplies whatever is not named and is required; the
+  value itself is left alone when a neighbour changes.
+- **`[SusDependsOn]`** disables a control and names the reason ("visible when ContentMode =
+  icon") instead of rendering a control that silently does nothing — several attributes on one
+  field are combined with AND.
+
+A story that seeds a value outside the declared range keeps the true value in the field; the
+slider thumb sits at the edge. An invalid declaration (`min ≥ max`, a negative step,
+`[SusRangeFrom]` without `[SusRange]` or naming a missing or non-numeric neighbour) falls back to
+a plain field, and the dev-only caption says `range invalid`.
 
 ## Environment (zone B)
 

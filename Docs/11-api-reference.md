@@ -229,19 +229,38 @@ public partial class SusComponent
 - `DescribeEvents()` lists public `On*` delegate fields (name, bus name, payload type);
   `SubscribeEvent` attaches to one generically, boxing the argument.
 
-Two attributes make numeric ranges and prop dependencies explicit instead of guessed:
+Four attributes make numeric ranges, special values and prop dependencies explicit instead of guessed:
 
 ```csharp
 [SusRange(0, 5, 0.5)]                       public Prop<float>  Rating   = new(0);
 [SusRange(0, 100, "%")]                     public Prop<int>    Progress = new(0);
+[SusRange(0, 600, 10, Unit = "px")]
+[SusSpecial(-1, "auto")]                    public Prop<float>  Width    = new(-1f);
+[SusRange(0, 5, 0.5)]
+[SusRangeFrom(MaxProp = nameof(Max))]       public Prop<float>  Value    = new(0);
 [SusDependsOn(nameof(ContentMode), "icon")] public Prop<string> Icon     = new("");
 ```
 
-`[SusRange(min, max, step)]` (or `[SusRange(min, max, unit)]`) bounds a `Prop<int>`/`Prop<float>`;
-without it a consumer falls back to 0…100. `[SusDependsOn(prop, value = null)]` — repeatable, ANDed
-— declares that a prop only matters while another prop of the same component holds a given value;
-`IsDependencySatisfied` / `DescribeDependency` let a caller disable that control and show why,
-instead of rendering one that silently does nothing.
+`[SusRange(min, max, step)]` (or `[SusRange(min, max, unit)]`, or `Unit = "..."` as a named
+argument) bounds a `Prop<int>`/`Prop<float>`. Without it the prop has **no range**: a consumer such
+as the storybook shows a plain numeric field and does not clamp what is typed — there is no
+implicit default range. A step of `0` (the default) means "the consumer decides" (whole
+numbers step by 1, fractions by a hundredth of the span).
+
+`[SusSpecial(value, "label")]` — repeatable — declares a value that has its own meaning and may
+lie outside the range (`-1` = "auto"). A control offers each one as a chip that writes the value
+exactly as declared, so a sentinel is never clamped into the range.
+
+`[SusRangeFrom(MinProp = ..., MaxProp = ..., StepProp = ...)]` — any subset of the three names —
+takes the bounds or step from neighbour props of the same component, on top of the static
+`[SusRange]`, which supplies whatever is not named and stays the fallback. It requires
+`[SusRange]` on the same prop; without one, or with a neighbour that does not exist or is not
+numeric, the declaration is invalid and the control falls back to a plain field.
+
+`[SusDependsOn(prop, value = null)]` — repeatable, ANDed — declares that a prop only matters while
+another prop of the same component holds a given value; `IsDependencySatisfied` /
+`DescribeDependency` let a caller disable that control and show why, instead of rendering one that
+silently does nothing.
 
 ## Bind helpers (reactive)
 
