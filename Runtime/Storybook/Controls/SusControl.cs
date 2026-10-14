@@ -15,15 +15,21 @@ namespace Sharq.Core.Storybook.Controls
     {
         /// <summary><c>bool</c> - switch.</summary>
         Toggle = 0,
-        /// <summary>Closed set of five values or fewer - segmented picker.</summary>
+        /// <summary>
+        /// Closed set of five values or fewer whose texts fit the label budget
+        /// (<see cref="SusControlFactory.SegmentLabelBudget"/>) - segmented picker.
+        /// </summary>
         Segment = 1,
-        /// <summary>Closed set of more than five values - dropdown.</summary>
+        /// <summary>Any other closed set, and every colour name - dropdown.</summary>
         Dropdown = 2,
         /// <summary>Free <c>string</c> - text field (the empty string is a legal value).</summary>
         Text = 3,
         /// <summary>String prop named <c>*Icon</c> - glyph name field (picker: card T-3035).</summary>
         Icon = 4,
-        /// <summary>Numeric - slider plus a numeric field plus the range caption.</summary>
+        /// <summary>
+        /// Numeric - a numeric field, plus a slider when the range is declared, plus a chip per
+        /// declared special value.
+        /// </summary>
         Number = 5,
         /// <summary><c>Color</c> - skin token swatches plus a free value.</summary>
         Color = 6,
@@ -54,17 +60,23 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>Caption of a text prop that currently holds the empty string.</summary>
         public const string EmptyStringNote = "empty string · legal";
 
-        /// <summary>Caption of a numeric prop with no <c>[SusRange]</c>.</summary>
-        public const string NoRangeNote = "range not declared · 0…100";
+        /// <summary>Dev caption of a numeric prop with no <c>[SusRange]</c>: it is a plain field.</summary>
+        public const string NoRangeNote = "range not declared";
+
+        /// <summary>Dev caption of a numeric prop whose <c>[SusRange]</c> / <c>[SusRangeFrom]</c> contradicts itself.</summary>
+        public const string RangeInvalidNote = "range invalid";
+
+        /// <summary>Dev caption of a numeric prop whose value lies outside its declared range.</summary>
+        public const string OutOfRangeNote = "out of range";
+
+        /// <summary>Dev caption of a closed set that listed one value twice (ignoring case).</summary>
+        public const string DuplicateValuesNote = "duplicate values";
+
+        /// <summary>Dev caption of a closed set that the story declared, not the component.</summary>
+        public const string SetFromStoryNote = "set from story";
 
         /// <summary>Caption of a display-only row.</summary>
         public const string ReadOnlyNote = "updated from events";
-
-        /// <summary>Lower bound used when <c>[SusRange]</c> is absent.</summary>
-        public const double FallbackMin = 0d;
-
-        /// <summary>Upper bound used when <c>[SusRange]</c> is absent.</summary>
-        public const double FallbackMax = 100d;
 
         readonly Label _name = new();
         readonly Label _deadBadge = new("not read");
@@ -223,6 +235,9 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>Subclass hook: write the prop value into the widget.</summary>
         protected virtual void OnRefresh() { }
 
+        /// <summary>Subclass hook: release what the subclass subscribed to (runs once, from <see cref="Dispose"/>).</summary>
+        protected virtual void OnDispose() { }
+
         /// <summary>Writes through the prop; returns false when the value does not fit.</summary>
         protected bool Write(object value)
         {
@@ -231,6 +246,31 @@ namespace Sharq.Core.Storybook.Controls
             Refresh();
             ValueChanged?.Invoke(this);
             return true;
+        }
+
+        /// <summary>
+        /// True while the host wants the dev-only captions (<see cref="SusControlContext.ShowDiagnostics"/>).
+        /// A caption that explains the NUMBER to a buyer (range, step, unit) is never gated by it;
+        /// one that explains the declaration to a developer ("range not declared") always is
+        /// (ARCH-20261014-SB-PROP-CONTROLS D8, d:b763b1).
+        /// </summary>
+        protected bool ShowDiagnostics => Context == null || Context.ShowDiagnostics;
+
+        /// <summary>
+        /// Sets the caption: the buyer-facing <paramref name="caption"/> first, then each
+        /// non-empty diagnostic - those only while <see cref="ShowDiagnostics"/> holds. Joined with
+        /// a middle dot; nothing left hides the line.
+        /// </summary>
+        protected void SetCaption(string caption, params string[] diagnostics)
+        {
+            var parts = new List<string>(4);
+            if (!string.IsNullOrEmpty(caption)) parts.Add(caption);
+            if (ShowDiagnostics && diagnostics != null)
+            {
+                for (int i = 0; i < diagnostics.Length; i++)
+                    if (!string.IsNullOrEmpty(diagnostics[i])) parts.Add(diagnostics[i]);
+            }
+            SetNote(parts.Count == 0 ? null : string.Join(" · ", parts));
         }
 
         /// <summary>Sets the caption under the widget; null or empty hides it.</summary>
@@ -256,6 +296,7 @@ namespace Sharq.Core.Storybook.Controls
             _disposed = true;
             _subscription?.Dispose();
             _subscription = null;
+            OnDispose();
             ValueChanged = null;
         }
     }
@@ -299,31 +340,24 @@ namespace Sharq.Core.Storybook.Controls
     // -- closed sets: segment and dropdown -----------------------------------
 
     /// <summary>
-    /// The one membership test of a closed set. Case-insensitive, because that is how the two
-    /// closed-set controls already decide which option is the active one (<c>OnRefresh</c>) — a
-    /// second spelling rule here would eventually disagree with the highlight.
+    /// Closed set shown as a row of buttons: five values or fewer, and their texts fit the label
+    /// budget (<see cref="SusControlFactory.SegmentLabelBudget"/>).
     /// </summary>
-    internal static class SusControlValues
-    {
-        internal static bool IsOption(IReadOnlyList<string> options, string text)
-        {
-            if (options == null || text == null) return false;
-            for (int i = 0; i < options.Count; i++)
-                if (string.Equals(options[i], text, StringComparison.OrdinalIgnoreCase)) return true;
-            return false;
-        }
-    }
-
-    /// <summary>Closed set of values shown as a row of buttons (five or fewer).</summary>
     public sealed class SusSegmentControl : SusControl
     {
         readonly List<Button> _buttons = new();
+        readonly SusClosedSet _set;
         readonly IReadOnlyList<string> _options;
 
-        internal SusSegmentControl(SusPropInfo prop, SusControlContext context, IReadOnlyList<string> options)
+        internal SusSegmentControl(SusPropInfo prop, SusControlContext context, SusClosedSet set)
             : base(prop, SusControlKind.Segment, context)
         {
+            _set = set;
+            var options = set.Values;
             _options = options;
+            SetCaption(null,
+                set.FromStory ? SetFromStoryNote : null,
+                set.HadDuplicates ? DuplicateValuesNote : null);
             var strip = new VisualElement();
             strip.AddToClassList("sb-ctl__segment");
             for (int i = 0; i < options.Count; i++)
@@ -346,11 +380,11 @@ namespace Sharq.Core.Storybook.Controls
         public IReadOnlyList<Button> Buttons => _buttons;
 
         /// <inheritdoc/>
-        public override bool Accepts(string text) => SusControlValues.IsOption(_options, text);
+        public override bool Accepts(string text) => _set.Accepts(text);
 
         protected override void OnRefresh()
         {
-            var current = StringValue;
+            var current = _set.Display(StringValue);
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].EnableInClassList("sb-ctl__seg--active",
@@ -359,16 +393,22 @@ namespace Sharq.Core.Storybook.Controls
         }
     }
 
-    /// <summary>Closed set of more than five values shown as a dropdown.</summary>
+    /// <summary>Any closed set that is not a segment, and every colour name: a dropdown.</summary>
     public sealed class SusDropdownControl : SusControl
     {
         readonly DropdownField _field;
+        readonly SusClosedSet _set;
         readonly IReadOnlyList<string> _options;
 
-        internal SusDropdownControl(SusPropInfo prop, SusControlContext context, IReadOnlyList<string> options)
+        internal SusDropdownControl(SusPropInfo prop, SusControlContext context, SusClosedSet set)
             : base(prop, SusControlKind.Dropdown, context)
         {
+            _set = set;
+            var options = set.Values;
             _options = options;
+            SetCaption(null,
+                set.FromStory ? SetFromStoryNote : null,
+                set.HadDuplicates ? DuplicateValuesNote : null);
             _field = new DropdownField(new List<string>(options), 0);
             _field.AddToClassList("sb-ctl__dropdown");
             _field.RegisterValueChangedCallback(e => Write(e.newValue));
@@ -384,11 +424,11 @@ namespace Sharq.Core.Storybook.Controls
         public DropdownField Field => _field;
 
         /// <inheritdoc/>
-        public override bool Accepts(string text) => SusControlValues.IsOption(_options, text);
+        public override bool Accepts(string text) => _set.Accepts(text);
 
         protected override void OnRefresh()
         {
-            var current = StringValue;
+            var current = _set.Display(StringValue);
             for (int i = 0; i < _options.Count; i++)
             {
                 if (!string.Equals(_options[i], current, StringComparison.OrdinalIgnoreCase)) continue;
@@ -423,7 +463,7 @@ namespace Sharq.Core.Storybook.Controls
         {
             var value = StringValue;
             _field.SetValueWithoutNotify(value);
-            SetNote(value.Length == 0 ? EmptyStringNote : null);
+            SetCaption(null, value.Length == 0 ? EmptyStringNote : null);
         }
     }
 
@@ -466,81 +506,382 @@ namespace Sharq.Core.Storybook.Controls
 
     // -- numbers -------------------------------------------------------------
 
-    /// <summary>Numeric prop: slider, numeric field and the range caption.</summary>
+    /// <summary>What a numeric prop declared about its bounds.</summary>
+    public enum SusRangeStatus
+    {
+        /// <summary>No <c>[SusRange]</c>: the control is a plain field, no slider and no clamp.</summary>
+        Undeclared = 0,
+        /// <summary>A coherent range: slider plus field, the field clamps.</summary>
+        Valid = 1,
+        /// <summary>
+        /// The declaration contradicts itself (<c>min ≥ max</c>, negative step, a step wider than the
+        /// span, <c>[SusRangeFrom]</c> without <c>[SusRange]</c> or naming a missing / non-numeric
+        /// neighbour): treated like <see cref="Undeclared"/>, and the dev caption says so.
+        /// </summary>
+        Invalid = 2,
+    }
+
+    /// <summary>
+    /// Numeric prop (ARCH-20261014-SB-PROP-CONTROLS §4.2). A numeric field always; a slider only
+    /// where the component DECLARED a range (<c>[SusRange]</c>, optionally fed by neighbour props
+    /// through <c>[SusRangeFrom]</c>); one chip per <c>[SusSpecial]</c> value. Without a declared
+    /// range there is no made-up 0…100 scale and no clamp (D3, d:d05b9d): 0.55, 1.67 and 1500 ms
+    /// are not on one scale, and a clamp would destroy a sentinel such as -1 = "auto".
+    /// </summary>
     public sealed class SusNumberControl : SusControl
     {
+        /// <summary>USS class that mutes the slider and the field while a special value is active (muted, not disabled).</summary>
+        public const string DimClass = "sb-ctl--dim";
+
+        /// <summary>USS class of a special-value chip.</summary>
+        public const string SpecialClass = "sb-ctl__special";
+
+        /// <summary>USS class of the chip whose value the prop currently holds.</summary>
+        public const string SpecialOnClass = "sb-ctl__special--on";
+
+        const double SpecialTolerance = 1e-6;
+
         readonly Slider _slider;
         readonly TextField _field = new();
+        readonly VisualElement _specials = new();
+        readonly List<Button> _chips = new();
+        readonly IReadOnlyList<SusSpecialAttribute> _specialDefs;
+        readonly Dictionary<string, SusPropInfo> _neighbours = new(StringComparer.Ordinal);
+        readonly List<IDisposable> _neighbourSubscriptions = new();
         readonly bool _integral;
+
+        SusRangeStatus _status;
+        double _min = double.NaN;
+        double _max = double.NaN;
+        double _declaredStep;
+        double _step;
 
         internal SusNumberControl(SusPropInfo prop, SusControlContext context)
             : base(prop, SusControlKind.Number, context)
         {
-            var range = prop.Range;
-            Minimum = range?.Min ?? FallbackMin;
-            Maximum = range?.Max ?? FallbackMax;
-            Unit = range?.Unit ?? string.Empty;
+            Unit = prop.Range?.Unit ?? string.Empty;
             _integral = prop.ValueType == typeof(int) || prop.ValueType == typeof(long) ||
                         prop.ValueType == typeof(short) || prop.ValueType == typeof(byte);
+            _specialDefs = prop.Specials ?? Array.Empty<SusSpecialAttribute>();
 
-            _slider = new Slider((float)Minimum, (float)Maximum);
+            _specials.AddToClassList("sb-ctl__specials");
+            for (int i = 0; i < _specialDefs.Count; i++)
+            {
+                int index = i;
+                var chip = new Button(() => PickSpecial(index)) { text = _specialDefs[i].Label };
+                chip.AddToClassList(SpecialClass);
+                _specials.Add(chip);
+                _chips.Add(chip);
+            }
+
+            _slider = new Slider(0f, 1f);
             _slider.AddToClassList("sb-ctl__slider");
-            _slider.RegisterValueChangedCallback(e =>
-                Write(_integral ? Math.Round(e.newValue) : (double)e.newValue));
+            _slider.RegisterValueChangedCallback(e => Drag(e.newValue));
 
             _field.AddToClassList("sb-ctl__number");
+            // Commit on Enter / blur: a write per keystroke re-renders the field under the cursor and
+            // eats the decimal point of "3.5" the moment "3." parses as 3.
+            _field.isDelayed = true;
             _field.RegisterValueChangedCallback(e =>
             {
-                if (double.TryParse(e.newValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
-                    Write(Clamp(d));
+                if (!SetFromString(e.newValue)) Refresh();
             });
 
+            if (_chips.Count > 0) Body.Add(_specials);
             Body.Add(_slider);
             Body.Add(_field);
-            SetNote(range == null
-                ? NoRangeNote
-                : Minimum.ToString(CultureInfo.InvariantCulture) + "…" +
-                  Maximum.ToString(CultureInfo.InvariantCulture) +
-                  (Unit.Length > 0 ? " " + Unit : string.Empty));
+
+            ResolveNeighbours();
+            ApplyRange();
             Refresh();
             Observe();
         }
 
-        /// <summary>Lower bound: <c>[SusRange]</c> or the declared fallback.</summary>
-        public double Minimum { get; }
+        /// <summary>What the prop declared about its bounds - see <see cref="SusRangeStatus"/>.</summary>
+        public SusRangeStatus Status => _status;
 
-        /// <summary>Upper bound: <c>[SusRange]</c> or the declared fallback.</summary>
-        public double Maximum { get; }
+        /// <summary>
+        /// Current lower bound of the slider, or <see cref="double.NaN"/> when there is no slider.
+        /// Follows the neighbour props of <c>[SusRangeFrom]</c>.
+        /// </summary>
+        public double Minimum => _min;
+
+        /// <summary>Current upper bound of the slider, or <see cref="double.NaN"/> when there is no slider.</summary>
+        public double Maximum => _max;
+
+        /// <summary>
+        /// Step the slider snaps to: the declared one, else 1 for a whole number and a hundredth of
+        /// the span for a fraction. 0 when there is no slider.
+        /// </summary>
+        public double Step => _step;
 
         /// <summary>Unit from <c>[SusRange]</c>, or empty.</summary>
         public string Unit { get; }
 
-        /// <summary>True when the range came from <c>[SusRange]</c> rather than the fallback.</summary>
+        /// <summary>True when the prop carries a <c>[SusRange]</c> at all (it may still be invalid).</summary>
         public bool HasDeclaredRange => Prop.Range != null;
 
-        /// <summary>The slider - what a driver drags.</summary>
+        /// <summary>True while the slider is shown: a coherent declared range.</summary>
+        public bool HasSlider => _status == SusRangeStatus.Valid;
+
+        /// <summary>The slider - what a driver drags. Hidden (see <see cref="HasSlider"/>) without a valid range.</summary>
         public Slider Slider => _slider;
 
-        /// <summary>The numeric field next to the slider.</summary>
+        /// <summary>The numeric field.</summary>
         public TextField Field => _field;
 
-        double Clamp(double v) => v < Minimum ? Minimum : v > Maximum ? Maximum : v;
+        /// <summary>The special-value chips, in declaration order.</summary>
+        public IReadOnlyList<Button> Chips => _chips;
+
+        /// <summary>Index of the special value the prop holds right now, or -1.</summary>
+        public int ActiveSpecial { get; private set; } = -1;
+
+        /// <summary>True while a special value is active and the slider and field are muted.</summary>
+        public bool IsDimmed => ActiveSpecial >= 0;
+
+        /// <summary>
+        /// What dragging the slider does: snap to the step, write. The slider's own callback calls
+        /// this, and so does a test - a detached slider raises no change event of its own.
+        /// </summary>
+        public bool Drag(double value)
+        {
+            if (_status != SusRangeStatus.Valid || !IsFinite(value)) return false;
+            return Write(Quantize(value));
+        }
+
+        /// <summary>What clicking chip <paramref name="index"/> does: write the special value as it is, unclamped.</summary>
+        public bool PickSpecial(int index)
+        {
+            if (index < 0 || index >= _specialDefs.Count) return false;
+            var value = _specialDefs[index].Value;
+            return Write(_integral ? Math.Round(value, MidpointRounding.AwayFromZero) : value);
+        }
+
+        /// <summary>
+        /// Text typed into the field (or arriving from a link). Exact: no snapping to the step.
+        /// With a valid range it clamps into it, except for a special value, which is written as
+        /// declared. Without one it writes the number as it is. <c>NaN</c> and infinities are refused.
+        /// </summary>
+        public override bool SetFromString(string text)
+        {
+            if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ||
+                !IsFinite(d))
+                return false;
+            if (_integral) d = Math.Round(d, MidpointRounding.AwayFromZero);
+            if (_status == SusRangeStatus.Valid && SpecialIndexOf(d) < 0) d = Clamp(d);
+            return Write(d);
+        }
+
+        protected override void OnDispose()
+        {
+            for (int i = 0; i < _neighbourSubscriptions.Count; i++) _neighbourSubscriptions[i].Dispose();
+            _neighbourSubscriptions.Clear();
+        }
 
         protected override void OnRefresh()
         {
-            double current = ToDouble(Prop.Value);
-            _slider.SetValueWithoutNotify((float)Clamp(current));
-            _field.SetValueWithoutNotify(StringValue);
+            bool numeric = TryDouble(Prop.Value, out var current);
+            bool finite = numeric && IsFinite(current);
+            int special = finite ? SpecialIndexOf(current) : -1;
+            ActiveSpecial = special;
+
+            if (_status == SusRangeStatus.Valid)
+                _slider.SetValueWithoutNotify((float)(finite ? Clamp(current) : _min));
+
+            // A special value owns the row: the field is empty and its placeholder names the meaning.
+            _field.SetValueWithoutNotify(special >= 0 ? string.Empty : StringValue);
+            _field.textEdition.placeholder = special >= 0 ? _specialDefs[special].Label : string.Empty;
+
+            for (int i = 0; i < _chips.Count; i++) _chips[i].EnableInClassList(SpecialOnClass, i == special);
+            _slider.EnableInClassList(DimClass, special >= 0);
+            _field.EnableInClassList(DimClass, special >= 0);
+
+            UpdateCaption(current, finite, special);
         }
 
-        public override bool SetFromString(string text) =>
-            double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) &&
-            Write(Clamp(d));
+        // -- range -----------------------------------------------------------
 
-        static double ToDouble(object value)
+        /// <summary>
+        /// Finds the neighbour props <c>[SusRangeFrom]</c> names and subscribes to the numeric ones:
+        /// moving a neighbour re-derives the bounds and leaves the value alone.
+        /// </summary>
+        void ResolveNeighbours()
         {
-            try { return value == null ? 0d : Convert.ToDouble(value, CultureInfo.InvariantCulture); }
-            catch (Exception) { return 0d; }
+            var rangeFrom = Prop.RangeFrom;
+            if (rangeFrom == null || Context?.Component == null) return;
+
+            var wanted = new[] { rangeFrom.MinProp, rangeFrom.MaxProp, rangeFrom.StepProp };
+            IReadOnlyList<SusPropInfo> all = null;
+            for (int w = 0; w < wanted.Length; w++)
+            {
+                var name = wanted[w];
+                if (string.IsNullOrEmpty(name) || _neighbours.ContainsKey(name)) continue;
+                all ??= Context.Component.DescribeProps();
+                for (int i = 0; i < all.Count; i++)
+                {
+                    if (!string.Equals(all[i].Name, name, StringComparison.Ordinal)) continue;
+                    _neighbours[name] = all[i];
+                    if (SusPropGrouping.IsNumeric(all[i].ValueType))
+                        _neighbourSubscriptions.Add(all[i].SubscribeChanged(OnNeighbourChanged));
+                    break;
+                }
+            }
+        }
+
+        void OnNeighbourChanged()
+        {
+            ApplyRange();
+            Refresh();
+        }
+
+        bool Neighbour(string name, ref double target)
+        {
+            if (string.IsNullOrEmpty(name)) return true;
+            if (!_neighbours.TryGetValue(name, out var info)) return false;
+            if (!SusPropGrouping.IsNumeric(info.ValueType)) return false;
+            if (!TryDouble(info.Value, out var v) || !IsFinite(v)) return false;
+            target = v;
+            return true;
+        }
+
+        void ApplyRange()
+        {
+            var range = Prop.Range;
+            var rangeFrom = Prop.RangeFrom;
+            double min = double.NaN, max = double.NaN, step = 0d;
+            SusRangeStatus status;
+
+            if (range == null)
+            {
+                // A [SusRangeFrom] with nothing to start from is a wrong declaration, not an absent one.
+                status = rangeFrom != null ? SusRangeStatus.Invalid : SusRangeStatus.Undeclared;
+            }
+            else
+            {
+                min = range.Min;
+                max = range.Max;
+                step = range.Step;
+                bool ok = true;
+                if (rangeFrom != null)
+                {
+                    ok &= Neighbour(rangeFrom.MinProp, ref min);
+                    ok &= Neighbour(rangeFrom.MaxProp, ref max);
+                    ok &= Neighbour(rangeFrom.StepProp, ref step);
+                }
+                ok &= IsFinite(min) && IsFinite(max) && IsFinite(step) &&
+                      min < max && step >= 0d && (step == 0d || step <= max - min);
+                status = ok ? SusRangeStatus.Valid : SusRangeStatus.Invalid;
+            }
+
+            _status = status;
+            if (status == SusRangeStatus.Valid)
+            {
+                _min = min;
+                _max = max;
+                _declaredStep = step;
+                _step = step > 0d ? step : _integral ? 1d : (max - min) / 100d;
+                _slider.lowValue = (float)min;
+                _slider.highValue = (float)max;
+            }
+            else
+            {
+                _min = double.NaN;
+                _max = double.NaN;
+                _declaredStep = 0d;
+                _step = 0d;
+            }
+
+            _slider.EnableInClassList(HiddenClass, status != SusRangeStatus.Valid);
+            _field.EnableInClassList("sb-ctl__number--solo", status != SusRangeStatus.Valid);
+        }
+
+        double Clamp(double v) => v < _min ? _min : v > _max ? _max : v;
+
+        /// <summary>
+        /// Snaps to <c>min + round((v − min) / step) · step</c>, rounded to the decimals of the
+        /// step, then back into the range; whole numbers stay whole.
+        /// </summary>
+        double Quantize(double v)
+        {
+            double q = _min + Math.Round((v - _min) / _step, MidpointRounding.AwayFromZero) * _step;
+            q = Math.Round(q, Math.Max(Decimals(_step), Decimals(_min)));
+            q = Clamp(q);
+            return _integral ? Math.Round(q, MidpointRounding.AwayFromZero) : q;
+        }
+
+        int SpecialIndexOf(double value)
+        {
+            for (int i = 0; i < _specialDefs.Count; i++)
+                if (Math.Abs(value - _specialDefs[i].Value) < SpecialTolerance) return i;
+            return -1;
+        }
+
+        // -- captions --------------------------------------------------------
+
+        void UpdateCaption(double current, bool finite, int special)
+        {
+            string caption = null;
+            string diagnostic = null;
+            switch (_status)
+            {
+                case SusRangeStatus.Valid:
+                    caption = RangeCaption();
+                    if (finite && special < 0 && (current < _min || current > _max))
+                        diagnostic = OutOfRangeNote;
+                    break;
+                case SusRangeStatus.Invalid:
+                    diagnostic = RangeInvalidNote;
+                    break;
+                default:
+                    diagnostic = NoRangeNote;
+                    break;
+            }
+            SetCaption(caption, diagnostic);
+        }
+
+        /// <summary>Buyer-facing range caption: <c>0…5 · step 0.5</c>, <c>0…1000 ms</c>.</summary>
+        string RangeCaption()
+        {
+            var text = Format(_min) + "…" + Format(_max);
+            if (Unit.Length > 0) text += " " + Unit;
+            if (_declaredStep > 0d) text += " · step " + Format(_declaredStep);
+            return text;
+        }
+
+        static string Format(double v) =>
+            Math.Round(v, 6).ToString(CultureInfo.InvariantCulture);
+
+        // -- numbers ---------------------------------------------------------
+
+        static bool IsFinite(double v) => !double.IsNaN(v) && !double.IsInfinity(v);
+
+        /// <summary>Digits after the point a step needs (0.02 → 2); capped so float noise cannot run away.</summary>
+        static int Decimals(double x)
+        {
+            x = Math.Abs(x);
+            if (!IsFinite(x)) return 0;
+            double scale = 1d;
+            for (int d = 0; d <= 9; d++, scale *= 10d)
+            {
+                double scaled = x * scale;
+                if (Math.Abs(scaled - Math.Round(scaled)) < 1e-7 * Math.Max(1d, scaled)) return d;
+            }
+            return 9;
+        }
+
+        static bool TryDouble(object value, out double result)
+        {
+            result = double.NaN;
+            if (value == null) return false;
+            try
+            {
+                result = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 

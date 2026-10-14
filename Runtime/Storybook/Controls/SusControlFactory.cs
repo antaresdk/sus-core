@@ -27,6 +27,14 @@ namespace Sharq.Core.Storybook.Controls
         /// </summary>
         public const int SegmentLimit = 5;
 
+        /// <summary>
+        /// Widest total of the value texts of a closed set still shown as a segmented picker
+        /// (characters). The zone D column is narrow: five long values would be cut off, so a set
+        /// over the budget is a dropdown however few values it has
+        /// (ARCH-20261014-SB-PROP-CONTROLS D6, d:56c403).
+        /// </summary>
+        public const int SegmentLabelBudget = 32;
+
         static readonly List<ISusControlProvider> Extra = new();
 
         /// <summary>Providers registered on top of the built-in table, oldest first.</summary>
@@ -60,9 +68,12 @@ namespace Sharq.Core.Storybook.Controls
         public static void RegisterDefaults() => Register(SusIconControlProvider.Default);
 
         /// <summary>
-        /// Which widget the built-in table gives this prop. Order matters: a closed set beats the
-        /// underlying type (an <c>int</c> with an allowed set is a picker, not a slider), and
-        /// read-only beats everything (a control that cannot write must not look writable).
+        /// Which widget the built-in table gives this prop (ARCH-20261014-SB-PROP-CONTROLS §4.1,
+        /// rows in the order they are tried). A closed set beats the underlying type (an
+        /// <c>int</c> with an allowed set is a picker, not a slider), and read-only beats
+        /// everything (a control that cannot write must not look writable). The kind is a
+        /// function of the prop's DECLARATION - type, <c>UseAllowed</c>, attributes - so the same
+        /// prop is the same widget in every story (card T-4521, U-033).
         /// </summary>
         /// <param name="prop">The prop to dress.</param>
         /// <param name="declaredSet">
@@ -80,7 +91,15 @@ namespace Sharq.Core.Storybook.Controls
 
             var options = OptionsOf(prop, declaredSet);
             if (options.Count > 0)
-                return options.Count <= SegmentLimit ? SusControlKind.Segment : SusControlKind.Dropdown;
+            {
+                // A colour NAME is always a list: Button has six, Checkbox five, and a threshold
+                // that turns one of them into a segment would make the same prop look different
+                // per component (U-033). Swatches are not an option - see the plan, section 2.3.
+                if (IsColorName(prop)) return SusControlKind.Dropdown;
+                return options.Count <= SegmentLimit && LabelLength(options) <= SegmentLabelBudget
+                    ? SusControlKind.Segment
+                    : SusControlKind.Dropdown;
+            }
 
             if (t == typeof(bool)) return SusControlKind.Toggle;
             if (t == typeof(Color) || t == typeof(Color32)) return SusControlKind.Color;
@@ -95,20 +114,46 @@ namespace Sharq.Core.Storybook.Controls
 
         /// <summary>
         /// Legal values of a closed-set prop in display order, or an empty list when the prop is
-        /// not a closed set.
+        /// not a closed set. Case variants collapse to their FIRST spelling and the empty string
+        /// is never an option of its own (see <see cref="SusClosedSet"/>).
         /// </summary>
-        public static IReadOnlyList<string> OptionsOf(SusPropInfo prop, IReadOnlyList<string> declaredSet = null)
+        public static IReadOnlyList<string> OptionsOf(SusPropInfo prop, IReadOnlyList<string> declaredSet = null) =>
+            ClosedSetOf(prop, declaredSet).Values;
+
+        /// <summary>
+        /// The closed set of a prop, resolved once: canonical values (case duplicates collapsed to
+        /// the first spelling, the empty string removed), where the set came from, and what an
+        /// empty prop value stands for. Order of sources: the component's own
+        /// <c>UseAllowed</c>, then a C# enum, then the axis the STORY declared (card T-3379) - the
+        /// story fills a hole and never overrides the component, because the component's set is
+        /// the one the runtime enforces (ARCH-20261014-SB-PROP-CONTROLS D1, d:f09527).
+        /// </summary>
+        internal static SusClosedSet ClosedSetOf(SusPropInfo prop, IReadOnlyList<string> declaredSet = null)
         {
             if (prop == null) throw new ArgumentNullException(nameof(prop));
             if (prop.Allowed?.Values != null && prop.Allowed.Values.Count > 0)
-                return prop.Allowed.Values;
+                return SusClosedSet.From(prop.Allowed.Values, fromStory: false, prop.Allowed);
             if (prop.ValueType != null && prop.ValueType.IsEnum)
-                return Enum.GetNames(prop.ValueType);
-            // Card T-3379: the set the component never declared but the story did. Last, so a
-            // component that clamps the prop itself is always the answer.
+                return SusClosedSet.From(Enum.GetNames(prop.ValueType), fromStory: false, allowed: null);
             if (declaredSet != null && declaredSet.Count > 0 && prop.ValueType == typeof(string))
-                return declaredSet;
-            return Array.Empty<string>();
+                return SusClosedSet.From(declaredSet, fromStory: true, allowed: null);
+            return SusClosedSet.Empty;
+        }
+
+        /// <summary>
+        /// True for a prop that carries a colour NAME: <c>Color</c> or <c>*Color</c>. Such a set
+        /// is always a dropdown (<see cref="SegmentLabelBudget"/> never applies).
+        /// </summary>
+        public static bool IsColorName(SusPropInfo prop) =>
+            prop != null &&
+            (string.Equals(prop.Name, "Color", StringComparison.Ordinal) ||
+             prop.Name.EndsWith("Color", StringComparison.Ordinal));
+
+        static int LabelLength(IReadOnlyList<string> options)
+        {
+            int total = 0;
+            for (int i = 0; i < options.Count; i++) total += options[i].Length;
+            return total;
         }
 
         /// <summary>
@@ -154,9 +199,9 @@ namespace Sharq.Core.Storybook.Controls
                 case SusControlKind.Toggle:
                     return new SusToggleControl(prop, context);
                 case SusControlKind.Segment:
-                    return new SusSegmentControl(prop, context, OptionsOf(prop, declaredSet));
+                    return new SusSegmentControl(prop, context, ClosedSetOf(prop, declaredSet));
                 case SusControlKind.Dropdown:
-                    return new SusDropdownControl(prop, context, OptionsOf(prop, declaredSet));
+                    return new SusDropdownControl(prop, context, ClosedSetOf(prop, declaredSet));
                 case SusControlKind.Text:
                     return new SusTextControl(prop, context);
                 case SusControlKind.Icon:
@@ -211,6 +256,78 @@ namespace Sharq.Core.Storybook.Controls
                 sb.Append(ToQueryValue(list[i]));
             }
             return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// A closed set as the panel shows it (ARCH-20261014-SB-PROP-CONTROLS section 4.3): canonical
+    /// values without case duplicates, plus the facts the dev captions need.
+    /// </summary>
+    internal sealed class SusClosedSet
+    {
+        public static readonly SusClosedSet Empty = new(Array.Empty<string>(), false, false, null);
+
+        SusClosedSet(IReadOnlyList<string> values, bool fromStory, bool hadDuplicates, string emptyAs)
+        {
+            Values = values;
+            FromStory = fromStory;
+            HadDuplicates = hadDuplicates;
+            EmptyAs = emptyAs;
+        }
+
+        /// <summary>Canonical values in declaration order.</summary>
+        public IReadOnlyList<string> Values { get; }
+
+        /// <summary>The set was declared by a story, not by the component (caption "set from story").</summary>
+        public bool FromStory { get; }
+
+        /// <summary>The source listed the same value twice, ignoring case (caption "duplicate values").</summary>
+        public bool HadDuplicates { get; }
+
+        /// <summary>
+        /// The option the empty string is shown as, or null when the component does not allow it.
+        /// A legal empty value is not an option of its own: it reads as the fallback the component
+        /// treats it as, so the picker never grows a blank button.
+        /// </summary>
+        public string EmptyAs { get; }
+
+        /// <summary>The option that is active for a prop currently holding <paramref name="current"/>.</summary>
+        public string Display(string current) =>
+            string.IsNullOrEmpty(current) && EmptyAs != null ? EmptyAs : current;
+
+        /// <summary>True when <paramref name="text"/> is one of the options (case-insensitive) or the legal empty value.</summary>
+        public bool Accepts(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return EmptyAs != null;
+            for (int i = 0; i < Values.Count; i++)
+                if (string.Equals(Values[i], text, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
+        public static SusClosedSet From(IReadOnlyList<string> source, bool fromStory, SusAllowedInfo allowed)
+        {
+            var values = new List<string>(source.Count);
+            bool hadDuplicates = false;
+            bool hadEmpty = false;
+            for (int i = 0; i < source.Count; i++)
+            {
+                var v = source[i];
+                if (string.IsNullOrEmpty(v))
+                {
+                    hadEmpty = true;
+                    continue;
+                }
+                bool seen = false;
+                for (int j = 0; j < values.Count && !seen; j++)
+                    seen = string.Equals(values[j], v, StringComparison.OrdinalIgnoreCase);
+                if (seen) hadDuplicates = true;
+                else values.Add(v);
+            }
+
+            string emptyAs = null;
+            if (values.Count > 0 && allowed != null && (allowed.AllowEmpty || hadEmpty))
+                emptyAs = string.IsNullOrEmpty(allowed.Fallback) ? values[0] : allowed.Fallback;
+            return new SusClosedSet(values, fromStory, hadDuplicates, emptyAs);
         }
     }
 }

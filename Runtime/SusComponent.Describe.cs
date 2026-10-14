@@ -36,6 +36,8 @@ namespace Sharq.Core
             public Type DeclaringType;
             public bool ReadOnly;
             public SusRangeAttribute Range;
+            public SusRangeFromAttribute RangeFrom;
+            public SusSpecialAttribute[] Specials;
             public SusDependsOnAttribute[] DependsOn;
         }
 
@@ -86,6 +88,8 @@ namespace Sharq.Core
                     d.DependsOn)
                 {
                     Allowed = allowedInfo,
+                    RangeFrom = d.RangeFrom,
+                    Specials = d.Specials,
                 };
                 result.Add(info);
             }
@@ -417,6 +421,10 @@ namespace Sharq.Core
                 var conditions = new SusDependsOnAttribute[raw.Length];
                 for (int c = 0; c < raw.Length; c++) conditions[c] = (SusDependsOnAttribute)raw[c];
 
+                var rawSpecials = field.GetCustomAttributes(typeof(SusSpecialAttribute), inherit: true);
+                var specials = new SusSpecialAttribute[rawSpecials.Length];
+                for (int c = 0; c < rawSpecials.Length; c++) specials[c] = (SusSpecialAttribute)rawSpecials[c];
+
                 list.Add(new PropDescriptor
                 {
                     Field = field,
@@ -425,6 +433,8 @@ namespace Sharq.Core
                     DeclaringType = field.DeclaringType,
                     ReadOnly = readOnly,
                     Range = (SusRangeAttribute)Attribute.GetCustomAttribute(field, typeof(SusRangeAttribute)),
+                    RangeFrom = (SusRangeFromAttribute)Attribute.GetCustomAttribute(field, typeof(SusRangeFromAttribute)),
+                    Specials = specials,
                     DependsOn = conditions,
                 });
             }

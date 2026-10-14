@@ -1552,6 +1552,46 @@
     margin: 0;
 }
 
+/* A number with no declared range is the field alone: it takes the whole row. */
+.sb-ctl__number--solo {
+    flex-grow: 1;
+    width: auto;
+    margin-left: 0;
+}
+
+/* Special values of a number (card T-4521, [SusSpecial]): one chip each, in front of the widget. */
+.sb-ctl__specials {
+    flex-direction: row;
+    flex-shrink: 0;
+    margin-right: 6px;
+}
+
+.sb-ctl__special {
+    margin: 0;
+    margin-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: var(--sb-fs-10);
+    border-width: 1px;
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-sm);
+    background-color: var(--sb-code);
+    color: var(--sb-muted);
+}
+
+.sb-ctl__special--on {
+    background-color: var(--sb-panel);
+    border-color: var(--sb-accent);
+    color: var(--sb-ink);
+}
+
+/* Muted, not disabled: the slider and the field stay live while a special value is active. */
+.sb-ctl--dim {
+    opacity: 0.45;
+}
+
 .sb-ctl__glyph {
     width: 16px;
     height: 16px;

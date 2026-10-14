@@ -140,8 +140,21 @@ namespace Sharq.Core
         /// <summary>Allowed set recorded by <c>UseAllowed</c>, or null.</summary>
         public SusAllowedInfo Allowed { get; internal set; }
 
-        /// <summary>Declared numeric range, or null (consumer falls back to 0…100).</summary>
+        /// <summary>
+        /// Declared numeric range, or null. Without one a numeric prop is a plain field - no
+        /// slider, no clamp (ARCH-20261014-SB-PROP-CONTROLS D3).
+        /// </summary>
         public SusRangeAttribute Range { get; }
+
+        /// <summary>
+        /// Neighbour props that supply the bounds / step on top of <see cref="Range"/>
+        /// (<c>[SusRangeFrom]</c>), or null.
+        /// </summary>
+        public SusRangeFromAttribute RangeFrom { get; internal set; }
+
+        /// <summary>Declared special values (<c>[SusSpecial]</c>) in declaration order; empty when none.</summary>
+        public IReadOnlyList<SusSpecialAttribute> Specials { get; internal set; } =
+            Array.Empty<SusSpecialAttribute>();
 
         /// <summary>Declared conditions (ALL must hold); empty when unconditional.</summary>
         public IReadOnlyList<SusDependsOnAttribute> DependsOn { get; }

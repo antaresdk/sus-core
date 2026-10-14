@@ -35,6 +35,15 @@ namespace Sharq.Core.Storybook.Controls
         /// </summary>
         public IReadOnlyList<string> ColorTokens { get; }
 
+        /// <summary>
+        /// True while the panel may show dev-only captions - "range not declared", "set from
+        /// story", "duplicate values" and the like. A buyer-facing build sets it to false: what
+        /// explains the NUMBER (range, step, unit, names of special values) stays, what explains the
+        /// declaration goes (owner decision Q-158 2a; ARCH-20261014-SB-PROP-CONTROLS D8, d:b763b1).
+        /// Defaults to true; the switch itself is card T-4529.
+        /// </summary>
+        public bool ShowDiagnostics { get; set; } = true;
+
         /// <summary>The colour tokens every panel starts with.</summary>
         public static IReadOnlyList<string> StandardColorTokens => DefaultTokens;
 
