@@ -159,7 +159,12 @@
     --sb-sizes-w: 340px;
     /* Scrollbar band, mock-up: 8px and no arrow buttons (D12). */
     --sb-scrollbar: 8px;
+}
 
+/* The shell's own ground, ink and face — NOT shared with .sb-portal: a portal root is Unity's
+ * full-window click catcher, and a ground on it covered the whole storybook while a list was open
+ * (POOL-01 U-031 rc-fail on Build-2026-10-15). Portal parts take ground and ink from their own rules. */
+.sb-shell {
     background-color: var(--sb-bg);
     color: var(--sb-ink);
     -unity-font-definition: var(--sb-font-ui);
