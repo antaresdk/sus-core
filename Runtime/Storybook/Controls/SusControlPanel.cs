@@ -494,11 +494,19 @@ namespace Sharq.Core.Storybook.Controls
             // enablement and the sheet's declared :disabled, not by a style written from here).
             _reset.SetEnabled(CanResetToStory);
 
-            SetLine(_uncoveredLine, "uncovered: ", _uncovered);
-            SetLine(_deadLine, "dead props: ", _dead);
+            // The coverage audit - "uncovered", "dead props" and its "story defect" badge - is a
+            // developer's diagnostic: a public build shows none of it (POOL-01 R11, Q-158 2a). A
+            // reason the story gave for leaving a prop without a control explains the panel to any
+            // reader and stays.
+            bool diagnostics = Context.ShowDiagnostics;
+            _badge.EnableInClassList(SusControl.HiddenClass, !diagnostics);
+            SetLine(_uncoveredLine, "uncovered: ", diagnostics ? _uncovered : NoItems);
+            SetLine(_deadLine, "dead props: ", diagnostics ? _dead : NoItems);
             SetLine(_excludedLine, "no control on purpose: ", _excluded);
             _foot.EnableInClassList(SusControl.HiddenClass, IsEmpty);
         }
+
+        static readonly List<string> NoItems = new();
 
         static void SetLine(Label label, string prefix, List<string> items)
         {

@@ -135,6 +135,68 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void AReadOnlyCaption_IsNotADeadProp()
+        {
+            // POOL-01 U-038: the service stories show their explanation as a read-only Note, and
+            // the panel listed that very caption under "dead props" - a defect it invented.
+            var panel = Panel(new CaptionFixture());
+
+            Assert.IsFalse(panel.Find("Note").IsDead, "no write of the panel reaches a read-only prop");
+            CollectionAssert.DoesNotContain(panel.DeadProps, "Note");
+            CollectionAssert.Contains(panel.DeadProps, "Knob", "a writable prop nobody reads still is");
+        }
+
+        [Test]
+        public void APublicBuild_ShowsNoDiagnostics_ButStillCountsThem()
+        {
+            // POOL-01 R11 (Q-158 2a): "not read", "dead props: ..." and the coverage badge are the
+            // developer's instrument; the public site shows none of them. The numbers stay
+            // readable through the API, so a test or a tool can still judge the story.
+            bool was = SusStorybookBuild.Diagnostics;
+            SusStorybookBuild.Diagnostics = false;
+            try
+            {
+                var panel = Panel(new SusIntrospectionFixture());
+
+                Assert.IsFalse(panel.Context.ShowDiagnostics, "a new panel takes the build's answer");
+                CollectionAssert.Contains(panel.DeadProps, "DeadProp");
+                Assert.IsTrue(panel.Find("DeadProp").IsDead);
+
+                var badge = panel.Find("DeadProp").Q<Label>(className: "sb-ctl__badge--dead");
+                Assert.IsTrue(badge.ClassListContains(SusControl.HiddenClass), "no 'not read' badge");
+                var line = panel.Q<Label>(className: "sb-ctlpanel__hole--dead");
+                Assert.IsTrue(line.ClassListContains(SusControl.HiddenClass), "no 'dead props' line");
+                var coverage = panel.Q<Label>(className: "sb-ctlpanel__badge");
+                Assert.IsTrue(coverage.ClassListContains(SusControl.HiddenClass), "no coverage badge");
+            }
+            finally
+            {
+                SusStorybookBuild.Diagnostics = was;
+            }
+        }
+
+        [Test]
+        public void ADevBuild_ShowsTheDiagnostics()
+        {
+            bool was = SusStorybookBuild.Diagnostics;
+            SusStorybookBuild.Diagnostics = true;
+            try
+            {
+                var panel = Panel(new SusIntrospectionFixture());
+
+                var badge = panel.Find("DeadProp").Q<Label>(className: "sb-ctl__badge--dead");
+                Assert.IsFalse(badge.ClassListContains(SusControl.HiddenClass), "'not read' is shown");
+                var line = panel.Q<Label>(className: "sb-ctlpanel__hole--dead");
+                Assert.IsFalse(line.ClassListContains(SusControl.HiddenClass));
+                StringAssert.Contains("DeadProp", line.text);
+            }
+            finally
+            {
+                SusStorybookBuild.Diagnostics = was;
+            }
+        }
+
+        [Test]
         public void ADependentControl_SaysWhatItDependsOnAndDimsUntilTheConditionHolds()
         {
             var component = new SusIntrospectionFixture();
@@ -215,6 +277,15 @@ namespace Sharq.Core.Editor.Tests
         }
 
         /// <summary>Claims a prop and then builds nothing - the hole the coverage gate hunts.</summary>
+        /// <summary>A story scene's shape: one read-only caption, one writable prop nobody reads.</summary>
+        sealed class CaptionFixture : SusComponent
+        {
+            public ReadonlyProp<string> Note = new Prop<string>("what this scene shows").AsReadonly();
+            public Prop<string> Knob = new("");
+
+            protected override void Build() { }
+        }
+
         sealed class SilentProvider : ISusControlProvider
         {
             readonly string _prop;

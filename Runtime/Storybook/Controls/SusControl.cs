@@ -129,11 +129,14 @@ namespace Sharq.Core.Storybook.Controls
             // Snapshot, not a live read: every control subscribes to its prop, and a subscriber
             // makes the prop look alive. The observation is therefore taken HERE - before this
             // control attaches itself - and the panel is built after the story has rendered once,
-            // which is exactly when SusPropInfo.Dead is meaningful.
-            IsDead = prop.Dead;
+            // which is exactly when SusPropInfo.Dead is meaningful. A read-only prop is a caption
+            // the story shows, not a knob: no write of the panel reaches it, so "nobody reads it"
+            // judges nothing (POOL-01 U-038 - the service stories' Note was listed as dead).
+            IsDead = !prop.ReadOnly && prop.Dead;
 
             _manualBadge.EnableInClassList(HiddenClass, !IsManual);
-            _deadBadge.EnableInClassList(HiddenClass, !IsDead);
+            // "not read" is a developer's diagnostic: hidden in a public build (POOL-01 R11).
+            _deadBadge.EnableInClassList(HiddenClass, !IsDead || !ShowDiagnostics);
             SetNote(null);
             UpdateDependency();
         }

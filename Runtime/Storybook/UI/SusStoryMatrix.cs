@@ -666,8 +666,12 @@ namespace Sharq.Core.Storybook.UI
             _scroll.EnableInClassList("sb-hidden", !_open);
             // Card T-3482: the word changes with the mode, because the buyer is looking at two
             // stories that show their states differently and is owed the reason in words.
+            // Why the engine folded it ("heavy story", "cell budget") is the developer's business:
+            // a public build shows the fold and not the reason (POOL-01 R11, Q-158 2a).
             _toggle.text = (_open ? "▾" : "▸") + (_oversize ? " states · " : " matrix · ") + MetaText +
-                           (_open || CollapseReason == null ? string.Empty : " · " + CollapseReason);
+                           (_open || CollapseReason == null || !SusStorybookBuild.Diagnostics
+                               ? string.Empty
+                               : " · " + CollapseReason);
             RenderNote();
         }
 
@@ -784,15 +788,18 @@ namespace Sharq.Core.Storybook.UI
         }
 
         /// <summary>
-        /// The footnote under the widget. Two things can need saying and both are the buyer's
-        /// business: which state columns could not be drawn at all, and - card T-3482 - why this
-        /// story shows one instance with switches where the previous one showed a grid. A mode
-        /// the reader has to infer from the shape of the widget is not a named mode.
+        /// The footnote under the widget. Two things can need saying: which state columns could
+        /// not be drawn at all (the author's business - dev builds only, POOL-01 R11), and - card
+        /// T-3482 - why this story shows one instance with switches where the previous one showed
+        /// a grid (the buyer's business). A mode the reader has to infer from the shape of the
+        /// widget is not a named mode.
         /// </summary>
         void RenderNote()
         {
             var text = string.Empty;
-            if (_skipped.Count > 0)
+            // Which pseudo-class columns the USS has no twins for is a note to the component's
+            // author, not to a buyer: dev builds only (POOL-01 R11, U-035).
+            if (_skipped.Count > 0 && SusStorybookBuild.Diagnostics)
                 text = string.Join(", ", _skipped) +
                        " — no state twins in this component's USS, so the column is not drawn: " +
                        "UI Toolkit cannot force a pseudo-class, and a column showing the rest " +

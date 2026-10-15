@@ -429,6 +429,38 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void A_public_build_folds_without_saying_why_and_keeps_the_twins_note_to_itself()
+        {
+            // POOL-01 R11 (Q-158 2a): "cell budget", "heavy story" and the "no state twins"
+            // paragraph are the engine talking to the component's author - a public build keeps
+            // the fold and the dropped columns, and says neither reason.
+            bool was = SusStorybookBuild.Diagnostics;
+            SusStorybookBuild.Diagnostics = false;
+            try
+            {
+                AllTwins();
+                SusStoryMatrix.AxisPropName = "Tone";
+                var folded = new SusStoryMatrix();
+                folded.Show(Entry(Swatch));
+
+                Assert.That(folded.Open, Is.False, "the budget still folds it");
+                Assert.That(folded.CollapseReason, Is.EqualTo("cell budget"), "and the API still says why");
+                Assert.That(folded.ToggleText, Does.Not.Contain("cell budget"));
+
+                NoTwins();
+                var dropped = new SusStoryMatrix();
+                dropped.Show(Entry(Swatch));
+
+                Assert.That(dropped.SkippedStates, Is.Not.Empty, "the columns are still not drawn");
+                Assert.That(dropped.NoteText, Is.Empty, "and the reader is not lectured about it");
+            }
+            finally
+            {
+                SusStorybookBuild.Diagnostics = was;
+            }
+        }
+
+        [Test]
         public void A_heavy_story_stays_folded_even_inside_the_budget()
         {
             NoTwins();

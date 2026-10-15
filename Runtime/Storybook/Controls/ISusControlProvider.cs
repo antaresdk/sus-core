@@ -40,9 +40,10 @@ namespace Sharq.Core.Storybook.Controls
         /// story", "duplicate values" and the like. A buyer-facing build sets it to false: what
         /// explains the NUMBER (range, step, unit, names of special values) stays, what explains the
         /// declaration goes (owner decision Q-158 2a; ARCH-20261014-SB-PROP-CONTROLS D8, d:b763b1).
-        /// Defaults to true; the switch itself is card T-4529.
+        /// Defaults to <see cref="SusStorybookBuild.Diagnostics"/>: on in the Editor and in a
+        /// development build, off in the release build the site serves (POOL-01 R11).
         /// </summary>
-        public bool ShowDiagnostics { get; set; } = true;
+        public bool ShowDiagnostics { get; set; } = SusStorybookBuild.Diagnostics;
 
         /// <summary>The colour tokens every panel starts with.</summary>
         public static IReadOnlyList<string> StandardColorTokens => DefaultTokens;

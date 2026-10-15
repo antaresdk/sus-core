@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine.UIElements;
 
@@ -156,9 +157,15 @@ namespace Sharq.Core.Storybook.UI
             var text = string.Empty;
             if (_tracked != null)
             {
-                var s = _tracked.resolvedStyle;
+                // POOL-01 U-037: a component whose root only lays out its children (SusAvatar: the
+                // circle is .sus-avatar__surface, the root's radius is a percentage) read
+                // "h — · pad 0 · radius 0" next to a visibly round, padded instance. Measure the box
+                // that actually paints, and take the laid-out height when the style says auto.
+                var box = PaintedBox(_tracked);
+                var s = box.resolvedStyle;
+                var height = float.IsNaN(s.height) ? box.layout.height : s.height;
                 text =
-                    "h " + N(s.height) +
+                    "h " + N(height) +
                     " · fs " + N(s.fontSize) +
                     " · pad " + N(s.paddingLeft) +
                     " · radius " + N(s.borderTopLeftRadius) +
@@ -234,6 +241,40 @@ namespace Sharq.Core.Storybook.UI
         /// judge of D15/D16 reads: two layout passes over an unchanged stage must add zero.
         /// </summary>
         public int Writes { get; private set; }
+
+        /// <summary>
+        /// The element whose box the reader sees: <paramref name="root"/> when it paints anything
+        /// itself (a ground, a border, a radius), otherwise the first laid-out descendant within
+        /// three levels that does; the root when nothing paints.
+        /// </summary>
+        internal static VisualElement PaintedBox(VisualElement root)
+        {
+            if (root == null || Paints(root)) return root;
+            var level = new List<VisualElement> { root };
+            for (var depth = 0; depth < 3 && level.Count > 0; depth++)
+            {
+                var next = new List<VisualElement>();
+                foreach (var e in level)
+                    foreach (var child in e.Children())
+                    {
+                        if (child.resolvedStyle.display == DisplayStyle.None) continue;
+                        if (Paints(child) && child.layout.width > 0f) return child;
+                        next.Add(child);
+                    }
+                level = next;
+            }
+            return root;
+        }
+
+        static bool Paints(VisualElement e)
+        {
+            var s = e.resolvedStyle;
+            return s.backgroundColor.a > 0.01f
+                   || s.borderTopWidth > 0f || s.borderLeftWidth > 0f
+                   || s.borderTopLeftRadius > 0f
+                   || s.backgroundImage.texture != null || s.backgroundImage.sprite != null
+                   || s.backgroundImage.vectorImage != null;
+        }
 
         static string N(float value) =>
             float.IsNaN(value) || float.IsInfinity(value)
