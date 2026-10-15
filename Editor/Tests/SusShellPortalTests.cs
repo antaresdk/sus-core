@@ -58,6 +58,13 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void Light_Theme_Class_Is_The_Shell_Theme_Axis_Class()
+        {
+            Assert.AreEqual(Sharq.Core.Storybook.Env.SusBuiltinEnvAxes.ShellThemeAxis.LightClass,
+                SusShellPortal.LightThemeClass, "the portal mirrors exactly the class the shell-theme chip puts on the shell");
+        }
+
+        [Test]
         public void Dress_Dark_Shell_Leaves_No_Light_Class()
         {
             Shell(out var field, out _, light: false);

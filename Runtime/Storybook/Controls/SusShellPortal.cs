@@ -24,8 +24,12 @@ namespace Sharq.Core.Storybook.Controls
         /// <summary>Class of the shell root (<see cref="SusStorybookHost"/>).</summary>
         public const string ShellClass = "sb-shell";
 
-        /// <summary>The shell's light-theme class, mirrored onto a portal.</summary>
-        public const string LightThemeClass = Env.SusBuiltinEnvAxes.ShellThemeAxis.LightClass;
+        /// <summary>
+        /// The shell's light-theme class, mirrored onto a portal. Spelled here, not read from the
+        /// shell-theme axis: zone D drives props and does not reference environment axes (R142);
+        /// SusShellPortalTests pins it equal to the axis's own class.
+        /// </summary>
+        public const string LightThemeClass = "sb-shell--theme-light";
 
         /// <summary>Every dropped-open list root currently under <paramref name="root"/>.</summary>
         public static IEnumerable<VisualElement> Menus(VisualElement root)
