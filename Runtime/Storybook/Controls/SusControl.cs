@@ -569,7 +569,8 @@ namespace Sharq.Core.Storybook.Controls
             {
                 int index = i;
                 var chip = new Button(() => PickSpecial(index)) { text = _specialDefs[i].Label };
-                chip.AddToClassList(SpecialClass);
+                // Literal on purpose (R140 reads the shell class off the call); it is SpecialClass.
+                chip.AddToClassList("sb-ctl__special");
                 _specials.Add(chip);
                 _chips.Add(chip);
             }

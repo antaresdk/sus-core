@@ -2256,6 +2256,7 @@
 .sb-env__share,
 .sb-env__props,
 .sb-ctl__list-add,
+.sb-ctl__special,
 .sb-ctl__iconfield {
     -unity-font-definition: var(--sb-fw-500);
 }
