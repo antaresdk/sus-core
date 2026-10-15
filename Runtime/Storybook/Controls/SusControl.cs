@@ -1095,7 +1095,8 @@ namespace Sharq.Core.Storybook.Controls
         protected override void OnRefresh()
         {
             int count = Count;
-            _summary.text = count + (count == 1 ? " row ✎" : " rows ✎");
+            // "edit" in words: U+270E is in none of the shell's faces (POOL-01 R3, T-3372).
+            _summary.text = count + (count == 1 ? " row · edit" : " rows · edit");
             _rows.EnableInClassList(HiddenClass, !_open);
             _rows.Clear();
             if (!_open) return;

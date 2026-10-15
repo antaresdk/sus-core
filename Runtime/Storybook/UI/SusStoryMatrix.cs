@@ -668,7 +668,9 @@ namespace Sharq.Core.Storybook.UI
             // stories that show their states differently and is owed the reason in words.
             // Why the engine folded it ("heavy story", "cell budget") is the developer's business:
             // a public build shows the fold and not the reason (POOL-01 R11, Q-158 2a).
-            _toggle.text = (_open ? "▾" : "▸") + (_oversize ? " states · " : " matrix · ") + MetaText +
+            // Triangles from Geist Mono, the toggle's face: U+25B8 / U+25BE are in none of the
+            // shell's faces and drew as empty boxes in a WebGL player (POOL-01 R3, T-3372).
+            _toggle.text = (_open ? "▼" : "▶") + (_oversize ? " states · " : " matrix · ") + MetaText +
                            (_open || CollapseReason == null || !SusStorybookBuild.Diagnostics
                                ? string.Empty
                                : " · " + CollapseReason);
@@ -713,7 +715,7 @@ namespace Sharq.Core.Storybook.UI
             _scroll.AddToClassList("sb-hidden");
             _note.AddToClassList("sb-hidden");
             _note.text = string.Empty;
-            _toggle.text = "▸ matrix · " + MetaText;
+            _toggle.text = "▶ matrix · " + MetaText;
         }
 
         void ResolveRows(SusComponent probe)

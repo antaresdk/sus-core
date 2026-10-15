@@ -419,13 +419,13 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(matrix.BuiltCellCount, Is.Zero);
             Assert.That(CellsInTree(matrix), Is.Zero, "no instance is built until it is asked for");
             Assert.That(matrix.CollapseReason, Is.EqualTo("cell budget"));
-            Assert.That(matrix.ToggleText, Does.StartWith("▸ matrix · Tone × state · 5 × 6"));
+            Assert.That(matrix.ToggleText, Does.StartWith("▶ matrix · Tone × state · 5 × 6"));
 
             matrix.Toggle();
 
             Assert.That(matrix.Open, Is.True);
             Assert.That(CellsInTree(matrix), Is.EqualTo(30));
-            Assert.That(matrix.ToggleText, Does.StartWith("▾ matrix"));
+            Assert.That(matrix.ToggleText, Does.StartWith("▼ matrix"));
         }
 
         [Test]

@@ -111,8 +111,13 @@ namespace Sharq.Core.Storybook
             var top = new VisualElement();
             top.AddToClassList("sb-shell__topbar");
 
-            _burger = new Button(ToggleDrawer) { text = "≡" };
+            // The bars are the core "list" icon, not U+2261: no face of the shell's chain has that
+            // glyph, and a WebGL player has no OS font to borrow it from (POOL-01 R3, T-3372).
+            _burger = new Button(ToggleDrawer);
             _burger.AddToClassList("sb-shell__burger");
+            var bars = new VisualElement { pickingMode = PickingMode.Ignore };
+            bars.AddToClassList("sb-shell__burger-icon");
+            _burger.Add(bars);
 
             _crumbs.AddToClassList("sb-shell__crumbs");
 

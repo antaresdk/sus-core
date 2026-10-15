@@ -229,6 +229,24 @@
     display: flex;
 }
 
+/* The bars are the core "list" icon (white SVG, tinted here): no face of the shell's chain has
+ * U+2261, and a WebGL player has no OS font to borrow it from (POOL-01 R3, card T-3372). */
+.sb-shell__burger-icon {
+    width: 16px;
+    height: 16px;
+    background-image: url("../Resources/SusRuntime/Icons/core/regular/list.svg");
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--sb-ink);
+}
+
+.sb-shell__burger:active .sb-shell__burger-icon {
+    -unity-background-image-tint-color: var(--sb-accent);
+}
+
+.sb-shell__burger:disabled .sb-shell__burger-icon {
+    -unity-background-image-tint-color: var(--sb-ink-disabled);
+}
+
 .sb-shell__crumbs {
     -unity-font-definition: var(--sb-font-mono);
     font-size: var(--sb-fs-11);

@@ -32,6 +32,8 @@ namespace Sharq.Core.Storybook
         [SerializeField] UIDocument _document;
 
         SusStorybookHost _host;
+        PanelSettings _sourcePanel;
+        PanelSettings _ownPanel;
 
         /// <summary>The live shell, or null before <c>OnEnable</c>.</summary>
         public SusStorybookHost Host => _host;
@@ -39,6 +41,7 @@ namespace Sharq.Core.Storybook
         void OnEnable()
         {
             if (_document == null) _document = GetComponent<UIDocument>();
+            ProvideGlyphFallback();
             var root = _document != null ? _document.rootVisualElement : null;
             if (root == null)
             {
@@ -55,10 +58,38 @@ namespace Sharq.Core.Storybook
 
         void OnDisable()
         {
-            if (_host == null) return;
-            _host.Dispose();
-            _host.RemoveFromHierarchy();
-            _host = null;
+            if (_host != null)
+            {
+                _host.Dispose();
+                _host.RemoveFromHierarchy();
+                _host = null;
+            }
+            RestorePanel();
+        }
+
+        /// <summary>
+        /// Mounts the document into a copy of its panel whose text settings fall back to a face
+        /// with Cyrillic (POOL-01 R3, card T-3372; see <see cref="SusStorybookText"/>).
+        /// </summary>
+        void ProvideGlyphFallback()
+        {
+            if (_document == null || _ownPanel != null) return;
+            var source = _document.panelSettings;
+            var copy = SusStorybookText.WithGlyphFallback(source);
+            if (copy == null) return;
+            _sourcePanel = source;
+            _ownPanel = copy;
+            _document.panelSettings = copy;
+        }
+
+        void RestorePanel()
+        {
+            if (_ownPanel == null) return;
+            if (_document != null && _document.panelSettings == _ownPanel)
+                _document.panelSettings = _sourcePanel;
+            SusStorybookText.Release(_ownPanel);
+            _ownPanel = null;
+            _sourcePanel = null;
         }
 
         StyleSheet ResolveStyleSheet()
