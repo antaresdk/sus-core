@@ -135,6 +135,35 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void APropReadLater_LosesItsMark_WhenThePanelAsksAgain()
+        {
+            // Card T-3151: HoldDurationMs is read when a hold runs, OffsetX when a menu opens - not
+            // at mount. The first read after the panel was built clears the observation.
+            var component = new SusIntrospectionFixture();
+            var panel = Panel(component);
+            Assume.That(panel.Find("DeadProp").IsDead, "precondition: nobody has read it yet");
+
+            Assert.IsFalse(panel.RefreshReads(), "nothing read, nothing changes");
+
+            var _ = component.DeadProp.Value;   // the behaviour runs and reads it
+            Assert.IsTrue(panel.RefreshReads());
+            Assert.IsFalse(panel.Find("DeadProp").IsDead);
+            CollectionAssert.DoesNotContain(panel.DeadProps, "DeadProp");
+        }
+
+        [Test]
+        public void ThePanelsOwnWrite_IsNotARead()
+        {
+            var component = new SusIntrospectionFixture();
+            var panel = Panel(component);
+
+            Assert.IsTrue(panel.Find("DeadProp").SetFromString("written by the panel"));
+            panel.RefreshReads();
+
+            Assert.IsTrue(panel.Find("DeadProp").IsDead, "a write from zone D proves nothing about the component");
+        }
+
+        [Test]
         public void AReadOnlyCaption_IsNotADeadProp()
         {
             // POOL-01 U-038: the service stories show their explanation as a read-only Note, and

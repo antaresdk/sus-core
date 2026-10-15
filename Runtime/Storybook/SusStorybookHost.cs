@@ -433,7 +433,10 @@ namespace Sharq.Core.Storybook
             // how often the stage is allowed to be re-read.
             bool sizes = _sizes.RefreshIfStale();
             bool probe = _probe.RefreshIfDirty();
-            return probe || sizes;
+            // Card T-3151: a behaviour prop is read when the behaviour runs; zone D drops its
+            // "not read yet" mark on the same throttled tick.
+            bool reads = _controls != null && _controls.RefreshReads();
+            return probe || sizes || reads;
         }
 
         /// <summary>Goes back one route; false when there is nowhere to go.</summary>

@@ -469,6 +469,20 @@ namespace Sharq.Core.Storybook.Controls
             }
         }
 
+        /// <summary>
+        /// Re-asks every "not read yet" control whether the component has read its prop since
+        /// (card T-3151) - a behaviour prop is read when the behaviour runs, not at mount. Cheap
+        /// (one int compare per dead control) and called from the stage's throttled tick; the
+        /// footer is rewritten only when something changed. True when it did.
+        /// </summary>
+        public bool RefreshReads()
+        {
+            bool changed = false;
+            for (int i = 0; i < _controls.Count; i++) changed |= _controls[i].RefreshRead();
+            if (changed) RefreshFooter();
+            return changed;
+        }
+
         void OnControlChanged(SusControl control)
         {
             // One prop can gate another, so the whole panel re-reads its conditions after a write.
@@ -482,7 +496,7 @@ namespace Sharq.Core.Storybook.Controls
             _dead.Clear();
             for (int i = 0; i < _controls.Count; i++)
             {
-                if (_controls[i].IsDead) _dead.Add(_controls[i].Prop.Name);
+                if (_controls[i].ReportsUnread) _dead.Add(_controls[i].Prop.Name);
             }
 
             _count.text = "props " + PropCount + " · controls " + ControlCount;
@@ -501,7 +515,7 @@ namespace Sharq.Core.Storybook.Controls
             bool diagnostics = Context.ShowDiagnostics;
             _badge.EnableInClassList(SusControl.HiddenClass, !diagnostics);
             SetLine(_uncoveredLine, "uncovered: ", diagnostics ? _uncovered : NoItems);
-            SetLine(_deadLine, "dead props: ", diagnostics ? _dead : NoItems);
+            SetLine(_deadLine, "not read yet: ", diagnostics ? _dead : NoItems);
             SetLine(_excludedLine, "no control on purpose: ", _excluded);
             _foot.EnableInClassList(SusControl.HiddenClass, IsEmpty);
         }

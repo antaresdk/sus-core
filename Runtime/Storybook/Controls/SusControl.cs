@@ -79,7 +79,7 @@ namespace Sharq.Core.Storybook.Controls
         public const string ReadOnlyNote = "updated from events";
 
         readonly Label _name = new();
-        readonly Label _deadBadge = new("not read");
+        readonly Label _deadBadge = new("not read yet");
         readonly Label _manualBadge = new("manual");
         readonly Label _note = new();
         readonly Label _dependency = new();
@@ -133,12 +133,11 @@ namespace Sharq.Core.Storybook.Controls
             // the story shows, not a knob: no write of the panel reaches it, so "nobody reads it"
             // judges nothing (POOL-01 U-038 - the service stories' Note was listed as dead).
             IsDead = !prop.ReadOnly && prop.Dead;
+            _readsAtBuild = prop.ReadCount;
 
             _manualBadge.EnableInClassList(HiddenClass, !IsManual);
-            // "not read" is a developer's diagnostic: hidden in a public build (POOL-01 R11).
-            _deadBadge.EnableInClassList(HiddenClass, !IsDead || !ShowDiagnostics);
             SetNote(null);
-            UpdateDependency();
+            UpdateDependency();   // also syncs the "not read yet" badge
         }
 
         /// <summary>The prop this row drives.</summary>
@@ -154,10 +153,29 @@ namespace Sharq.Core.Storybook.Controls
         public bool IsManual { get; }
 
         /// <summary>
-        /// Nobody read the prop when this control was built - the red badge of §4.3.1. A
-        /// snapshot: see the constructor for why a live read cannot answer this question.
+        /// Nobody has read the prop since this control was built - the red badge of §4.3.1. Taken
+        /// as a snapshot (see the constructor for why a subscription cannot answer it), and cleared
+        /// by <see cref="RefreshRead"/> the first time the component reads the prop after all.
         /// </summary>
-        public bool IsDead { get; }
+        public bool IsDead { get; private set; }
+
+        int _readsAtBuild;
+
+        /// <summary>
+        /// Clears the "not read yet" observation once the component has read the prop (card
+        /// T-3151, POOL-01 R4). Measured over the 50 props the mounted kit listed as dead: all but
+        /// one are read - by the behaviour they configure, when it runs (a hold reads
+        /// HoldDurationMs, an open reads OffsetX, a keystroke reads MaxLength, a hover reads
+        /// OpenDelay) - so a snapshot at mount accused working props. The read count includes
+        /// those lazy reads, and the panel's own writes do not add to it. True when it changed.
+        /// </summary>
+        public bool RefreshRead()
+        {
+            if (!IsDead || Prop.ReadCount <= _readsAtBuild) return false;
+            IsDead = false;
+            SyncDeadBadge();
+            return true;
+        }
 
         /// <summary>Every declared <c>[SusDependsOn]</c> currently holds.</summary>
         public bool IsActive { get; private set; } = true;
@@ -224,6 +242,7 @@ namespace Sharq.Core.Storybook.Controls
                 _dependency.text = string.Empty;
                 _dependency.AddToClassList(HiddenClass);
                 RemoveFromClassList("sb-ctl--inert");
+                SyncDeadBadge();
                 return;
             }
 
@@ -233,7 +252,19 @@ namespace Sharq.Core.Storybook.Controls
             _dependency.text = text;
             _dependency.RemoveFromClassList(HiddenClass);
             EnableInClassList("sb-ctl--inert", !IsActive);
+            SyncDeadBadge();
         }
+
+        /// <summary>
+        /// The "not read yet" badge: a developer's diagnostic, hidden in a public build (POOL-01
+        /// R11), and silent while a declared condition does not hold - an inert prop is not read
+        /// BECAUSE of that condition, which the dependency line already names (card T-3151).
+        /// </summary>
+        void SyncDeadBadge() =>
+            _deadBadge.EnableInClassList(HiddenClass, !IsDead || !IsActive || !ShowDiagnostics);
+
+        /// <summary>True when the prop is reported in the footer: unread, and not inert by declaration.</summary>
+        public bool ReportsUnread => IsDead && IsActive;
 
         /// <summary>Subclass hook: write the prop value into the widget.</summary>
         protected virtual void OnRefresh() { }
