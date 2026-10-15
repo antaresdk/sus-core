@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-10-15
+
+### Added
+- Storybook prop attributes `[SusSpecial(value, label)]` (a sentinel value shown as a chip, e.g. `-1` = `auto`, and allowed outside `[SusRange]`) and `[SusRangeFrom(MinProp, MaxProp, StepProp)]` (bounds read live from sibling props, with the static `[SusRange]` as fallback).
+
+### Changed
+- Storybook controls follow the prop declaration: a number without `[SusRange]` is a plain numeric field (no implicit 0..100 slider); a declared range snaps slider drags to its step; closed sets collapse values that differ only by case; a colour string is always a dropdown.
+- Storybook: the dropped-open list of a zone D dropdown is dressed with the shell stylesheet, tokens and theme (it is rendered on the document root, outside the shell, and showed a white window with invisible labels).
+- Storybook: the icon picker popup lives in an overlay host owned by the controls panel and is placed inside the window after its first layout (it used to open below the bottom edge).
+- Sharq source maps (`*.g.uss.map.json`) store the source path relative to the package root and hash the LF form of the source, so the generated file is the same on every machine and checkout.
+
+### Fixed
+- Storybook: the special-value chip carries the shell button class.
+
 ## [1.3.4] - 2026-09-30
 
 ### Fixed
