@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text;
 
@@ -70,7 +71,8 @@ namespace Sharq.Core.Editor
             string sourceMap = null;
             if (styleResult.MapLines.Count > 0)
                 sourceMap = SharqSourceMapWriter.Build(
-                    model.SourcePath, model.SourceSha1, model.StyleBodyLine, styleResult.MapLines);
+                    PackageRelativeSourcePath(model.SourcePath), model.SourceSha1, model.StyleBodyLine,
+                    styleResult.MapLines);
 
             return new Artifacts
             {
@@ -81,6 +83,33 @@ namespace Sharq.Core.Editor
                 GlobalUss = styleResult.HasGlobalCss ? styleResult.GlobalCss : null,
                 SourceMap = sourceMap,
             };
+        }
+
+        /// <summary>
+        /// (T-4071) The map's <c>"sharq"</c> field: the source path relative to its package root
+        /// (the nearest folder up the tree that holds <c>package.json</c>), forward-slashed. An
+        /// absolute path made every generated map depend on the machine and the checkout (a
+        /// worktree build, then the interactive editor, then a move of the workspace each rewrote
+        /// every map) and leaked a local path into the shipped packages. A relative path, or one
+        /// outside any package, is kept as given.
+        /// </summary>
+        internal static string PackageRelativeSourcePath(string sourcePath)
+        {
+            if (string.IsNullOrEmpty(sourcePath)) return sourcePath;
+            var normalized = sourcePath.Replace('\\', '/');
+            if (!Path.IsPathRooted(sourcePath)) return normalized;
+
+            var full = Path.GetFullPath(sourcePath);
+            for (var dir = Path.GetDirectoryName(full); !string.IsNullOrEmpty(dir); dir = Path.GetDirectoryName(dir))
+            {
+                if (!File.Exists(Path.Combine(dir, "package.json"))) continue;
+                var root = dir.Replace('\\', '/').TrimEnd('/') + "/";
+                var fullSlashed = full.Replace('\\', '/');
+                return fullSlashed.StartsWith(root, StringComparison.OrdinalIgnoreCase)
+                    ? fullSlashed.Substring(root.Length)
+                    : normalized;
+            }
+            return normalized;
         }
 
         /// <summary>

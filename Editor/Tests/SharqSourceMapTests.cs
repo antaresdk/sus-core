@@ -231,6 +231,47 @@ namespace Sharq.Core.Editor.Tests
             Assert.AreNotEqual(a.SourceSha1, b.SourceSha1);
         }
 
+        [Test]
+        public void Sha1_Ignores_Line_Endings()
+        {
+            // T-4071: a CRLF and an LF checkout of the same commit must generate the same map.
+            const string lf = "<template><div></div></template>\n<style>\n.a {\n    color: red;\n}\n</style>\n";
+            var a = SharqFileParser.Parse(lf, "A.sharq");
+            var b = SharqFileParser.Parse(lf.Replace("\n", "\r\n"), "A.sharq");
+            Assert.AreEqual(a.SourceSha1, b.SourceSha1);
+        }
+
+        [Test]
+        public void SourcePath_Is_Relative_To_The_Package_Root()
+        {
+            // T-4071: the map names its source relative to the folder holding package.json, so the
+            // generated file is the same on every machine and in every checkout.
+            var root = Path.Combine(Path.GetTempPath(), "sus-t4071-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var atoms = Path.Combine(root, "Components", "atoms");
+                Directory.CreateDirectory(atoms);
+                File.WriteAllText(Path.Combine(root, "package.json"), "{}");
+                var sharq = Path.Combine(atoms, "SusButton.sharq");
+
+                Assert.AreEqual("Components/atoms/SusButton.sharq",
+                    SharqCompilePipeline.PackageRelativeSourcePath(sharq));
+                Assert.AreEqual("Components/atoms/SusButton.sharq",
+                    SharqCompilePipeline.PackageRelativeSourcePath(sharq.Replace('\\', '/')));
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        [Test]
+        public void SourcePath_Relative_Or_Outside_A_Package_Is_Kept()
+        {
+            Assert.AreEqual("SusRoundTrip.sharq", SharqCompilePipeline.PackageRelativeSourcePath("SusRoundTrip.sharq"));
+            Assert.AreEqual("Components/x/A.sharq", SharqCompilePipeline.PackageRelativeSourcePath(@"Components\x\A.sharq"));
+        }
+
         // ───────────────────────── MapFileName / WriteSourceMap lifecycle ─────────────────────────
 
         [Test]

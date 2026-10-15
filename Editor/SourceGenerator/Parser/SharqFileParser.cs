@@ -63,7 +63,9 @@ namespace Sharq.Core.Editor
             {
                 ClassName = Path.GetFileNameWithoutExtension(filePath),
                 SourcePath = filePath,
-                SourceSha1 = ComputeSha1(sharqContent), // T-3295: hash of the whole file, not just <style>
+                // T-3295: hash of the whole file, not just <style>. T-4071: of its LF form, so a
+                // CRLF and an LF checkout of the same commit generate the same map.
+                SourceSha1 = ComputeSha1(sharqContent.Replace("\r\n", "\n")),
             };
 
             // ─── Extract <template> (XML-aware close finding) ────────
