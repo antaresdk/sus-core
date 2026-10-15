@@ -83,9 +83,10 @@ namespace Sharq.Core.Editor.Tests
 
             var primitives = core.Groups.First(g => g.Id == "primitives");
             // Order first, then name: the three Order = 0 stories sort by name, the
-            // provider-born one declares Order = 10 and lands last.
+            // provider-born one declares Order = 10 after them, and the two placement fixtures of
+            // card T-4522 declare Order = 20 and sort by name at the end.
             Assert.That(primitives.Stories.Select(s => s.Slug).ToList(),
-                Is.EqualTo(new[] { "counter", "swatch", "twin", "swatch-error" }));
+                Is.EqualTo(new[] { "counter", "swatch", "twin", "swatch-error", "placement-layers", "placement-screen" }));
         }
 
         [Test]

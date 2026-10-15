@@ -1172,6 +1172,10 @@ namespace Sharq.Core.Storybook.UI
             {
                 box.Add(item);
             }
+            // Card T-4522: an absolute screen in a box with no size of its own was clipped to
+            // nothing - the dark sliver in a cell, the empty switcher. The box holds room for it
+            // the way the stage's viewport content does (SusSubjectPlacement - the box only).
+            SusSubjectPlacement.Watch(ctx?.Host ?? item, box, item);
         }
 
         void SetAxis(SusComponent item, string value)

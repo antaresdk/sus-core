@@ -100,6 +100,7 @@ namespace Sharq.Core.Storybook
         // null when it declared none — the stage's own reference to what Unmount must take back
         // by reference, same reasoning as _scene above.
         VisualElement _currentHost;
+        SusSubjectPlacement _placement;   // card T-4522
         bool _disposed;
 
         public SusStorybookHost(StyleSheet styleSheet = null)
@@ -568,6 +569,11 @@ namespace Sharq.Core.Storybook
                 _canvasViewport.Add(component);
             }
             MountScene(story, story.Host ?? component);
+            // Card T-4522: the viewport content holds room for an absolute screen, and lays a
+            // control out at its natural width (SusSubjectPlacement - the frame only, never the
+            // product instance).
+            _placement = SusSubjectPlacement.Watch(
+                story.Host ?? component, _canvasViewport.contentContainer, component);
 
             // The story's popups belong to the canvas, not to the panel root (T-3032), and stay
             // on the canvas rather than the viewport (decision D2): a host parked on a ScrollView
@@ -607,6 +613,9 @@ namespace Sharq.Core.Storybook
 
             SetStageEmpty(false);
         }
+
+        /// <summary>How the current subject was placed (card T-4522), or null while nothing is mounted.</summary>
+        public SusSubjectPlacement QaPlacement => _placement;
 
         /// <summary>
         /// Parents the scenery the story declared through <see cref="SusStoryContext.AddSibling"/>
@@ -825,6 +834,8 @@ namespace Sharq.Core.Storybook
                 _currentHost.RemoveFromHierarchy();
                 _currentHost = null;
             }
+            _placement?.Stop();
+            _placement = null;
             _canvasViewport.contentContainer.Clear();
             for (int i = _canvas.hierarchy.childCount - 1; i >= 0; i--)
             {

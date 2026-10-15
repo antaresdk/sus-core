@@ -1,0 +1,24 @@
+/* Fixture of SusSubjectPlacementTests (card T-4522): a subject absolute over its parent BY ITS
+ * OWN SHEET, the way .sus-screen and .sus-fill are - an inline position would win over any
+ * sheet and test a different branch. */
+.placement-fixture-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    flex-grow: 1;
+}
+
+.placement-fixture-screen__body {
+    height: 120px;
+}
+
+.placement-fixture-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80px;
+    height: 80px;
+}

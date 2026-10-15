@@ -145,6 +145,10 @@
     /* The canvas is ONE number, declared here, before the first layout pass (D18): an open
        popover must not be able to change it. */
     --sb-canvas-h: 350px;
+    /* What a subject placed to fill the canvas fills (card T-4522): the canvas height less its
+       2 x 22px padding, 2 x 1px border and the 8px horizontal scroller (--sb-scrollbar). A
+       percentage cannot say it: the viewport's content is sized by its content. */
+    --sb-canvas-fill-h: 296px;
     --sb-canvas-min-w: 320px;
     /* Side of the dotted tile of the canvas, card T-3444. It has to be STATED: the initial value
        of `background-size` in UI Toolkit is 100% 100%, not the image's own size, so a tile left
@@ -847,6 +851,30 @@
  * class this file already owns. */
 .sb-stage__viewport-content {
     min-width: 100%;
+}
+
+/* Card T-4522 (POOL-01 R1, U-041, U-050…U-075): the frame a subject is mounted in, marked by
+ * SusSubjectPlacement - see its summary for the measurements. Only the FRAME (an engine element)
+ * is marked; the product instance carries no class of the shell (T-3421). A subject absolute over
+ * its parent - a screen, a HUD root - took no room in the viewport content, which stayed 0 px tall
+ * and clipped it: 26 stories showed an empty frame. The marked frame is at least as tall as the
+ * visible canvas, so a filling subject has something to fill; the engine then holds it open to the
+ * size the subject took (a measured write, like the matrix cells), and taller scrolls inside the
+ * canvas (D1). A control or a group of controls is laid out at its natural width.
+ * Selectors name classes of ONE element: UI Toolkit matches `>` against the logical parent, which
+ * for anything inside a ScrollView is the ScrollView itself. */
+.sb-stage__viewport-content.sb-subject-frame--fill {
+    min-height: var(--sb-canvas-fill-h);
+}
+
+.sb-stage__viewport-content.sb-subject-frame--natural {
+    align-items: flex-start;
+}
+
+/* In a matrix box: room for an absolute instance - one cell's worth, the box then follows it. */
+.sb-matrix__item.sb-subject-frame--fill {
+    min-width: var(--sb-matrix-cell-w);
+    min-height: var(--sb-matrix-cell-h);
 }
 
 /* Card T-3359 (RETURN, ux-reviewer report 2026-09-24-ux-reviewer-3). The ground above still
