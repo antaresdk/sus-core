@@ -412,9 +412,37 @@ namespace Sharq.Core.Storybook.Controls
             _field = new DropdownField(new List<string>(options), 0);
             _field.AddToClassList("sb-ctl__dropdown");
             _field.RegisterValueChangedCallback(e => Write(e.newValue));
+            // Card T-3374 (U-031): the list Unity drops open is not a child of the field - dress it
+            // as a shell portal the moment it appears, whichever way it was opened.
+            _field.RegisterCallback<PointerDownEvent>(_ => DressOpeningMenu(), TrickleDown.TrickleDown);
+            _field.RegisterCallback<NavigationSubmitEvent>(_ => DressOpeningMenu(), TrickleDown.TrickleDown);
             Body.Add(_field);
             Refresh();
             Observe();
+        }
+
+        /// <summary>Frames the control waits for the list to appear after an open gesture.</summary>
+        internal const int MenuWaitFrames = 30;
+
+        IVisualElementScheduledItem _dressWatch;
+
+        void DressOpeningMenu()
+        {
+            var root = _field.panel?.visualTree;
+            if (root == null) return;
+
+            var before = new HashSet<VisualElement>(SusShellPortal.Menus(root));
+            var frames = 0;
+            var dressed = 0;
+            _dressWatch?.Pause();
+            _dressWatch = _field.schedule
+                .Execute(() =>
+                {
+                    frames++;
+                    dressed += SusShellPortal.DressNewMenus(root, before, _field);
+                })
+                .Every(0)
+                .Until(() => dressed > 0 || frames > MenuWaitFrames);
         }
 
         /// <summary>Legal values, in declaration order.</summary>

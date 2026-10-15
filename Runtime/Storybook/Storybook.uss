@@ -37,7 +37,14 @@
     flex-grow: 1;
     flex-direction: column;
     min-height: 0;
+}
 
+/* The token set is shared with the shell's PORTAL (card T-3374, U-031): the root Unity gives the
+ * dropped-open list of a DropdownField sits on the document root, BESIDE the shell, so it never
+ * inherited a single --sb-* name. SusShellPortal dresses that root with this sheet, .sb-portal and
+ * the shell's theme class; geometry above stays the shell's own. */
+.sb-shell,
+.sb-portal {
     /* 13 colour names, dark set (§4.2 table) */
     --sb-bg: #18181a;
     --sb-panel: #1f1f21;
@@ -2415,10 +2422,60 @@
     -unity-background-image-tint-color: var(--sb-muted);
 }
 
-/* The dropped-open list is NOT reachable from this sheet: UI Toolkit renders it in the panel's
- * own root overlay, outside the shell subtree, so no selector anchored on a shell class can
- * touch it. Named here so the gap reads as a measured boundary and not as a missing row of the
- * 4.4 table; dressing it needs the list's own sheet, which is a separate card. */
+/* -- DropdownField: the dropped-open list, its row, the selected row (4.4) ---
+ * UI Toolkit renders the list on the document root, outside the shell subtree (card T-3374,
+ * U-031: a white window whose labels inherited the shell's light ink and vanished). The control
+ * dresses that root as a shell portal (SusShellPortal: this sheet + .sb-portal + theme class), so
+ * every rule below is anchored on .sb-portal. The root itself is Unity's full-window click
+ * catcher and stays transparent. */
+
+.sb-portal .unity-base-dropdown__container-outer {
+    background-color: var(--sb-panel);
+    border-width: 1px;
+    border-color: var(--sb-line);
+    border-radius: var(--sb-r-md);
+}
+
+.sb-portal .unity-base-dropdown__container-inner {
+    background-color: var(--sb-panel);
+    border-width: 0;
+    border-radius: var(--sb-r-md);
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.sb-portal .unity-base-dropdown__item {
+    min-height: 24px;
+    padding-left: 6px;
+    padding-right: 10px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.sb-portal .unity-base-dropdown__item:hover {
+    background-color: var(--sb-line-soft);
+}
+
+.sb-portal .unity-base-dropdown__item:checked {
+    background-color: var(--sb-accent-soft);
+}
+
+.sb-portal .unity-base-dropdown__label {
+    color: var(--sb-ink);
+    -unity-font-definition: var(--sb-font-ui);
+    font-size: var(--sb-fs-12);
+}
+
+.sb-portal .unity-base-dropdown__item:checked .unity-base-dropdown__label {
+    color: var(--sb-accent-text);
+}
+
+.sb-portal .unity-base-dropdown__checkmark {
+    -unity-background-image-tint-color: var(--sb-accent-text);
+}
+
+.sb-portal .unity-base-dropdown__separator {
+    background-color: var(--sb-line);
+}
 
 /* -- Slider: tracker, dragger, the number field beside it (4.4) ------------- */
 
