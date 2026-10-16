@@ -85,7 +85,10 @@ namespace Sharq.Core.Storybook
             var result = new List<FontAsset>();
             foreach (var path in GlyphFallbackFonts)
             {
-                if (Built.TryGetValue(path, out var built) && built != null)
+                // Alive means its atlas is alive too: leaving Play mode in the Editor destroys the
+                // atlas texture of a font asset built during Play while the asset object survives in
+                // this cache - drawing from it then threw MissingReferenceException.
+                if (Built.TryGetValue(path, out var built) && built != null && built.atlasTexture != null)
                 {
                     result.Add(built);
                     continue;
