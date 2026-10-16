@@ -40,6 +40,39 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void A_dev_only_story_is_registered_in_a_dev_build_and_left_out_of_a_public_one()
+        {
+            // Q-158 7b (POOL-01 U-133): the skin demo stays in the source and in dev, out of the
+            // kit's public storybook.
+            Assert.That(SusStoryRegistry.LastRegisteredStoryIds, Contains.Item(DevOnlyFixtureStory.Id),
+                "the Editor is a dev build");
+
+            bool was = SusStorybookBuild.Diagnostics;
+            SusStorybookBuild.Diagnostics = false;
+            try
+            {
+                SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
+                Assert.That(SusStoryRegistry.LastRegisteredStoryIds, Has.No.Member(DevOnlyFixtureStory.Id));
+                Assert.That(SusStoryRegistry.LastRegisteredStoryIds, Contains.Item("enginetests/primitives/counter"),
+                    "every other story is still there");
+            }
+            finally
+            {
+                SusStorybookBuild.Diagnostics = was;
+                SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
+            }
+        }
+
+        [SusStory(DevOnlyFixtureStory.Id, Name = "Dev only", Order = 30, DevOnly = true,
+            Component = typeof(CoreCounterDemo), Purpose = "a developer's story")]
+        public sealed class DevOnlyFixtureStory : ISusStory
+        {
+            public const string Id = "enginetests/primitives/dev-only";
+            public SusComponent Create() => new CoreCounterDemo();
+            public void Configure(SusStoryContext ctx) { }
+        }
+
+        [Test]
         public void Discovery_finds_provider_born_stories_too()
         {
             Assert.That(SusStoryRegistry.LastRegisteredStoryIds,
@@ -84,9 +117,10 @@ namespace Sharq.Core.Editor.Tests
             var primitives = core.Groups.First(g => g.Id == "primitives");
             // Order first, then name: the three Order = 0 stories sort by name, the
             // provider-born one declares Order = 10 after them, and the two placement fixtures of
-            // card T-4522 declare Order = 20 and sort by name at the end.
+            // card T-4522 declare Order = 20 and sort by name, and the dev-only fixture (Order = 30)
+            // closes the list.
             Assert.That(primitives.Stories.Select(s => s.Slug).ToList(),
-                Is.EqualTo(new[] { "counter", "swatch", "twin", "swatch-error", "placement-layers", "placement-screen" }));
+                Is.EqualTo(new[] { "counter", "swatch", "twin", "swatch-error", "placement-layers", "placement-screen", "dev-only" }));
         }
 
         [Test]

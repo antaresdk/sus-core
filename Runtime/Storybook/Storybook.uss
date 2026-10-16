@@ -149,6 +149,10 @@
        2 x 22px padding, 2 x 1px border and the 8px horizontal scroller (--sb-scrollbar). A
        percentage cannot say it: the viewport's content is sized by its content. */
     --sb-canvas-fill-h: 296px;
+    /* The width caps a story may put on its live instance (story helpers below, card T-4530). */
+    --sb-story-w-sm: 280px;
+    --sb-story-w-md: 420px;
+    --sb-story-w-lg: 520px;
     --sb-canvas-min-w: 320px;
     /* Side of the dotted tile of the canvas, card T-3444. It has to be STATED: the initial value
        of `background-size` in UI Toolkit is 100% 100%, not the image's own size, so a tile left
@@ -869,6 +873,26 @@
 
 .sb-stage__viewport-content.sb-subject-frame--natural {
     align-items: flex-start;
+}
+
+/* Story helpers (card T-4530, POOL-01 U-122): 21 kit stories cap their live instance with
+ * `storybook-constrain-sm|md|lg`, classes the legacy shell sheet declared (Samples~/Storybook)
+ * and the engine never loaded - so the cap silently did nothing, and a slider stretched to the
+ * width of its gallery, past the visible canvas. The shell declares them now: the same caps,
+ * minus the legacy centring (the stage places subjects, not the story). */
+.storybook-constrain-sm {
+    max-width: var(--sb-story-w-sm);
+    width: 100%;
+}
+
+.storybook-constrain-md {
+    max-width: var(--sb-story-w-md);
+    width: 100%;
+}
+
+.storybook-constrain-lg {
+    max-width: var(--sb-story-w-lg);
+    width: 100%;
 }
 
 /* In a matrix box: room for an absolute instance - one cell's worth, the box then follows it. */

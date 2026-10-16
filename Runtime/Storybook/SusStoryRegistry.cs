@@ -384,6 +384,11 @@ namespace Sharq.Core.Storybook
                 {
                     SusLog.Warn("[storybook] '" + type.FullName + "' has no public parameterless constructor - skipped.");
                 }
+                else if (attr.DevOnly && !SusStorybookBuild.Diagnostics)
+                {
+                    // Q-158 7b: a developer's story stays out of the public build (no warning -
+                    // this is the declared outcome, not a defect).
+                }
                 else if (TryParseId(attr.Id, out var pkg, out var group, out var slug))
                 {
                     var story = (ISusStory)Activator.CreateInstance(type);

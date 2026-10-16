@@ -104,6 +104,15 @@ namespace Sharq.Core.Storybook
         /// </summary>
         public SusStoryWeight Weight { get; set; } = SusStoryWeight.Normal;   // card T-3038
 
+        /// <summary>
+        /// A developer's story: registered in the Editor and in a development player, left out of
+        /// a public build (<see cref="SusStorybookBuild.Diagnostics"/> false). For a story the
+        /// public storybook of its package should not carry - owner decision Q-158 7b: the skin
+        /// demo is not part of the kit's public storybook (POOL-01 U-133). The source, its
+        /// scenario and its frames stay; only the public registry skips it.
+        /// </summary>
+        public bool DevOnly { get; set; }
+
         public SusStoryAttribute(string id)
         {
             Id = id;
