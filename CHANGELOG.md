@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-10-16
+
+### Added
+- `SusStorybookBuild.Diagnostics`: true in the Editor and a development player, false in a release player. The storybook's diagnostics (the "not read yet" badge and footer, the coverage audit, the matrix fold reason, the "no state twins" note) show only while it is true.
+- `[SusStory(DevOnly = true)]`: a story registered in development builds and left out of a public one.
+
+### Changed
+- Storybook: the stage frames what it mounts. A subject absolute over its parent (a screen, a HUD root, an overlay) gets room in its frame and is shown instead of being clipped to nothing; a control or a group of controls keeps its natural width instead of spanning the canvas. The matrix switcher shows its instance at the measured natural width, in a window as tall as the canvas, and grid columns keep a gap.
+- Storybook: zone D's "not read yet" mark clears once the component reads the prop (behaviour props are read when the behaviour runs, not at mount); read-only props and props inert by a declared condition are not reported.
+- Storybook: the scene host falls back to a face with Cyrillic for glyphs the shell's own face lacks (WebGL players have no OS fonts); glyphs missing from every face of the chain are replaced (the burger draws an icon).
+
+### Fixed
+- Storybook: an open dropdown list no longer paints the shell ground over the whole window.
+- Storybook: the sizes line measures the box that paints (Avatar, Banner) and reads the laid-out height when the style says auto.
+- Storybook: zone D prop names stay on one line.
+
+
 ## [1.3.5] - 2026-10-15
 
 ### Added
