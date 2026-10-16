@@ -142,6 +142,7 @@
     --sb-matrix-cell-w: 72px;
     --sb-matrix-cell-h: 34px;
     --sb-matrix-label-w: 68px;
+    --sb-matrix-gap: 12px;   /* between two columns of cells (card T-4524) */
     /* The canvas is ONE number, declared here, before the first layout pass (D18): an open
        popover must not be able to change it. */
     --sb-canvas-h: 350px;
@@ -968,6 +969,13 @@
     max-height: 280px;
 }
 
+/* Card T-4524 (POOL-01 U-040): the switcher shows ONE instance, chosen because it is too big for a
+ * cell - and the grid's 280px window cut it at the bottom (card, modal-auth, escape). In switcher
+ * mode the window is as tall as the live canvas below it. */
+.sb-matrix__scroll.sb-matrix__scroll--solo {
+    max-height: var(--sb-canvas-h);
+}
+
 .sb-matrix__grid {
     flex-direction: column;
 }
@@ -1026,6 +1034,15 @@
     flex-grow: 0;
     align-items: center;
     justify-content: center;
+}
+
+/* Card T-4524 (POOL-01 U-040): cells grow to the widest instance of their column and stood
+ * flush - two text components read as one ("Start the questStart the quest", "AudioHome").
+ * One gap after every column, the SAME on a head and on a cell, so the measured widths still
+ * line up (the drift T-3355 fixed came from margins that differed between the two). */
+.sb-matrix__cell,
+.sb-matrix__colhead {
+    margin-right: var(--sb-matrix-gap);
 }
 
 /* The wrapper the cell measures. It declares NOTHING about size any more.

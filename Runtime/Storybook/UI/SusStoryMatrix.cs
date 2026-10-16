@@ -664,6 +664,7 @@ namespace Sharq.Core.Storybook.UI
             if (!_open) ClearCells();
 
             _scroll.EnableInClassList("sb-hidden", !_open);
+            _scroll.EnableInClassList("sb-matrix__scroll--solo", _oversize);   // card T-4524
             // Card T-3482: the word changes with the mode, because the buyer is looking at two
             // stories that show their states differently and is owed the reason in words.
             // Why the engine folded it ("heavy story", "cell budget") is the developer's business:
@@ -1041,6 +1042,12 @@ namespace Sharq.Core.Storybook.UI
                 box.pickingMode = PickingMode.Ignore;
                 item.pickingMode = PickingMode.Ignore;
                 PlaceInBox(box, itemCtx, item);
+                // Card T-4524 (POOL-01 U-040): the solo box shrank to its content, and a component
+                // sized as a percentage of its parent (a carousel at width 100%) collapsed to a
+                // 40px strip with its text one letter per line. The box is the instance's natural
+                // width as the measuring box found it - the size the mode was chosen by.
+                // sus:uss-impossible measured natural width of the instance, from the measuring pass
+                if (_natural.x > 0f) box.style.width = _natural.x;
                 solo.Add(box);
             }
             solo.Add(new OverlayHost { name = CellOverlayName });
