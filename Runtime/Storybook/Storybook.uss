@@ -1523,6 +1523,11 @@
     font-size: var(--sb-fs-11);
     color: var(--sb-ink);
     margin-right: 6px;
+    /* POOL-01 N-02 (card T-4530): a prop name is one line. Laid out to its measured width, the
+       label still wrapped its last letter on a sub-pixel rounding ("Disable" + a lone "d" under
+       the switch, "Densit"). It neither wraps nor gives width away. */
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .sb-ctl__badge {
