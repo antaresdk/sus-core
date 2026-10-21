@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.7] - 2026-10-21
+
+### Fixed
+- Storybook: the sizes line under the live instance reads the instance again after its first layout; it kept the reading taken at mount ("h —", radius 0) whenever the next story's canvas was the size of the last one.
+- Storybook: in the state switcher, an instance that takes its width from its parent (measured 0 wide) gets a box as wide as the window instead of an empty one.
+
 ## [1.3.6] - 2026-10-16
 
 ### Added
