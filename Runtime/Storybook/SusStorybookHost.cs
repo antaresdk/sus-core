@@ -590,6 +590,7 @@ namespace Sharq.Core.Storybook
             // Zone C, card T-3038.
             _matrix.Show(entry);
             _sizes.Track(component);
+            ReadSizesAfterFirstLayout(component);
 
             // Zone E, card T-3040: the feed subscribes to every declared event of THIS instance
             // and forgets the previous story's session. Zone D's panel rides along (card T-3143)
@@ -921,6 +922,26 @@ namespace Sharq.Core.Storybook
         void ToggleDrawer() => EnableInClassList("sb-shell--drawer-open", !ClassListContains("sb-shell--drawer-open"));
 
         void CloseDrawer() => RemoveFromClassList("sb-shell--drawer-open");
+
+        /// <summary>
+        /// POOL-01 U-037: <see cref="SusStorySizes.Track"/> reads the instance before its first
+        /// layout ("h —"), and the canvas of the next story is usually the size of the last one,
+        /// so no canvas pass came to ask again and the line kept that first reading. One more read
+        /// after the instance's own first layout - a subscription that removes itself on its first
+        /// call, so the loop D16 closed (T-3362) cannot reopen.
+        /// </summary>
+        void ReadSizesAfterFirstLayout(VisualElement component)
+        {
+            EventCallback<GeometryChangedEvent> firstLayout = null;
+            firstLayout = _ =>
+            {
+                component.UnregisterCallback(firstLayout);
+                if (_disposed || _sizes.Tracked != component) return;
+                _sizes.MarkStale();
+                _probe.MarkDirty();
+            };
+            component.RegisterCallback(firstLayout);
+        }
 
         // Card T-3362: this handler writes NOTHING that participates in layout. It raises the
         // dirty flag of zone E and asks the size line for a re-read; the size line is what used

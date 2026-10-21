@@ -1080,6 +1080,12 @@
     align-items: flex-start;
 }
 
+/* The box of an instance that takes its width from its parent (measured 0 wide): it spans the
+ * switcher window, and the instance inside stretches with it. */
+.sb-matrix__item.sb-matrix__item--stretch {
+    align-self: stretch;
+}
+
 /* Where ONE instance is measured before the mode is decided (card T-3482). It has to be laid out
  * - `display: none` would report nothing - and it must not be seen, which is exactly what
  * `visibility: hidden` is for. Absolute, so it takes no room in the widget. */

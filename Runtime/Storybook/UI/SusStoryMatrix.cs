@@ -153,6 +153,9 @@ namespace Sharq.Core.Storybook.UI
         /// </summary>
         public const string CellOverlayName = "sus-storybook-matrix-cell-overlay";
 
+        /// <summary>The switcher box of an instance without a width of its own: it spans the window.</summary>
+        public const string ItemStretchClass = "sb-matrix__item--stretch";
+
         /// <summary>
         /// Prop the rows come from. The plan names <c>Variant</c>; it is a property rather than a
         /// constant so a rig can point the matrix at another closed axis without a fork. The
@@ -1048,6 +1051,10 @@ namespace Sharq.Core.Storybook.UI
                 // width as the measuring box found it - the size the mode was chosen by.
                 // sus:uss-impossible measured natural width of the instance, from the measuring pass
                 if (_natural.x > 0f) box.style.width = _natural.x;
+                // An instance that takes its width from its parent measures 0 wide (the Diagnostics
+                // panel: "one instance 0x280", an empty window on the RC stand): its box spans the
+                // window instead of collapsing to nothing.
+                else box.AddToClassList(ItemStretchClass);
                 solo.Add(box);
             }
             solo.Add(new OverlayHost { name = CellOverlayName });
