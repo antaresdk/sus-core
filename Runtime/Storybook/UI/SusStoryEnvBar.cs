@@ -44,7 +44,7 @@ namespace Sharq.Core.Storybook.UI
         /// <summary>Raised after any chip click actually changed a service (route text may be stale now).</summary>
         public event Action Changed;
 
-        public SusStoryEnvBar(VisualElement shellRoot, VisualElement previewRoot)
+        public SusStoryEnvBar(VisualElement shellRoot, VisualElement previewRoot, VisualElement scaleRoot = null)
         {
             AddToClassList("sb-env__bar");
 
@@ -86,7 +86,7 @@ namespace Sharq.Core.Storybook.UI
                 _shellRoot.RegisterCallback<KeyDownEvent>(OnShellKeyDown);
             RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
 
-            foreach (var axis in SusBuiltinEnvAxes.CreateAll(shellRoot, previewRoot))
+            foreach (var axis in SusBuiltinEnvAxes.CreateAll(shellRoot, previewRoot, scaleRoot))
                 _builtin[axis.Id] = axis;
 
             SusStoryEnvAxisRegistry.Changed += Rebuild;
@@ -214,15 +214,40 @@ namespace Sharq.Core.Storybook.UI
                 var icon = new SusIconElement(axis.Icon);
                 icon.AddToClassList("sb-env__chip-icon");
 
-                var value = new Label(axis.Current) { name = "sb-env-chip-value" };
+                // Owner, 2026-10-22: a chip that only said "dark", "100" or "mouse" did not say
+                // WHAT it switches, and two chips both said "dark". Every chip now names its axis.
+                var caption = new Label(CaptionOf(axis.Id)) { name = "sb-env-chip-caption" };
+                caption.AddToClassList("sb-env__chip-caption");
+
+                var value = new Label(ValueText(axis)) { name = "sb-env-chip-value" };
                 value.AddToClassList("sb-env__chip-value");
 
                 chip.Add(icon);
+                chip.Add(caption);
                 chip.Add(value);
+                chip.tooltip = CaptionOf(axis.Id) + ": " + string.Join(" / ", axis.Values) + " - click for the next";
                 chip.RegisterCallback<ClickEvent>(_ => Cycle(axis));
                 _chips.Add(chip);
             }
         }
+
+        /// <summary>
+        /// The word a chip carries before its value: what the axis switches. The six built-in axes
+        /// have one each; an axis another package registers is named by its id.
+        /// </summary>
+        public static string CaptionOf(string axisId) => axisId switch
+        {
+            "breakpoint" => "width",
+            "density" => "density",
+            "theme" => "theme",
+            "scale" => "UI scale",
+            "input" => "input",
+            "shell-theme" => "storybook",
+            _ => axisId,
+        };
+
+        static string ValueText(ISusStoryEnvAxis axis) =>
+            string.Equals(axis.Id, "scale", StringComparison.Ordinal) ? axis.Current + "%" : axis.Current;
 
         /// <summary>
         /// Drives the same code path a chip click does. UI Toolkit drops a synthetic

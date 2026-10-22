@@ -37,12 +37,18 @@ namespace Sharq.Core.Storybook.Env
     /// </summary>
     static class SusBuiltinEnvAxes
     {
-        public static IEnumerable<ISusStoryEnvAxis> CreateAll(VisualElement shellRoot, VisualElement previewRoot)
+        /// <param name="scaleRoot">
+        /// What the UI-scale axis magnifies. The storybook passes its canvas viewport: a transform
+        /// on the whole stage grew the picture but not the boxes, so components crossed the edges
+        /// of their frames (owner, 2026-10-22). Null keeps the preview root, as before.
+        /// </param>
+        public static IEnumerable<ISusStoryEnvAxis> CreateAll(VisualElement shellRoot, VisualElement previewRoot,
+            VisualElement scaleRoot = null)
         {
             yield return new BreakpointAxis(previewRoot);
             yield return new DensityAxis(previewRoot);
             yield return new ThemeAxis(previewRoot);
-            yield return new ScaleAxis(previewRoot);
+            yield return new ScaleAxis(scaleRoot ?? previewRoot);
             yield return new InputAxis();
             yield return new ShellThemeAxis(shellRoot);
         }

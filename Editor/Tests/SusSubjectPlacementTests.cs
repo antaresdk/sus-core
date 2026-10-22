@@ -6,6 +6,7 @@ using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
 using Sharq.Core.Storybook.UI;
+using Sharq.Core.Storybook.Probe;
 using Sharq.Core.Editor.TestSupport;
 
 namespace Sharq.Core.Editor.Tests
@@ -148,6 +149,85 @@ namespace Sharq.Core.Editor.Tests
             Assert.IsFalse(SusSubjectPlacement.KeepsNaturalWidth(SusStateRoles.Surface));
             Assert.IsFalse(SusSubjectPlacement.KeepsNaturalWidth(SusStateRoles.Display));
             Assert.IsFalse(SusSubjectPlacement.KeepsNaturalWidth(null), "a scene has no role");
+        }
+
+        // ── owner 2026-10-22: the UI-scale chip scales the logical screen, not the picture ──
+
+        [UnityTest]
+        public IEnumerator The_ui_scale_chip_lays_the_viewport_out_smaller_and_fills_the_canvas()
+        {
+            Assert.IsTrue(_host.ShowStoryById("enginetests/primitives/counter"));
+            yield return Settle();
+            var scaleAxis = System.Linq.Enumerable.First(_host.Env.ActiveAxes(), a => a.Id == "scale");
+            var canvas = _host.QaCanvas;
+            VisualElement viewport = _host.QaSubjectRoot;
+            while (viewport != null && !(viewport is ScrollView)) viewport = viewport.parent;
+            Assert.IsNotNull(viewport, "the canvas viewport");
+            try
+            {
+                _host.Env.CycleForTest("scale"); // 100 -> 125
+                yield return Settle();
+
+                Assert.IsTrue(viewport.ClassListContains(SusStorybookHost.ViewportScaledClass));
+                var box = canvas.contentRect;
+                Assert.That(viewport.layout.width, Is.EqualTo(box.width / 1.25f).Within(1f),
+                    "laid out at canvas / scale, as a real UI scale leaves a smaller logical screen");
+                var contentRight = canvas.worldBound.xMin + canvas.resolvedStyle.borderLeftWidth
+                                   + canvas.resolvedStyle.paddingLeft + box.width;
+                Assert.That(viewport.worldBound.xMax, Is.EqualTo(contentRight).Within(1.5f),
+                    "magnified back from its top-left corner it ends where the canvas content ends, not past it");
+            }
+            finally
+            {
+                scaleAxis.Apply("100");
+            }
+            yield return Settle();
+        }
+
+        [Test]
+        public void Every_environment_chip_names_what_it_switches()
+        {
+            Assert.AreEqual("theme", SusStoryEnvBar.CaptionOf("theme"));
+            Assert.AreEqual("storybook", SusStoryEnvBar.CaptionOf("shell-theme"),
+                "two chips both saying dark was the complaint: the tool's own theme is named apart");
+            Assert.AreEqual("UI scale", SusStoryEnvBar.CaptionOf("scale"));
+            Assert.AreEqual("skin", SusStoryEnvBar.CaptionOf("skin"), "an axis of another package is named by its id");
+        }
+
+        // ── owner's rule 2026-10-22: no state widget for an undeclared composite ──────────
+
+        [UnityTest]
+        public IEnumerator An_undeclared_composite_gets_no_state_widget()
+        {
+            Assert.IsTrue(_host.ShowStoryById(PlacementScreenStory.Id));
+            yield return Settle();
+
+            var matrix = _host.Matrix;
+            Assert.AreEqual(SusStoryMatrixMode.None, matrix.MatrixMode,
+                "a screen nobody gave a role, too large for a cell: its forced states would all repeat rest");
+            StringAssert.Contains("composite", matrix.SilentReason);
+            Assert.IsTrue(matrix.ClassListContains("sb-hidden"), "the widget is absent, not folded");
+            Assert.IsNotNull(_host.QaPlacement?.Subject, "the live instance is still on the stage");
+        }
+
+        [UnityTest]
+        public IEnumerator A_declared_composite_keeps_its_states()
+        {
+            SusStateRoles.Declare(nameof(PlacementScreenDemo), SusStateRoles.Group);
+            try
+            {
+                Assert.IsTrue(_host.ShowStoryById(PlacementScreenStory.Id));
+                yield return Settle();
+
+                var matrix = _host.Matrix;
+                Assert.IsNull(matrix.SilentReason, "the role table owns the answer for a declared role");
+                Assert.AreNotEqual(SusStoryMatrixMode.None, matrix.MatrixMode);
+                Assert.IsFalse(matrix.ClassListContains("sb-hidden"));
+            }
+            finally
+            {
+                SusStateRoles.Reset();
+            }
         }
     }
 

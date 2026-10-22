@@ -67,6 +67,12 @@ namespace Sharq.Core.Editor.Tests
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.BuildFrom(new[] { typeof(CoreCounterStory).Assembly });
 
+            // The swatch is an engine fixture no role table names, and in this rig it measures
+            // wider than a grid cell: undeclared AND oversize is a composite, which gets no state
+            // widget at all (SusStoryMatrix.StandDownIfComposite, owner 2026-10-22). Giving it a
+            // role keeps zone C built - the matrix is what this fixture is about.
+            SusStateRoles.Declare(nameof(CoreSwatchDemo), SusStateRoles.Control);
+
             _host = new SusStorybookHost();
             s_window.rootVisualElement.Add(_host);
         }
@@ -78,6 +84,7 @@ namespace Sharq.Core.Editor.Tests
             _host?.RemoveFromHierarchy();
             _host = null;
 
+            SusStateRoles.Reset();
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
 
@@ -106,7 +113,7 @@ namespace Sharq.Core.Editor.Tests
             Assert.IsTrue(_host.ShowStoryById(Swatch));
             for (int f = 0; f < Settle; f++) yield return null;
 
-            Assert.That(_host.Matrix.BuiltCellCount, Is.GreaterThan(0), "sanity: the matrix built cells");
+            Assert.That(_host.Matrix.BuiltCellCount, Is.GreaterThan(0), "sanity: the matrix built cells (silent: " + _host.Matrix.SilentReason + ")");
 
             var axis = _host.Env.ActiveAxes().First(a => a.Id == "theme");
 

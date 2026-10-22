@@ -91,6 +91,7 @@ namespace Sharq.Core.Editor.Tests
             _host?.RemoveFromHierarchy();
             _host = null;
 
+            SusStateRoles.Reset();
             SusStoryRegistry.ClearDeclaredPackages();
             SusStoryRegistry.Invalidate();
         }
@@ -146,6 +147,11 @@ namespace Sharq.Core.Editor.Tests
         [UnityTest]
         public IEnumerator Scenery_a_story_parented_itself_into_an_overlay_host_is_gone_after_switching()
         {
+            // The copy outside the canvas comes from zone C's own instance of the modal. The
+            // fixture names no role, and an undeclared oversize component - an open modal measures
+            // as a full overlay - gets no state widget at all (owner 2026-10-22); a role keeps that
+            // second instance, and with it the path T-3168 is about.
+            SusStateRoles.Declare(nameof(CoreMatrixModalDemo), SusStateRoles.Control);
             Assert.IsTrue(_host.ShowStoryById(Diy));
             yield return null;
             yield return null;

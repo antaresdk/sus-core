@@ -716,6 +716,15 @@
     -unity-background-scale-mode: scale-to-fit;
 }
 
+/* What the chip switches (owner 2026-10-22: "dark", "100" and "mouse" alone said nothing, and two
+ * chips both said "dark"). Quieter than the value it names. */
+.sb-env__chip-caption {
+    font-size: var(--sb-fs-12);
+    color: var(--sb-muted);
+    white-space: nowrap;
+    margin-right: 4px;
+}
+
 .sb-env__chip-value {
     font-size: var(--sb-fs-12);
     color: var(--sb-ink);
@@ -844,6 +853,16 @@
  * directly (plan §6 risk row, D18 of the shell plan). */
 .sb-stage__viewport {
     flex-grow: 1;
+    /* The UI-scale chip magnifies the viewport from its top-left corner (owner 2026-10-22). */
+    transform-origin: 0% 0%;
+}
+
+/* While the UI scale is away from 100% the viewport is laid out at canvas / scale (a measured write
+ * in SusStorybookHost.FitScaledViewport) and must keep that size: growing it to fill the canvas
+ * would be magnified past the canvas edge again. */
+.sb-stage__viewport.sb-stage__viewport--scaled {
+    flex-grow: 0;
+    flex-shrink: 0;
 }
 
 /* The content container gets ITS OWN class (`AddToClassList` in SusStorybookHost, not a style-API

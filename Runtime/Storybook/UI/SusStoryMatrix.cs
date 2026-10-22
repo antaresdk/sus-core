@@ -612,6 +612,7 @@ namespace Sharq.Core.Storybook.UI
             // host is the honest box - the instance living inside its slot never opens itself.
             var size = BoxOf(_probeMeasureTarget);
             Decide(size, size != Vector2.zero);
+            if (StandDownIfComposite()) return;
             SetOpen(CollapseReason == null);
         }
 
@@ -633,7 +634,34 @@ namespace Sharq.Core.Storybook.UI
             if (_oversize == wasOversize) return;
             _revisions++;
             ClearCells();
+            if (StandDownIfComposite()) return;
             SetOpen(CollapseReason == null);
+        }
+
+        /// <summary>
+        /// A composite whose role nobody declared - a screen, a HUD preset, a reward panel: too
+        /// large for a grid cell and absent from the role registry - gets no state widget at all.
+        /// Owner's rule (2026-10-22, game storybook): a block that can only show the same frame
+        /// again is not a smaller block, it is noise next to the live instance, and its switches
+        /// switch nothing. For an undeclared type every state column is a mere permission
+        /// (<see cref="SusStateDuty.Variant"/>), and on a composite the forced root state - a ring
+        /// around the whole screen, the screen "disabled" - is not a state the buyer can use.
+        /// A small undeclared component keeps its grid (an ability slot dims when disabled), and a
+        /// composite whose role is declared keeps its states (the role table owns that answer).
+        /// </summary>
+        bool StandDownIfComposite()
+        {
+            if (!_oversize || _role != null) return false;
+            _silent = "a composite without a declared state role: every forced state would repeat the rest frame";
+            _rows.Clear();
+            _columns.Clear();
+            _skipped.Clear();
+            ClearCells();
+            // The measuring instance goes too: a screen left parked in a hidden box keeps running
+            // its animations and timers for nothing.
+            ClearMeasure();
+            AddToClassList("sb-hidden");
+            return true;
         }
 
         /// <summary>

@@ -157,8 +157,9 @@ namespace Sharq.Core.Storybook
             // while all 14 matrix cells stayed on the dark background var() resolves to above the
             // stage. _stage is the element the mock-up actually means by "the stage" — matrix and
             // canvas both live under it, so an axis bound there reaches both.
-            _env = new SusStoryEnvBar(this, _stage);
+            _env = new SusStoryEnvBar(this, _stage, _canvasViewport);
             _env.Changed += RefreshAddress;
+            _env.Changed += FitScaledViewport;
             // An environment axis (breakpoint, density, theme, scale, input) re-lays out the
             // stage, so it is one of D17's named occasions for zone E (card T-3358).
             _env.Changed += () => { _probe.MarkDirty(); _sizes.Refresh(); };
@@ -294,6 +295,9 @@ namespace Sharq.Core.Storybook
             // purpose — the canvas is a fixture of the shell, so the subscription survives every
             // story switch and needs no re-registration.
             _canvas.RegisterCallback<GeometryChangedEvent>(OnCanvasGeometryChanged);
+            // A separate subscriber, so the T-3362 handler keeps writing nothing: this one writes
+            // the scaled viewport's size, which the canvas's size never depends on.
+            _canvas.RegisterCallback<GeometryChangedEvent>(_ => FitScaledViewport());
 
             ShowStoryFromUrlOrFirst();
         }
@@ -591,6 +595,8 @@ namespace Sharq.Core.Storybook
             _matrix.Show(entry);
             _sizes.Track(component);
             ReadSizesAfterFirstLayout(component);
+            // A route can carry env.scale; the viewport has to follow it on mount, not only on a click.
+            FitScaledViewport();
 
             // Zone E, card T-3040: the feed subscribes to every declared event of THIS instance
             // and forgets the previous story's session. Zone D's panel rides along (card T-3143)
@@ -941,6 +947,40 @@ namespace Sharq.Core.Storybook
                 _probe.MarkDirty();
             };
             component.RegisterCallback(firstLayout);
+        }
+
+        /// <summary>The canvas viewport while the UI-scale axis is away from 100%.</summary>
+        public const string ViewportScaledClass = "sb-stage__viewport--scaled";
+
+        /// <summary>
+        /// The UI-scale chip (owner, 2026-10-22): it used to put a transform on the whole stage, and
+        /// a transform grows the picture, not the boxes - every component crossed the edge of its
+        /// frame. A real UI scale shrinks the logical screen instead, so the canvas viewport is laid
+        /// out at canvas / scale and magnified back from its top-left corner (Storybook.uss): it
+        /// fills the canvas exactly, the subject lays out as it would on that smaller screen, and a
+        /// subject too big for it scrolls inside the viewport as at 100%. The size is the canvas's,
+        /// and the canvas is sized by the stage and its own fixed height, never by the viewport, so
+        /// the write cannot feed back (the loop of T-3362 stays closed).
+        /// </summary>
+        void FitScaledViewport()
+        {
+            if (_disposed) return;
+            var scale = SusScaleService.Current.Value;
+            bool scaled = scale > 0f && !UnityEngine.Mathf.Approximately(scale, 1f);
+            _canvasViewport.EnableInClassList(ViewportScaledClass, scaled);
+            if (!scaled)
+            {
+                _canvasViewport.style.width = StyleKeyword.Null;
+                _canvasViewport.style.height = StyleKeyword.Null;
+                return;
+            }
+            var box = _canvas.contentRect;
+            if (box.width <= 0f || box.height <= 0f) return;
+            float width = box.width / scale, height = box.height / scale;
+            var laid = _canvasViewport.layout;
+            if (UnityEngine.Mathf.Abs(laid.width - width) < 0.5f && UnityEngine.Mathf.Abs(laid.height - height) < 0.5f) return;
+            _canvasViewport.style.width = width; // sus:uss-impossible measured canvas size divided by the UI scale factor - the logical screen a real UI scale leaves
+            _canvasViewport.style.height = height; // sus:uss-impossible measured canvas size divided by the UI scale factor - the logical screen a real UI scale leaves
         }
 
         // Card T-3362: this handler writes NOTHING that participates in layout. It raises the
