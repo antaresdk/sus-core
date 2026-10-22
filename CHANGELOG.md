@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.9] - 2026-10-22
+
+### Changed
+- Storybook: a story that declares no component (`[SusStory(NoComponent = ...)]`: a service demo, a store panel, a screen assembled in place) gets no state widget. It puts a scene on the stage, and a scene has no states of its own, so every forced column repeated the rest frame of the whole scene even when it measured small enough for a grid cell. A role declared for the scene type still keeps the states.
+
 ## [1.3.8] - 2026-10-22
 
 ### Changed
