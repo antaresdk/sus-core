@@ -800,6 +800,19 @@ namespace Sharq.Core.Storybook.UI
                 ? _entry.ComponentType
                 : probe != null ? probe.GetType() : null;
             _role = SusStateRoles.RoleOf(roleType);
+
+            // A story that declared it has no component (a service demo, a store panel, a game
+            // screen assembled in place) puts a scene on the stage, and a scene has no states of
+            // its own: every forced column would be the rest frame of the whole scene again,
+            // whatever size it measures. Owner's rule (2026-10-22): a block that cannot show two
+            // different states is not shown. A role declared for the scene type still wins.
+            if (_role == null && _entry != null && _entry.ComponentType == null &&
+                !string.IsNullOrWhiteSpace(_entry.NoComponentReason))
+            {
+                _silent = "no component on the stage (" + _entry.NoComponentReason + "): a scene has no states of its own";
+                return;
+            }
+
             var all = SusStoryStates.All;
             for (int i = 0; i < all.Count; i++)
             {

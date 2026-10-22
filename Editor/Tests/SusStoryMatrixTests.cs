@@ -2,6 +2,7 @@ using System.Linq;
 using NUnit.Framework;
 using UnityEngine.UIElements;
 using Sharq.Core.Storybook;
+using Sharq.Core.Storybook.Probe;
 using Sharq.Core.Storybook.UI;
 
 namespace Sharq.Core.Editor.Tests
@@ -383,6 +384,34 @@ namespace Sharq.Core.Editor.Tests
             Assert.That(matrix.Role, Is.Null);
             Assert.That(matrix.Columns, Is.EqualTo(SusStoryStates.All),
                 "silence of the registry is not a statement about a component: wave 6 adds the rest");
+        }
+
+        [Test]
+        public void A_story_without_a_component_gets_no_state_widget()
+        {
+            AllTwins();
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry("enginetests/showcase/set"));
+
+            Assert.That(matrix.MatrixMode, Is.EqualTo(SusStoryMatrixMode.None),
+                "owner 2026-10-22: a scene has no states of its own, every column would repeat rest");
+            StringAssert.Contains("no component", matrix.SilentReason);
+            Assert.That(matrix.CellCount, Is.Zero);
+            Assert.That(matrix.ClassListContains("sb-hidden"), Is.True);
+        }
+
+        [Test]
+        public void A_scene_with_a_declared_role_keeps_its_states()
+        {
+            AllTwins();
+            SusStateRoles.Declare(nameof(CoreShowcaseDemo), SusStateRoles.Group);
+            var matrix = new SusStoryMatrix();
+
+            matrix.Show(Entry("enginetests/showcase/set"));
+
+            Assert.That(matrix.SilentReason, Is.Null, "a declared role owns the answer");
+            Assert.That(matrix.Columns.Count, Is.GreaterThan(1));
         }
 
         // ── the budget ───────────────────────────────────────────────────────
