@@ -171,7 +171,7 @@ SDF vs. raw TTF, missing-glyph fallback).
 
 <!-- sus:gen urls -->
 ```
-https://github.com/antaresdk/sus-core.git#v1.3.7
+https://github.com/antaresdk/sus-core.git#v1.3.8
 ```
 <!-- /sus:gen -->
 

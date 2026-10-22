@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.8] - 2026-10-22
+
+### Changed
+- Storybook: a component too large for a grid cell whose type no role table names (a game screen, a HUD preset, a reward panel) gets no state widget. Each forced state repeated the rest frame of the whole composite, so the block showed the same screen again and its switches changed nothing. A small undeclared component keeps its grid; a composite with a declared role keeps its states.
+- Storybook: every environment chip carries a caption naming its axis (width, density, theme, UI scale, input, storybook) and a tooltip saying what it switches; the UI scale reads as a percentage.
+
+### Fixed
+- Storybook: the UI scale chip scales the canvas viewport, laid out at the canvas size divided by the scale with a top-left origin, so a scaled subject fills the canvas instead of spilling past its edge.
+
 ## [1.3.7] - 2026-10-21
 
 ### Fixed
