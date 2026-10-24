@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.10] - 2026-10-24
+
+### Fixed
+- Storybook: on "Story not found" the shell crumbs show the address that was asked for; they kept the previous story.
+
 ## [1.3.9] - 2026-10-22
 
 ### Changed
