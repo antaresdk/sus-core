@@ -213,6 +213,21 @@ namespace Sharq.Core.Editor.Tests
         }
 
         [Test]
+        public void Story_not_found_shows_the_address_it_was_asked_for_in_the_crumbs()
+        {
+            // POOL-02 R2 (T-4584): the crumbs kept the previous story over "Story not found".
+            using var host = new SusStorybookHost();
+            host.ShowStoryById("enginetests/primitives/swatch");
+            var crumbs = host.Q<Label>(className: "sb-shell__crumbs");
+            StringAssert.Contains("Swatch", crumbs.text);
+
+            host.Navigate(new SusStoryRoute("kit/atoms/nope"));
+
+            Assert.That(host.CurrentStory, Is.Null);
+            Assert.That(crumbs.text, Is.EqualTo("kit / atoms / nope"));
+        }
+
+        [Test]
         public void Back_returns_to_the_previous_story_and_remounts_it()
         {
             using var host = new SusStorybookHost();

@@ -885,6 +885,9 @@ namespace Sharq.Core.Storybook
 
         void ShowMissing(string id)
         {
+            // POOL-02 R2 (T-4584): the shell crumbs are the address the page is on. They kept the
+            // previous story ("kit / overlay / Tooltip") over "Story not found" for another id.
+            _crumbs.text = string.IsNullOrEmpty(id) ? string.Empty : id.Replace("/", " / ");
             _stageEmptyTitle.text = "Story not found";
             _stageEmptyText.text = "'" + id + "' is not in the registry. The link may point at a " +
                                   "story whose package is not loaded in this build.";
