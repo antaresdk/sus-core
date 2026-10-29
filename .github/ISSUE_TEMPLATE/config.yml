@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://sus-ui.dev/docs/getting-started
+    about: Guides, API reference and the component catalog.
+  - name: Questions and chat (Discord)
+    url: https://discord.gg/gwS9nwqWWj
+    about: Ask how to do something — the community and the authors are there.
+  - name: Security vulnerability
+    url: https://github.com/antaresdk/sus-core/security/advisories/new
+    about: Report it privately, not in a public issue.
